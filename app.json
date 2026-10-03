@@ -1,18 +1,43 @@
 {
   "expo": {
-    "name": "attend",
+    "name": "Attend",
     "slug": "attend",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "attend",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#09090B",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.itaiagami.attend",
+      "appleTeamId": "WZ6VU6BWNG",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          }
+        ]
+      }
     },
     "android": {
+      "package": "com.itaiagami.attend",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#09090B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -20,7 +45,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -28,9 +53,24 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#09090B",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 120
+        }
+      ],
+      "expo-sqlite",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Attend listens while you speak during a session, so the guide can respond. Audio is processed on this iPhone and never saved.",
+          "enableBackgroundPlayback": true
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Attend listens while you speak during a session, so the guide can respond. Audio is processed on this iPhone and never saved.",
+          "speechRecognitionPermission": "Attend turns what you say during a session into words, on this iPhone, so the guide can follow what you notice."
         }
       ]
     ],

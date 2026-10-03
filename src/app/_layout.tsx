@@ -1,18 +1,52 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { DataProvider, useData } from '@/data/store';
+import { color } from '@/design/theme';
+import { VoiceSessionProvider } from '@/voice/VoiceSessionProvider';
+import { SkiaGate } from '@/viz/SkiaGate';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-SplashScreen.preventAutoHideAsync();
+const navTheme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: color.bg, card: color.bg, text: color.text, border: color.hairline, primary: color.text },
+};
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function RootStack() {
+  const { ready } = useData();
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+  if (!ready) return <View style={{ flex: 1, backgroundColor: color.bg }} />;
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
+      <Stack.Screen name="recap/[id]" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
+      <Stack.Screen name="journey/[id]" options={{ presentation: 'card', animation: 'default' }} />
+      <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
+      <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: color.bg }}>
+      <ThemeProvider value={navTheme}>
+        <StatusBar style="light" />
+        <SkiaGate>
+          <DataProvider>
+            <VoiceSessionProvider>
+              <RootStack />
+            </VoiceSessionProvider>
+          </DataProvider>
+        </SkiaGate>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
