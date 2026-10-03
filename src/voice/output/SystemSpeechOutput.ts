@@ -1,5 +1,6 @@
 import * as Speech from 'expo-speech';
 import { Platform } from 'react-native';
+import { beginSessionAudio } from '../audioSession';
 import type { SpeechOutput } from '../types';
 
 /**
@@ -24,6 +25,8 @@ export class SystemSpeechOutput implements SpeechOutput {
   }
 
   async begin() {
+    // Without this the silent switch mutes the guide whenever nothing else set the audio mode (Expo Go).
+    await beginSessionAudio(false);
     if (this.chosen) return;
     this.chosen = true;
     try {
