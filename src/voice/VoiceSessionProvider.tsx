@@ -86,12 +86,11 @@ async function chooseInput(mode: string): Promise<SpeechInput> {
   return new SimulatedParticipantInput();
 }
 
-function chooseOutput(pref: 'natural' | 'system', voiceId?: string): SpeechOutput {
+function chooseOutput(voiceId?: string): SpeechOutput {
+  // ElevenLabs is the guide's voice. The phone's own voice only speaks a line the server could not deliver.
   const system = new SystemSpeechOutput();
-  if (pref === 'natural' && hasRemote) {
-    return new ElevenLabsSpeechOutput({ apiUrl: config.apiUrl, headers: apiHeaders(), voiceId: voiceId ?? config.voiceId }, system);
-  }
-  return system;
+  if (!hasRemote) return system;
+  return new ElevenLabsSpeechOutput({ apiUrl: config.apiUrl, headers: apiHeaders(), voiceId: voiceId ?? config.voiceId }, system);
 }
 
 function chooseBrain(pref: string): GuideBrain {
@@ -128,7 +127,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setStatus('preparing');
 
       const input = await chooseInput(prefs.dev.inputMode);
-      const output = chooseOutput(prefs.voiceOutput, prefs.voiceId);
+      const output = chooseOutput(prefs.voiceId);
       const brain = chooseBrain(prefs.dev.brain);
       setLabels({ input: input.label, output: output.label, brain: brain.id });
       setDevInput(input instanceof DevTextInput ? input : undefined);

@@ -1,16 +1,21 @@
 import { createAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
+import { Directory, File, Paths } from 'expo-file-system';
 import type { SpeechOutput } from '../types';
 
 /**
- * The guide's natural voice: ElevenLabs text-to-speech, fetched through the
- * Attend proxy so the ElevenLabs key never ships in the app.
+ * The guide's voice: ElevenLabs, fetched through the Attend voice server so
+ * the ElevenLabs key never ships in the app.
  *
- * Lines are fetched one or two ahead (`prepare`) while the current one plays,
- * so the silence between lines is the silence the guide intended, not
- * network latency. If a line cannot be fetched in time, it is spoken by the
- * fallback voice instead: an eyes-closed session must never just stop.
+ * Every line is saved to the phone's cache the first time it is fetched, so
+ * the guide's recurring lines ("Take a moment to settle in.") play instantly
+ * and work offline after the first session. Upcoming lines are downloaded
+ * while the current one plays, so the silence between lines is the silence
+ * the guide intended, not network latency.
  *
- * Only the guide's own lines go to the proxy. A line may echo a single word
+ * Only if a line cannot be fetched at all does the phone's own voice speak
+ * it, so an eyes-closed session never simply stops.
+ *
+ * Only the guide's own lines go to the server. A line may echo a single word
  * the person used ("Notice that tightness."), never their sentences.
  */
 
@@ -20,13 +25,25 @@ export type ElevenLabsConfig = {
   voiceId: string;
 };
 
-const LOAD_TIMEOUT_MS = 6000;
-const PREFETCH = 2;
+const PREFETCH = 3;
+const FETCH_TIMEOUT_MS = 9000;
+
+function hash(s: string): string {
+  let h1 = 0x811c9dc5;
+  let h2 = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = (Math.imul(h2, 31) + c) >>> 0;
+  }
+  return `${h1.toString(36)}${h2.toString(36)}${s.length.toString(36)}`;
+}
 
 export class ElevenLabsSpeechOutput implements SpeechOutput {
   readonly id = 'elevenlabs';
-  readonly label = 'Natural voice';
-  private players = new Map<string, AudioPlayer>();
+  readonly label = 'ElevenLabs voice';
+  private dir: Directory | null = null;
+  private inflight = new Map<string, Promise<string | null>>();
   private current?: AudioPlayer;
   failures = 0;
 
@@ -41,85 +58,98 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
 
   async begin() {
     await this.fallback.begin?.();
-  }
-
-  private source(text: string) {
-    const base = this.cfg.apiUrl.replace(/\/$/, '');
-    const uri = `${base}/tts?voice=${encodeURIComponent(this.cfg.voiceId)}&text=${encodeURIComponent(text)}`;
-    return {
-      uri,
-      headers: this.cfg.headers && Object.keys(this.cfg.headers).length ? this.cfg.headers : undefined,
-    };
-  }
-
-  private playerFor(text: string): AudioPlayer {
-    const existing = this.players.get(text);
-    if (existing) {
-      this.players.delete(text);
-      return existing;
+    try {
+      const d = new Directory(Paths.cache, 'guide-voice', this.cfg.voiceId);
+      d.create({ intermediates: true, idempotent: true });
+      this.dir = d;
+    } catch {
+      this.dir = null;
     }
-    return createAudioPlayer(this.source(text), { downloadFirst: true, updateInterval: 100 });
+  }
+
+  private url(text: string) {
+    const base = this.cfg.apiUrl.replace(/\/$/, '');
+    return `${base}/tts?voice=${encodeURIComponent(this.cfg.voiceId)}&text=${encodeURIComponent(text)}`;
+  }
+
+  /** Local file URI for a line, downloading it if needed. Null if it can't be had. */
+  private fetchLine(text: string): Promise<string | null> {
+    const existing = this.inflight.get(text);
+    if (existing) return existing;
+    const p = (async () => {
+      if (!this.dir) return null;
+      const file = new File(this.dir, `${hash(text)}.mp3`);
+      try {
+        if (file.exists && file.size > 1000) return file.uri;
+      } catch {}
+      try {
+        const download = File.downloadFileAsync(this.url(text), file, { headers: this.cfg.headers, idempotent: true });
+        const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), FETCH_TIMEOUT_MS));
+        const saved = await Promise.race([download, timeout]);
+        if (saved.size < 1000) {
+          // An error body (JSON), not audio.
+          try {
+            saved.delete();
+          } catch {}
+          return null;
+        }
+        return saved.uri;
+      } catch {
+        try {
+          if (file.exists) file.delete();
+        } catch {}
+        return null;
+      }
+    })();
+    this.inflight.set(text, p);
+    p.finally(() => setTimeout(() => this.inflight.delete(text), 0));
+    return p;
   }
 
   prepare(texts: string[]) {
-    for (const t of texts.slice(0, PREFETCH)) {
-      if (this.players.has(t)) continue;
-      try {
-        this.players.set(t, createAudioPlayer(this.source(t), { downloadFirst: true, updateInterval: 100 }));
-      } catch {
-        // Prefetch is an optimisation only.
-      }
-    }
+    for (const t of texts.slice(0, PREFETCH)) void this.fetchLine(t);
   }
 
-  speak(text: string, signal: AbortSignal): Promise<void> {
-    if (signal.aborted) return Promise.resolve();
-    // After repeated failures, stop trying for this session and use the fallback voice.
-    if (this.failures >= 3) return this.fallback.speak(text, signal);
-
-    let player: AudioPlayer;
-    try {
-      player = this.playerFor(text);
-    } catch {
+  async speak(text: string, signal: AbortSignal): Promise<void> {
+    if (signal.aborted) return;
+    const uri = await this.fetchLine(text);
+    if (signal.aborted) return;
+    if (!uri) {
       this.failures++;
       return this.fallback.speak(text, signal);
     }
-    this.current = player;
+    return this.play(uri, text, signal);
+  }
 
+  private play(uri: string, text: string, signal: AbortSignal): Promise<void> {
+    let player: AudioPlayer;
+    try {
+      player = createAudioPlayer({ uri }, { updateInterval: 100 });
+    } catch {
+      return this.fallback.speak(text, signal);
+    }
+    this.current = player;
     return new Promise<void>((resolve) => {
       let settled = false;
-      let started = false;
-      let nudged = false;
       const startedAt = Date.now();
-
       const sub = player.addListener('playbackStatusUpdate', (st: AudioStatus) => {
-        if (st.error) return fail();
-        if (st.playing || st.currentTime > 0) started = true;
-        // play() before the download finished may be ignored; ask once more when it is ready.
-        if (st.isLoaded && !st.playing && !started && !nudged) {
-          nudged = true;
-          player.play();
-        }
-        if (st.didJustFinish) done();
+        if (st.error) return finish(true);
+        if (st.didJustFinish) finish(false);
       });
-
+      // A line that never reports finishing still ends, eventually.
       const watchdog = setInterval(() => {
-        if (!started && Date.now() - startedAt > LOAD_TIMEOUT_MS) fail();
-        // A line that never reports finishing still ends, eventually.
-        if (Date.now() - startedAt > 60_000) done();
-      }, 250);
-
-      player.play();
-
+        if (Date.now() - startedAt > 60_000) finish(false);
+      }, 500);
       const onAbort = () => {
         try {
           player.pause();
         } catch {}
-        done();
+        finish(false);
       };
       signal.addEventListener('abort', onAbort, { once: true });
-
-      const cleanup = () => {
+      const finish = (failed: boolean) => {
+        if (settled) return;
+        settled = true;
         clearInterval(watchdog);
         sub.remove();
         signal.removeEventListener('abort', onAbort);
@@ -127,22 +157,10 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
           player.remove();
         } catch {}
         if (this.current === player) this.current = undefined;
+        if (failed && !signal.aborted) this.fallback.speak(text, signal).then(resolve);
+        else resolve();
       };
-
-      const done = () => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        resolve();
-      };
-
-      const fail = () => {
-        if (settled) return;
-        settled = true;
-        this.failures++;
-        cleanup();
-        this.fallback.speak(text, signal).then(resolve);
-      };
+      player.play();
     });
   }
 
@@ -153,21 +171,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     this.fallback.stop();
   }
 
-  async end() {
-    this.clearPrefetch();
-  }
-
-  private clearPrefetch() {
-    for (const p of this.players.values()) {
-      try {
-        p.remove();
-      } catch {}
-    }
-    this.players.clear();
-  }
-
   dispose() {
     this.stop();
-    this.clearPrefetch();
   }
 }

@@ -55,7 +55,7 @@ function Choice({ label, detail, selected, disabled, onPress }: { label: string;
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
-  const natural = prefs.voiceOutput === 'natural' && hasRemote;
+  const natural = hasRemote;
   const realCount = sessions.filter((s) => !s.isSample).length;
 
   return (
@@ -79,12 +79,10 @@ export function SettingsScreen() {
             />
           </View>
         ))}
-        <Hairline />
-        <Choice label="On-device voice" detail="Works offline" selected={!natural} onPress={() => setPrefs({ voiceOutput: 'system' })} />
       </Group>
       {!hasRemote ? (
         <Txt variant="footnote" tone="tertiary" style={styles.note}>
-          Natural voices and the adaptive guide need the Attend service, which isn’t configured in this build. Sessions use the on-device voice and guide.
+          The guide’s voice needs the Attend voice server, which isn’t configured in this build.
         </Txt>
       ) : null}
 

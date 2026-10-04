@@ -23,6 +23,7 @@
     "dist",
     "public",
     "tests",
-    "tools"
+    "tools",
+    "server"
   ]
 }
