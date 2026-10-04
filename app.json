@@ -16,7 +16,10 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ],
+        "NSPhotoLibraryUsageDescription": "Attend doesn't use your photo library. This permission is listed only because a component in the app could ask for it; it is never requested."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -25,11 +28,15 @@
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
-            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
           }
         ]
       }
@@ -77,6 +84,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "itai26",
+    "extra": {
+      "eas": {
+        "projectId": "86b5b6c3-8a3c-42ed-8eb1-d8f22d45fb27"
+      }
     }
   }
 }
