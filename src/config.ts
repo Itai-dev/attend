@@ -7,7 +7,7 @@
 export const config = {
   /** Base URL of the voice/guide server (server/ in this repo, deployed on Vercel). */
   // The voice server is public by design (it holds the keys; the app holds only its address).
-  apiUrl: (process.env.EXPO_PUBLIC_ATTEND_API_URL || 'https://attend-voice.vercel.app/api').trim(),
+  apiUrl: (process.env.EXPO_PUBLIC_ATTEND_API_URL || 'https://attend-server-ochre.vercel.app/api').trim(),
   apiKey: (process.env.EXPO_PUBLIC_ATTEND_API_KEY ?? '').trim(),
   /** Optional shared token the proxy can require (ATTEND_APP_TOKEN). Deters casual use; not a secret. */
   appToken: (process.env.EXPO_PUBLIC_ATTEND_APP_TOKEN ?? '').trim(),
