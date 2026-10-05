@@ -8,7 +8,7 @@ import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
 import { REGIONS } from '../domain/regions';
 import type { SessionType } from '../domain/types';
-import { applyScript, VOICE_DIRECTION } from '../engine/guide/lines';
+import { applyOpening, applyScript, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
 import type { SessionLength } from '../engine/phases';
@@ -88,12 +88,34 @@ async function chooseInput(mode: string): Promise<SpeechInput> {
   return new SimulatedParticipantInput();
 }
 
-function chooseOutput(voiceId?: string): SpeechOutput {
+/** What the app takes from the session type's ElevenLabs agent (server/api/agent.ts). */
+type AgentSettings = { voiceId?: string; speed?: number; stability?: number; similarity?: number; prompt?: string; firstMessage?: string };
+const lastAgent: Partial<Record<SessionType, AgentSettings>> = {};
+
+/**
+ * The guide's voice and tone are edited in ElevenLabs, one agent per session type.
+ * Fetched with the script at the start of a session; offline, the last one fetched (or the defaults) is used.
+ */
+async function fetchAgent(type: SessionType): Promise<AgentSettings | undefined> {
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 2500);
+    const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/agent?type=${type}`, { headers: apiHeaders(), signal: ctl.signal });
+    clearTimeout(t);
+    if (res.ok) lastAgent[type] = (await res.json()) as AgentSettings;
+  } catch {
+    // Keep the last settings.
+  }
+  return lastAgent[type];
+}
+
+function chooseOutput(voiceId?: string, agent?: AgentSettings): SpeechOutput {
   // ElevenLabs is the guide's only voice. If it can't be reached the session pauses; it never switches to the phone's voice.
   return new ElevenLabsSpeechOutput({
     apiUrl: config.apiUrl,
     headers: apiHeaders(),
-    voiceId: voiceId ?? config.voiceId,
+    voiceId: agent?.voiceId ?? voiceId ?? config.voiceId,
+    settings: agent,
     direction: () => VOICE_DIRECTION,
   });
 }
@@ -116,8 +138,8 @@ async function refreshScript(): Promise<void> {
   }
 }
 
-function chooseBrain(pref: string): GuideBrain {
-  const remote = () => new RemoteGuideBrain({ url: config.apiUrl, headers: apiHeaders(), model: config.guideModel });
+function chooseBrain(pref: string, agent?: AgentSettings): GuideBrain {
+  const remote = () => new RemoteGuideBrain({ url: config.apiUrl, headers: apiHeaders(), model: config.guideModel, style: () => agent?.prompt });
   if (__DEV__ && pref === 'local') return new LocalGuideBrain();
   if (__DEV__ && pref === 'claude' && hasRemote) return remote();
   return hasRemote ? remote() : new LocalGuideBrain();
@@ -148,11 +170,16 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setDebug([]);
       setSessionType(type);
       setStatus('preparing');
-      if (hasRemote) await refreshScript();
+      // Script first: the agent's opening line is laid over the script's arrival.
+      let agent: AgentSettings | undefined;
+      if (hasRemote) {
+        [, agent] = await Promise.all([refreshScript(), fetchAgent(type)]);
+        applyOpening(type, agent?.firstMessage);
+      }
 
       const input = await chooseInput(prefs.dev.inputMode);
-      const output = chooseOutput(prefs.voiceId);
-      const brain = chooseBrain(prefs.dev.brain);
+      const output = chooseOutput(prefs.voiceId, agent);
+      const brain = chooseBrain(prefs.dev.brain, agent);
       setLabels({ input: input.label, output: output.label, brain: brain.id });
       setDevInput(input instanceof DevTextInput ? input : undefined);
 

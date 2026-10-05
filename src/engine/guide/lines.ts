@@ -152,6 +152,18 @@ export function applyScript(remote: unknown): string[] {
   return rejected;
 }
 
+/**
+ * The session's opening line from the ElevenLabs agent's "First message". It replaces the
+ * first line of that type's arrival, keeping its silence; an off-voice line is ignored.
+ */
+export function applyOpening(type: keyof GuideScript['ARRIVE'], text: unknown): boolean {
+  if (typeof text !== 'string') return false;
+  const t = text.trim();
+  if (!t || t.length > 200 || violatesGuideLanguage(t)) return false;
+  ARRIVE = { ...ARRIVE, [type]: ARRIVE[type].map((v) => [[t, v[0]?.[1] ?? 3500] as Line, ...v.slice(1)]) };
+  return true;
+}
+
 /** Back to the words bundled with the app. */
 export function resetScript() {
   setAll(GUIDE_SCRIPT);

@@ -11,19 +11,13 @@ export const config = {
   apiKey: (process.env.EXPO_PUBLIC_ATTEND_API_KEY ?? '').trim(),
   /** Optional shared token the proxy can require (ATTEND_APP_TOKEN). Deters casual use; not a secret. */
   appToken: (process.env.EXPO_PUBLIC_ATTEND_APP_TOKEN ?? '').trim(),
-  /** ElevenLabs "River" — calm, neutral, conversational; a premade voice every account can use. */
+  /** ElevenLabs "River": the fallback voice when the session type's agent can't be read. The agents choose the real one. */
   voiceId: (process.env.EXPO_PUBLIC_ELEVENLABS_VOICE_ID ?? 'SAz9YHcvj6GT2YYXdXww').trim(),
   /** Optional override; the proxy chooses a fast model by default. */
   guideModel: process.env.EXPO_PUBLIC_GUIDE_MODEL?.trim() || undefined,
 };
 
 export const hasRemote = config.apiUrl.length > 0;
-
-export const GUIDE_VOICES = [
-  { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', detail: 'Calm, neutral' },
-  { id: 'ESDuPqgyZIDDVZTlIrH7', name: 'Aaron', detail: 'Warm, British' },
-  { id: 'Lt0VPfndF8W0Iwvl0bDe', name: 'Lulu', detail: 'Soft, velvety' },
-] as const;
 
 /** Headers every request to the proxy carries. */
 export function apiHeaders(): Record<string, string> {

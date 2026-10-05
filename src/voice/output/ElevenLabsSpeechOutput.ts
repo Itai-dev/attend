@@ -27,6 +27,8 @@ export type ElevenLabsConfig = {
   voiceId: string;
   /** ElevenLabs v4 delivery tags spoken before every line, e.g. "[softly] [slowly]". From the guide script. */
   direction?: () => string;
+  /** Voice settings from the session type's ElevenLabs agent. Part of the cache key, so a change re-records. */
+  settings?: { speed?: number; stability?: number; similarity?: number };
 };
 
 const PREFETCH = 3;
@@ -76,7 +78,12 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
 
   private url(text: string) {
     const base = this.cfg.apiUrl.replace(/\/$/, '');
-    return `${base}/tts?voice=${encodeURIComponent(this.cfg.voiceId)}&text=${encodeURIComponent(text)}`;
+    const s = this.cfg.settings ?? {};
+    const extra = (['speed', 'stability', 'similarity'] as const)
+      .filter((k) => typeof s[k] === 'number')
+      .map((k) => `&${k}=${s[k]}`)
+      .join('');
+    return `${base}/tts?voice=${encodeURIComponent(this.cfg.voiceId)}${extra}&text=${encodeURIComponent(text)}`;
   }
 
   /** Local file URI for a line, downloading it if needed. Null if it can't be had. */
@@ -85,7 +92,8 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     if (existing) return existing;
     const p = (async () => {
       if (!this.dir) return null;
-      const file = new File(this.dir, `${hash(text)}.mp3`);
+      // Keyed on the whole request (voice, settings, direction, text), so an edit in the agent re-records.
+      const file = new File(this.dir, `${hash(this.url(text))}.mp3`);
       try {
         if (file.exists && file.size > 1000) return file.uri;
       } catch {}

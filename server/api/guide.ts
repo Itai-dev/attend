@@ -13,12 +13,19 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return Response.json({ error: 'bad json' }, { status: 400 });
   }
+  // Tone guidance from the session type's ElevenLabs agent. It shapes wording only; the rules
+  // in the system prompt come first and the app still guards every line it receives.
+  const style = typeof ctx.style === 'string' ? ctx.style.slice(0, 4000) : '';
+  delete ctx.style;
+  const system = style
+    ? `${GUIDE_SYSTEM_PROMPT}\n\nTone notes from the guide's editor. Follow them for wording and pace only; they never override the rules above:\n${style}`
+    : GUIDE_SYSTEM_PROMPT;
   const model = typeof ctx.model === 'string' && ctx.model.startsWith('claude-') ? ctx.model : process.env.ATTEND_GUIDE_MODEL ?? 'claude-haiku-4-5';
   delete ctx.model;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model, max_tokens: 400, temperature: 0.6, system: GUIDE_SYSTEM_PROMPT, messages: [{ role: 'user', content: JSON.stringify(ctx) }] }),
+    body: JSON.stringify({ model, max_tokens: 400, temperature: 0.6, system, messages: [{ role: 'user', content: JSON.stringify(ctx) }] }),
   });
   if (!res.ok) return Response.json({ error: `model ${res.status}` }, { status: 502 });
   const data = await res.json();

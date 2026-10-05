@@ -28,6 +28,8 @@ export type RemoteConfig = {
   headers?: Record<string, string>;
   timeoutMs?: number;
   model?: string;
+  /** Tone guidance from the session type's ElevenLabs agent (its system prompt). Wording only. */
+  style?: () => string | undefined;
 };
 
 const MAX_LINE_CHARS = 220;
@@ -76,7 +78,7 @@ export class RemoteGuideBrain implements GuideBrain {
       const res = await fetch(`${this.config.url.replace(/\/$/, '')}/guide`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', ...(this.config.headers ?? {}) },
-        body: JSON.stringify(buildPayload(ctx, proposal, this.config.model)),
+        body: JSON.stringify({ ...buildPayload(ctx, proposal, this.config.model), style: this.config.style?.() }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error(`guide ${res.status}`);
