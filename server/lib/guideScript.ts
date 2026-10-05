@@ -49,10 +49,14 @@ export type GuideScript = {
   ACK_UNCERTAIN: string[];
   ACK_SILENCE: string[];
   EXPLORE_QUALITY: string[];
+  QUALITY_HINT: Line[][];
+  DEEPEN_BY_FAMILY: { [family: string]: string[] };
   EXPLORE_DEEPEN: string[];
   EXPLORE_SHAPE: string[];
   EXPLORE_EDGE: string[];
   EXPLORE_TEMPORAL: string[];
+  EXPLORE_TEMPERATURE: string[];
+  LIGHTNESS: Line[][];
   HOLD: Line[][];
   OBSERVE_MOVEMENT_STATIC: string[];
   OBSERVE_MOVEMENT: string[];
@@ -82,12 +86,14 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let the phone rest, and let your eyes close.', 4500],
-        ["There's nothing you need to fix right now.", 5500],
+        ["There's nothing you need to fix right now.", 4000],
+        ["We're not trying to change anything. Just to watch, with curiosity.", 5000],
       ],
       [
         ['Take a moment to settle in.', 3500],
         ['Get comfortable, and let your eyes close.', 5000],
-        ["There's nothing you need to fix right now.", 5500],
+        ["There's nothing you need to fix right now.", 4000],
+        ["For the next few minutes, we'll simply be curious about what's there.", 5000],
       ],
     ],
     flare: [
@@ -95,7 +101,8 @@ export const GUIDE_SCRIPT: GuideScript = {
         ["Let's take this slowly.", 3500],
         ['Let the phone rest, and let your eyes close.', 4500],
         ["You don't have to make anything go away right now.", 5000],
-        ['Let your breath be however it is.', 5000],
+        ['Let your breath be however it is.', 4500],
+        ["We'll just watch it for a while, without needing it to change.", 5000],
       ],
     ],
     sleep: [
@@ -109,7 +116,8 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let your eyes close.', 4000],
-        ["We'll go slowly. You can stop at any time, just by saying so.", 5500],
+        ["We'll go slowly. You can stop at any time, just by saying so.", 4500],
+        ["We're not here to solve it. Just to look at it, with curiosity.", 5000],
       ],
     ],
   },
@@ -160,18 +168,74 @@ export const GUIDE_SCRIPT: GuideScript = {
   ACK_PLAIN: ['Notice that.', 'Stay there for a moment.', 'Give that a few seconds.', 'Interesting.'],
   ACK_UNCERTAIN: ["That's fine. It doesn't need a name.", "That's alright. Just stay near it."],
   ACK_SILENCE: ['Take your time.', 'Stay with it.', "There's no hurry."],
+  // Word menus. Somatic tracking is easier with words to choose from: a few concrete
+  // options, then "something else". Every word offered here is one the app understands
+  // when it's said back (src/domain/lexicon.ts), so the body map can follow.
   EXPLORE_QUALITY: [
-    'Does it feel more like pressure, pulling, squeezing, or something else?',
-    'If you had to describe it, is it more like tightness, burning, aching, or something else?',
+    'Does it feel more like pressure, tightness, or pulling? Or something else?',
+    'Is it more of an ache, a burning, or a buzzing? Or something else?',
+    'If you had to describe it: is it dull, sharp, heavy, or tingling?',
   ],
+
+  // When the first answer has no describing word ("it just hurts", "I don't know").
+  QUALITY_HINT: [
+    [
+      ["There's no right word.", 2500],
+      ['Some people notice tight, heavy, warm, or buzzing.', 3000],
+      ['Does any of those come close?', 0],
+    ],
+    [
+      ['Take your time. Just the nearest word is enough.', 3000],
+      ['Is it more squeezing, aching, burning, or tingling?', 0],
+    ],
+  ],
+
+  // A closer look, using the family of word the person chose: neighbouring words
+  // that help them tell the difference.
+  DEEPEN_BY_FAMILY: {
+    contract: ['Is that {noun} more like a squeeze, a knot, or a stiffness?', 'Does it feel clenched, or more cramping?'],
+    pull: ['Does it pull, stretch, or twist?', 'Is the pulling in one direction, or more like a stretch?'],
+    press: ['Is the pressure more heavy, or more like a squeeze?', 'Is it more like pressing, or more like tightness?'],
+    warm: ['Is it more warm, hot, or burning? Or more raw?', 'Is it a gentle warmth, or more like burning?'],
+    cold: ['Is it cool, or icy? Is there any numbness with it?'],
+    grain: ['Is it more buzzing, tingling, or like pins and needles?', 'Is it a fine tingling, or more electric?'],
+    point: ['Is it sharp in one point, or more shooting, along a line?'],
+    pulse: ['Is it throbbing, or more of a steady ache?'],
+    heavy: ['Is it more heavy, aching, dull, or sore?', 'Is it a deep ache, or more sore, near the surface?'],
+    mute: ['Is it numb, or more dull? Is there any tingling around it?'],
+  },
   EXPLORE_DEEPEN: ["What does '{word}' feel like right now?", 'When you say {word}, what is it like?', "What's the texture of that {noun}?"],
   EXPLORE_SHAPE: ['Is it a small spot, or more spread out?', 'Does it feel focused in one place, or more diffuse?'],
   EXPLORE_EDGE: ['Does it have a clear edge?', 'Can you find where it ends?'],
+  // Temperature is one of the plainest qualities to notice, and rarely a frightening one.
+  EXPLORE_TEMPERATURE: ['Does it feel warm, cool, or neither?', 'Is there any temperature to it? Warm, cool, or neutral?'],
+
+  // Said once as watching begins. Somatic tracking works best with lightness — curiosity,
+  // even interest — rather than vigilance. Outcome-independent: nothing has to happen.
+  LIGHTNESS: [
+    [
+      ["See if you can watch it with a little lightness, the way you'd watch something interesting.", 7000],
+      ["Whatever it does next is fine. It doesn't need to change.", 6000],
+    ],
+    [
+      ["There's nothing to get right here.", 4000],
+      ['Just be curious about what it does next, as if you were noticing it for the first time.', 8000],
+    ],
+    [
+      ['Let your attention be easy, and interested.', 5000],
+      ["You're not waiting for it to go away. Only watching what it does.", 7000],
+    ],
+  ],
+
   EXPLORE_TEMPORAL: [
     'Is it steady, or does it pulse, or come in waves?',
     'Does it stay constant, or change from moment to moment?',
   ],
   HOLD: [
+    [
+      ['Stay with it, the way you might watch clouds pass.', 14000],
+      ['What is it doing now?', 0],
+    ],
     [
       ['Just stay with it for a while.', 14000],
       ["What's here now?", 0],
@@ -187,6 +251,11 @@ export const GUIDE_SCRIPT: GuideScript = {
     'And does it stay in one place, or do you notice any movement?',
   ],
   OBSERVE_CHANGE: [
+    [
+      ['Keep watching it closely.', 6000],
+      ['It might grow, or shrink, or move, or stay just the same. Any of these is fine.', 9000],
+      ['What do you notice now?', 0],
+    ],
     [
       ['Notice whether anything shifts when you simply observe it.', 10000],
       ['Is there any part of it that feels different from a moment ago?', 0],
@@ -231,6 +300,10 @@ export const GUIDE_SCRIPT: GuideScript = {
   REACT_BOUNDARY: [[['Notice the edges softening.', 6000], ['Let them be as clear, or as blurry, as they are.', 5000]]],
   REACT_QUALITY: [[['Notice that {noun}.', 5000], ['Let it be whatever it is now.', 4500]]],
   REAPPRAISE_CORE: [
+    [
+      ['Notice it simply as sensation. Pressure, warmth, tightness. Coming and going.', 8000],
+      ['See if you can let the area around it soften, without needing the sensation itself to change.', 10000],
+    ],
     [
       ["You don't need to solve the sensation right now.", 5000],
       ['See if you can notice it without immediately treating it as an emergency.', 9000],

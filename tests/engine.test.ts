@@ -237,3 +237,35 @@ test('the end is announced before the closing lines, and the last line is held i
   const { CLOSE } = await import('../src/engine/guide/lines');
   for (const type of ['notice', 'flare', 'sleep', 'fear'] as const) assert.ok(CLOSE[type][CLOSE[type].length - 1][1] >= 7000, type);
 });
+
+test('somatic tracking: curiosity framed at arrival, lightness once as watching begins, temperature asked when unknown', async () => {
+  const r = await runSession(NECK_SCRIPT, { minutes: 10 });
+  const arrival = r.spoken.slice(0, 4).join(' ');
+  assert.match(arrival, /curious|curiosity/);
+  const light = r.spoken.filter((l) => /lightness|nothing to get right|easy, and interested/.test(l));
+  assert.equal(light.length, 1, light.join(' | '));
+  assert.ok(r.asks.includes('temperature'), r.asks.join(', '));
+
+  // Already said it burns: temperature is known, so not asked.
+  const hot = await runSession({ ...NECK_SCRIPT, notice: 'My neck is burning on the left side.' }, { minutes: 10 });
+  assert.ok(!hot.asks.includes('temperature'), hot.asks.join(', '));
+});
+
+test('word menus offer words the app understands, and guide a person who has no word yet', async () => {
+  const { extract } = await import('../src/domain/extract');
+  const { EXPLORE_QUALITY, QUALITY_HINT, DEEPEN_BY_FAMILY } = await import('../src/engine/guide/lines');
+  const menus = [...EXPLORE_QUALITY, ...QUALITY_HINT.flat().map(([t]) => t).filter((t) => /,/.test(t)), ...Object.values(DEEPEN_BY_FAMILY).flat()];
+  for (const m of menus) {
+    const words = extract(m.replace('{noun}', '')).descriptors;
+    assert.ok(words.length >= 2, `"${m}" → ${JSON.stringify(words)}`);
+  }
+
+  // "It just hurts" has no describing word: the guide offers words to choose from.
+  const vague = await runSession({ ...NECK_SCRIPT, notice: 'My neck. It just hurts.', quality: 'I am not sure.', quality_hint: 'Heavy, I think.' }, { minutes: 10 });
+  assert.ok(vague.asks.includes('quality_hint'), vague.asks.join(', '));
+  assert.ok(vague.spoken.some((l) => /tight, heavy, warm, or buzzing|squeezing, aching, burning, or tingling/.test(l)));
+
+  // "Tight" gets neighbouring words from its own family.
+  const tight = await runSession(NECK_SCRIPT, { minutes: 10 });
+  assert.ok(tight.spoken.some((l) => /squeeze, a knot, or a stiffness|clenched, or more cramping/.test(l)), tight.spoken.join(' | '));
+});

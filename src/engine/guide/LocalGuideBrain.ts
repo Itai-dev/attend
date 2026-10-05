@@ -1,4 +1,4 @@
-import { nounOf } from '../../domain/lexicon';
+import { DESCRIPTORS, nounOf } from '../../domain/lexicon';
 import { REGIONS, speakPlace } from '../../domain/regions';
 import type { BodySensation, SensationChange } from '../../domain/types';
 import { isClosing } from '../phases';
@@ -26,6 +26,31 @@ export class LocalGuideBrain implements GuideBrain {
 }
 
 const QUESTION_WINDOW_MS = 14_000;
+
+/** Already said whether it is warm or cold (burning, hot, icy…)? Then temperature is known. */
+function hasTemperature(focus: BodySensation): boolean {
+  return focus.descriptors.some((w) => {
+    const family = DESCRIPTORS.find((d) => d.word === w)?.family;
+    return family === 'warm' || family === 'cold';
+  });
+}
+
+/** Neighbouring words for the family the person's word belongs to; the open question when there's no menu. */
+function deepenMenu(focus: BodySensation): string[] {
+  const family = DESCRIPTORS.find((d) => d.word === focus.descriptors[0])?.family;
+  const menu = family ? L.DEEPEN_BY_FAMILY[family] : undefined;
+  return menu?.length ? menu : L.EXPLORE_DEEPEN;
+}
+
+/**
+ * The reappraisal the session opens with: for fear, the difference between feeling and
+ * reacting; otherwise, not needing to solve it. Later turns pick from the rest.
+ */
+function firstCore(ctx: GuideContext): number {
+  const want = ctx.sessionType === 'fear' ? /difference between feeling/ : /need to solve/;
+  const i = L.REAPPRAISE_CORE.findIndex((v) => want.test(v[0][0]));
+  return i >= 0 ? i : 0;
+}
 
 function fill(text: string, ctx: GuideContext, focus?: BodySensation): string {
   const word = focus?.descriptors[0] ?? ctx.unplacedDescriptors[0];
@@ -204,10 +229,16 @@ export function localTurn(ctx: GuideContext): GuideTurn {
       const generic = focus.descriptors.length === 0;
       let q: ReturnType<typeof question> | undefined;
       if (generic && !asked(ctx, 'quality')) q = question(pickText(L.EXPLORE_QUALITY, ctx), 'quality', ctx, focus);
-      else if (!generic && focus.descriptors.length < 3 && !asked(ctx, 'quality_deepen'))
-        q = question(pickText(L.EXPLORE_DEEPEN, ctx), 'quality_deepen', ctx, focus);
+      else if (generic && !asked(ctx, 'quality_hint')) {
+        // Still no describing word: offer a few to choose from, once, then move on either way.
+        const hint = lines(pickLines(L.QUALITY_HINT, ctx), ctx, focus);
+        const last = hint.pop()!;
+        return turn({ lines: [...prefix, ...react, ...hint, last], expectsResponse: true, ask: 'quality_hint', listenWindowMs: QUESTION_WINDOW_MS });
+      } else if (!generic && focus.descriptors.length < 3 && !asked(ctx, 'quality_deepen'))
+        q = question(pickText(deepenMenu(focus), ctx), 'quality_deepen', ctx, focus);
       else if (!focus.shape && !asked(ctx, 'shape')) q = question(pickText(L.EXPLORE_SHAPE, ctx), 'shape', ctx, focus);
       else if (!focus.edge && !asked(ctx, 'edge')) q = question(pickText(L.EXPLORE_EDGE, ctx), 'edge', ctx, focus);
+      else if (!hasTemperature(focus) && !asked(ctx, 'temperature')) q = question(pickText(L.EXPLORE_TEMPERATURE, ctx), 'temperature', ctx, focus);
       else if (!focus.temporalQuality && !asked(ctx, 'temporal')) q = question(pickText(L.EXPLORE_TEMPORAL, ctx), 'temporal', ctx, focus);
 
       if (q) {
@@ -221,7 +252,8 @@ export function localTurn(ctx: GuideContext): GuideTurn {
 
     case 'OBSERVE': {
       if (!focus) return turn({ lines: [], expectsResponse: false, advance: true });
-      const react = reaction(ctx, focus);
+      // Watching begins with lightness, once: curiosity rather than vigilance, and no outcome to wait for.
+      const react = [...reaction(ctx, focus), ...(ctx.phaseTurn === 0 ? lines(pickLines(L.LIGHTNESS, ctx), ctx, focus) : [])];
       if (!asked(ctx, 'movement')) {
         const isStatic = focus.movement?.type === 'static';
         const q = question(pickText(isStatic ? L.OBSERVE_MOVEMENT_STATIC : L.OBSERVE_MOVEMENT, ctx), 'movement', ctx, focus);
@@ -249,12 +281,12 @@ export function localTurn(ctx: GuideContext): GuideTurn {
       if (ctx.phaseTurn === 0) {
         if (ctx.signals.urgeToFix) parts.push(...lines(L.REAPPRAISE_URGE, ctx, focus));
         if (ctx.signals.familiarConfirmed) parts.push(...lines(L.REAPPRAISE_FAMILIAR, ctx, focus));
-        const core = ctx.sessionType === 'fear' ? L.REAPPRAISE_CORE[2] : L.REAPPRAISE_CORE[0];
-        parts.push(...lines(core, ctx, focus));
+        parts.push(...lines(L.REAPPRAISE_CORE[firstCore(ctx)], ctx, focus));
         const q = question(pickText(L.REAPPRAISE_REFLECT, ctx), 'reflect', ctx, focus, 12_000);
         return turn({ lines: [...parts, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
       }
-      parts.push(...lines(pickLines(L.REAPPRAISE_CORE.slice(1), ctx), ctx, focus));
+      const first = firstCore(ctx);
+      parts.push(...lines(pickLines(L.REAPPRAISE_CORE.filter((_, i) => i !== first), ctx), ctx, focus));
       return turn({ lines: parts, expectsResponse: false, advance: true });
     }
 
