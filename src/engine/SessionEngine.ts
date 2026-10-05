@@ -17,6 +17,9 @@ import {
   type SessionType,
 } from '../domain/types';
 import { isClosing, isDescribing, planFor, type Phase, type SessionLength, type SessionPlan } from './phases';
+
+const EXTEND_STEP_MS = 2 * 60_000;
+const MAX_EXTEND_MS = 6 * 60_000;
 import type { AskKind, GuideContext, GuideLine, GuideTurn, HistoryItem, RemoteObservations, UserTurn } from './types';
 
 /**
@@ -74,8 +77,17 @@ const CLOSE_RESERVE_MS = 70_000;
 
 export class SessionEngine {
   readonly sessionId: string;
-  readonly sessionType: SessionType;
-  readonly plan: SessionPlan;
+  /**
+   * Starts as chosen (always 'notice' from Home) and may adapt once, early, to 'flare' or
+   * 'fear' from what the person says — the guide notices instead of asking them to label it.
+   */
+  private _type: SessionType;
+  plan: SessionPlan;
+  private readonly minutes?: SessionLength;
+  private adapted = false;
+  private extendedMs = 0;
+  private extended = false;
+  private closeRequested = false;
   readonly startedAt: number;
 
   private readonly now: () => number;
@@ -110,7 +122,8 @@ export class SessionEngine {
   private outcome: SessionOutcome = 'completed';
 
   constructor(opts: EngineOptions) {
-    this.sessionType = opts.sessionType;
+    this._type = opts.sessionType;
+    this.minutes = opts.minutes;
     this.plan = planFor(opts.sessionType, opts.minutes);
     this.now = opts.now ?? Date.now;
     this.newId = opts.newId ?? defaultNewId;
@@ -118,6 +131,10 @@ export class SessionEngine {
     this.keepTranscript = opts.keepTranscript ?? false;
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
+  }
+
+  get sessionType(): SessionType {
+    return this._type;
   }
 
   get phase(): Phase {
@@ -163,6 +180,8 @@ export class SessionEngine {
       lastChanges: [...this.lastChanges],
       resumed: this.resumed,
       repeatRequested: this.repeatRequested,
+      extended: this.extended,
+      closeRequested: this.closeRequested,
       lastQuestion: this.lastQuestion,
       history: [...this.history],
       random: this.random,
@@ -189,6 +208,7 @@ export class SessionEngine {
   afterGuideTurn(turn: GuideTurn): void {
     this.resumed = false;
     this.repeatRequested = false;
+    this.extended = false;
     if (turn.end || isClosing(this._phase)) {
       if (turn.end || this._phase === 'DONE') this.setPhase('DONE');
       return;
@@ -237,6 +257,23 @@ export class SessionEngine {
       return { command: 'repeat' };
     }
     if (obs.command === 'pause' || obs.command === 'resume') return { command: obs.command };
+    if (obs.command === 'longer') {
+      // Two more minutes, up to six; the unanswered question is asked again after the acknowledgement.
+      const add = Math.min(MAX_EXTEND_MS - this.extendedMs, EXTEND_STEP_MS);
+      if (add > 0) {
+        this.extendedMs += add;
+        this.plan = { ...this.plan, targetMs: this.plan.targetMs + add };
+      }
+      this.extended = true;
+      this.repeatRequested = !isClosing(this._phase);
+      return { command: 'longer' };
+    }
+    if (obs.command === 'wrap' && !isClosing(this._phase)) {
+      this.closeRequested = true;
+      this.setPhase('CLOSE');
+      this.pushMoment('user', user.text);
+      return { command: 'wrap' };
+    }
 
     // Safety comes before any reinterpretation, and is never overridden by a model.
     const safety = screen(obs);
@@ -252,6 +289,7 @@ export class SessionEngine {
       this.pushMoment('user', user.text);
       return {};
     }
+    this.adaptType(obs);
     if (this._phase === 'SAFETY_CHECK') {
       const familiar = obs.familiarity === 'familiar' || (obs.answer === 'yes' && obs.familiarity !== 'new' && !/\bnew\b/.test(obs.text));
       this.applyToMap(obs);
@@ -459,6 +497,7 @@ export class SessionEngine {
       acceptance: false,
       urgeToFix: false,
       fear: false,
+      flare: false,
       wordCount: 0,
     };
     // Only fill what the local reading of the same answer missed.
@@ -476,6 +515,20 @@ export class SessionEngine {
     if (info.broad && !this.asked.includes('locate_narrow')) return true;
     if ((info.paired || info.sided) && !f.side && !this.asked.includes('locate_side')) return true;
     return false;
+  }
+
+  /**
+   * In the first few answers, a flare ("it's really bad today") or a worry ("I'm scared of
+   * what it is") changes the session's pace and framing once. Safety screening is unaffected:
+   * it ran before this and runs on every utterance regardless.
+   */
+  private adaptType(obs: Observation) {
+    if (this.adapted || this._type !== 'notice' || this.signals.utterances > 3) return;
+    const to: SessionType | undefined = obs.flare ? 'flare' : obs.fear ? 'fear' : undefined;
+    if (!to) return;
+    this.adapted = true;
+    this._type = to;
+    this.plan = { ...planFor(to, this.minutes), targetMs: this.plan.targetMs };
   }
 
   private reappraiseAllowed(): boolean {

@@ -17,7 +17,8 @@ import { sessionDate, shortDate } from '../shared/format';
  * anywhere. Each statement carries its own evidence.
  */
 
-export function JourneyScreen() {
+/** Journey's content, also shown inside Lately. */
+export function JourneyContent() {
   const { sessions, hasSamples, deleteSamples } = useData();
   const { width } = useWindowDimensions();
   const analysis = useMemo(() => analyzeJourney(sessions), [sessions]);
@@ -27,11 +28,11 @@ export function JourneyScreen() {
   const pairW = (Math.min(width, 520) - space.xl * 2 - space.m) / 2;
 
   return (
-    <TitledScroll title="Journey">
+    <>
       {hasSamples ? (
         <View style={styles.banner}>
           <Txt variant="footnote" tone="secondary" style={{ flex: 1 }}>
-            These are sample sessions, to show how Journey works.
+            These are sample sessions, to show how this works.
           </Txt>
           <QuietButton label="Remove" tone="primary" onPress={() => deleteSamples()} />
         </View>
@@ -79,6 +80,14 @@ export function JourneyScreen() {
           ))}
         </View>
       )}
+    </>
+  );
+}
+
+export function JourneyScreen() {
+  return (
+    <TitledScroll title="Journey">
+      <JourneyContent />
     </TitledScroll>
   );
 }

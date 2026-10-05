@@ -269,3 +269,30 @@ test('word menus offer words the app understands, and guide a person who has no 
   const tight = await runSession(NECK_SCRIPT, { minutes: 10 });
   assert.ok(tight.spoken.some((l) => /squeeze, a knot, or a stiffness|clenched, or more cramping/.test(l)), tight.spoken.join(' | '));
 });
+
+test('the guide adapts to a flare or a worry from what the person says, without being told', async () => {
+  const flare = await runSession({ ...NECK_SCRIPT, notice: 'My neck is flaring up, it is really bad today.' });
+  assert.equal(flare.session.sessionType, 'flare');
+  assert.ok(flare.spoken.some((l) => /open your eyes, and move gently/.test(l)), flare.spoken.slice(-3).join(' | '));
+
+  const fear = await runSession({ ...NECK_SCRIPT, notice: "There's a tightness in my neck and I'm worried about it." });
+  assert.equal(fear.session.sessionType, 'fear');
+
+  const plain = await runSession(NECK_SCRIPT);
+  assert.equal(plain.session.sessionType, 'notice');
+});
+
+test('"a little longer" extends the session and the guide carries on; "that\'s enough for today" closes gently', async () => {
+  const base = await runSession(NECK_SCRIPT, { minutes: 3 });
+  const longer = await runSession({ ...NECK_SCRIPT, quality_deepen: ['Can we go a little longer?', 'Like a knot.'] }, { minutes: 3 });
+  assert.ok(longer.spoken.some((l) => /A little longer|a few more minutes/.test(l)), longer.spoken.join(' | '));
+  assert.ok(longer.durationMs > base.durationMs + 60_000, `${base.durationMs} → ${longer.durationMs}`);
+  assert.equal(longer.session.outcome, 'completed');
+
+  const enough = await runSession({ ...NECK_SCRIPT, shape: "That's enough for today." }, { minutes: 10 });
+  assert.equal(enough.session.outcome, 'completed');
+  const tail = enough.spoken.slice(-7).join(' | ');
+  assert.match(tail, /Okay\.|Let's finish here/);
+  assert.match(tail, /room around you/);
+  assert.ok(!enough.spoken.some((l) => /coming toward the end|begin to come back/.test(l)), tail);
+});

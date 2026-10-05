@@ -179,13 +179,14 @@ function turn(partial: Omit<GuideTurn, 'source'>): GuideTurn {
 export function localTurn(ctx: GuideContext): GuideTurn {
   const focus = ctx.focus;
 
+  const ack = ctx.extended ? lines(pickLines(L.LONGER_ACK, ctx), ctx) : [];
   if (ctx.repeatRequested && ctx.lastQuestion && !isClosing(ctx.phase)) {
     const again = { ...ctx.lastQuestion, pauseAfterMs: 0 };
-    const lead = ctx.resumed ? [line(L.RESUME[0], L.RESUME[1], ctx)] : [];
+    const lead = [...(ctx.resumed ? [line(L.RESUME[0], L.RESUME[1], ctx)] : []), ...ack];
     return turn({ lines: [...lead, again], expectsResponse: true, ask: ctx.lastAsk, listenWindowMs: QUESTION_WINDOW_MS });
   }
 
-  const prefix: GuideLine[] = ctx.resumed ? [line(L.RESUME[0], L.RESUME[1], ctx)] : [];
+  const prefix: GuideLine[] = [...(ctx.resumed ? [line(L.RESUME[0], L.RESUME[1], ctx)] : []), ...ack];
 
   switch (ctx.phase) {
     case 'ARRIVE':
@@ -299,9 +300,14 @@ export function localTurn(ctx: GuideContext): GuideTurn {
     }
 
     case 'CLOSE': {
-      const react = ctx.lastResult === 'speech' ? [line('Notice that.', 3500, ctx)] : [];
-      // Announce the end before it comes, then close: never straight from a question into "open your eyes".
-      const prepare = lines(pickLines(L.CLOSE_PREPARE[ctx.sessionType], ctx), ctx, focus);
+      // Asked to finish: a short yes, then the close. Otherwise announce the end before it comes:
+      // never straight from a question into "open your eyes".
+      const react = ctx.closeRequested
+        ? lines(pickLines(L.WRAP_ACK, ctx), ctx)
+        : ctx.lastResult === 'speech'
+          ? [line('Notice that.', 3500, ctx)]
+          : [];
+      const prepare = ctx.closeRequested ? [] : lines(pickLines(L.CLOSE_PREPARE[ctx.sessionType], ctx), ctx, focus);
       return turn({ lines: [...react, ...prepare, ...lines(L.CLOSE[ctx.sessionType], ctx, focus)], expectsResponse: false, end: true });
     }
     case 'SAFETY_CLOSE':

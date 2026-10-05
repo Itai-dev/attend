@@ -36,7 +36,8 @@ function placesFrom(sessions: Session[]): Place[] {
   return [...by.values()].sort((a, b) => b.lastAt - a.lastAt);
 }
 
-export function BodyScreen() {
+/** The accumulated map and the places returned to; also shown inside Lately (without the recent strip). */
+export function BodyContent({ showRecent = true }: { showRecent?: boolean }) {
   const { sessions } = useData();
   const { width } = useWindowDimensions();
   const composite = useMemo(() => compositeMap(sessions), [sessions]);
@@ -46,8 +47,8 @@ export function BodyScreen() {
   const mapW = Math.min(width - space.xl * 2, 480);
 
   return (
-    <TitledScroll title="Body">
-      <Txt variant="callout" tone="secondary" style={{ marginTop: -space.m, marginBottom: space.l }}>
+    <>
+      <Txt variant="callout" tone="secondary" style={{ marginTop: showRecent ? -space.m : 0, marginBottom: space.l }}>
         Everywhere you’ve attended to. Recent sessions glow brighter.
       </Txt>
       <View style={styles.mapCard}>
@@ -92,7 +93,7 @@ export function BodyScreen() {
         </Txt>
       )}
 
-      {recent.length > 0 ? (
+      {showRecent && recent.length > 0 ? (
         <>
           <SectionLabel style={{ marginTop: space.xxl }}>Recent sessions</SectionLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.xl }} contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.m }}>
@@ -115,6 +116,14 @@ export function BodyScreen() {
           </ScrollView>
         </>
       ) : null}
+    </>
+  );
+}
+
+export function BodyScreen() {
+  return (
+    <TitledScroll title="Body">
+      <BodyContent />
     </TitledScroll>
   );
 }

@@ -24,7 +24,8 @@ function RootStack() {
   if (!ready) return <View style={{ flex: 1, backgroundColor: color.bg }} />;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
-      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="index" />
+      <Stack.Screen name="lately" options={{ presentation: 'card', animation: 'default' }} />
       <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="recap/[id]" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="journey/[id]" options={{ presentation: 'card', animation: 'default' }} />

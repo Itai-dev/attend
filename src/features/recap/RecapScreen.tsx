@@ -61,8 +61,9 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
 
   const done = () => {
     vs.reset();
+    // Back to the start: the app is used, then left. What was gathered waits behind "Lately".
     if (router.canDismiss()) router.dismissAll();
-    router.navigate('/journey');
+    else router.replace('/');
   };
 
   return (
