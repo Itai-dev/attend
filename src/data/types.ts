@@ -36,6 +36,8 @@ export type Prefs = {
   voiceId?: string;
   /** Last length picked on Home, offered again next time. */
   sessionMinutes?: 3 | 5 | 10;
+  /** The soft tone under the session. On unless turned off in Settings. */
+  ambience?: boolean;
   /** Developer settings. Ignored outside development builds. */
   dev: {
     inputMode: InputModePref;

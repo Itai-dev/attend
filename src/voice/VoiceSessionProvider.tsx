@@ -15,6 +15,7 @@ import type { SessionLength } from '../engine/phases';
 import { SessionEngine } from '../engine/SessionEngine';
 import { SessionRunner, type PauseReason, type RunnerStatus } from '../engine/SessionRunner';
 import type { GuideBrain } from '../engine/types';
+import { Ambience } from './ambience';
 import { endSessionAudio } from './audioSession';
 import { DevTextInput } from './input/DevTextInput';
 import { OnDeviceSpeechInput } from './input/OnDeviceSpeechInput';
@@ -167,6 +168,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       }
 
       const engine = new SessionEngine({ sessionType: type, minutes, keepTranscript: __DEV__ && prefs.dev.keepTranscripts });
+      const ambience = prefs.ambience === false ? undefined : new Ambience();
       const r = new SessionRunner({
         engine,
         brain,
@@ -175,6 +177,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         onState: (s) => {
           setStatus(s.status);
           setPausedBy(s.pausedBy);
+          ambience?.follow(s.status);
           if (s.error) setError(s.error);
         },
         onLevel: (l) => {
@@ -212,6 +215,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         deactivateKeepAwake('attend-session');
         input.dispose();
         output.dispose();
+        ambience?.stop();
         endSessionAudio().catch(() => {});
         level.value = 0;
       }

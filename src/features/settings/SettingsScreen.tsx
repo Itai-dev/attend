@@ -86,12 +86,24 @@ export function SettingsScreen() {
         </Txt>
       ) : null}
 
+      <SectionLabel style={styles.section}>Background</SectionLabel>
+      <Group>
+        <Choice
+          label="Soft tone"
+          detail="A low 432 Hz drone under the voice"
+          selected={prefs.ambience !== false}
+          onPress={() => setPrefs({ ambience: true })}
+        />
+        <Hairline />
+        <Choice label="Silence" detail="Only the guide’s voice" selected={prefs.ambience === false} onPress={() => setPrefs({ ambience: false })} />
+      </Group>
+
       <SectionLabel style={styles.section}>Privacy</SectionLabel>
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
             Your sessions are stored only on this iPhone. There is no account. What you say is turned into words on the device and the audio is never saved.
-            {hasRemote ? ' To adapt the guide, the words of the session are sent to Attend’s guide service and not stored there.' : ''}
+            {hasRemote ? ' To adapt the guide, the words of the session (never audio) are sent through Attend’s guide service to Anthropic’s Claude, which phrases the guide’s next lines. Attend doesn’t store them.' : ''}
           </Txt>
         </View>
         <Hairline />
