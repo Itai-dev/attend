@@ -34,6 +34,8 @@ export type Prefs = {
   samplesSeeded: boolean;
   voiceOutput: VoiceOutputPref;
   voiceId?: string;
+  /** Last length picked on Home, offered again next time. */
+  sessionMinutes?: 3 | 5 | 10;
   /** Developer settings. Ignored outside development builds. */
   dev: {
     inputMode: InputModePref;

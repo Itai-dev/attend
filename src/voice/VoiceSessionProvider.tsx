@@ -8,8 +8,10 @@ import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
 import { REGIONS } from '../domain/regions';
 import type { SessionType } from '../domain/types';
+import { applyScript, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
+import type { SessionLength } from '../engine/phases';
 import { SessionEngine } from '../engine/SessionEngine';
 import { SessionRunner, type PauseReason, type RunnerStatus } from '../engine/SessionRunner';
 import type { GuideBrain } from '../engine/types';
@@ -51,7 +53,7 @@ type VoiceSessionValue = {
   labels: { input: string; output: string; brain: string };
   debug: DebugEntry[];
   devInput?: DevTextInput;
-  start(type: SessionType): Promise<void>;
+  start(type: SessionType, minutes?: SessionLength): Promise<void>;
   pause(): void;
   resume(): void;
   end(): void;
@@ -87,7 +89,30 @@ async function chooseInput(mode: string): Promise<SpeechInput> {
 
 function chooseOutput(voiceId?: string): SpeechOutput {
   // ElevenLabs is the guide's only voice. If it can't be reached the session pauses; it never switches to the phone's voice.
-  return new ElevenLabsSpeechOutput({ apiUrl: config.apiUrl, headers: apiHeaders(), voiceId: voiceId ?? config.voiceId });
+  return new ElevenLabsSpeechOutput({
+    apiUrl: config.apiUrl,
+    headers: apiHeaders(),
+    voiceId: voiceId ?? config.voiceId,
+    direction: () => VOICE_DIRECTION,
+  });
+}
+
+/**
+ * The guide's words are edited in server/lib/guideScript.ts and served by the voice server.
+ * Fetched at the start of each session; offline or slow, the last script (or the bundled one) is used.
+ */
+async function refreshScript(): Promise<void> {
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 2500);
+    const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/script`, { headers: apiHeaders(), signal: ctl.signal });
+    clearTimeout(t);
+    if (!res.ok) return;
+    const rejected = applyScript(await res.json());
+    if (__DEV__ && rejected.length) console.warn(`Guide script: kept the bundled words for ${rejected.join(', ')}`);
+  } catch {
+    // Keep whatever script is already in use.
+  }
 }
 
 function chooseBrain(pref: string): GuideBrain {
@@ -114,7 +139,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   dataRef.current = data;
 
   const start = useCallback(
-    async (type: SessionType) => {
+    async (type: SessionType, minutes?: SessionLength) => {
       if (runner.current) return;
       const prefs = dataRef.current.prefs;
       setError(undefined);
@@ -122,6 +147,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setDebug([]);
       setSessionType(type);
       setStatus('preparing');
+      if (hasRemote) await refreshScript();
 
       const input = await chooseInput(prefs.dev.inputMode);
       const output = chooseOutput(prefs.voiceId);
@@ -140,7 +166,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const engine = new SessionEngine({ sessionType: type, keepTranscript: __DEV__ && prefs.dev.keepTranscripts });
+      const engine = new SessionEngine({ sessionType: type, minutes, keepTranscript: __DEV__ && prefs.dev.keepTranscripts });
       const r = new SessionRunner({
         engine,
         brain,

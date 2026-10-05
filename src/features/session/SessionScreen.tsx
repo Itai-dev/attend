@@ -8,6 +8,7 @@ import { useData } from '@/data/store';
 import type { SessionType } from '@/domain/types';
 import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
+import { SESSION_LENGTHS } from '@/engine/phases';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import { BreathingField, type BreathMode } from '@/viz/BreathingField';
 import { clock } from '../shared/format';
@@ -35,8 +36,9 @@ function breathMode(s: SessionStatus): BreathMode {
 }
 
 export function SessionScreen() {
-  const params = useLocalSearchParams<{ type?: string }>();
+  const params = useLocalSearchParams<{ type?: string; minutes?: string }>();
   const type = (['notice', 'flare', 'sleep', 'fear'].includes(params.type ?? '') ? params.type : 'notice') as SessionType;
+  const minutes = SESSION_LENGTHS.find((m) => String(m) === params.minutes);
   const vs = useVoiceSession();
   const { prefs, setPrefs } = useData();
   const { width, height } = useWindowDimensions();
@@ -52,7 +54,7 @@ export function SessionScreen() {
     if (started.current) return;
     started.current = true;
     vs.reset();
-    vs.start(type);
+    vs.start(type, minutes);
     const t = setTimeout(() => setHint(false), 6000);
     return () => {
       clearTimeout(t);
