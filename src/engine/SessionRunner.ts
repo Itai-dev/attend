@@ -183,7 +183,15 @@ export class SessionRunner {
       if (signal.aborted) return;
       this.set('speaking');
       this.debug('guide', line.text);
-      await out.speak(line.text, signal);
+      try {
+        await out.speak(line.text, signal);
+      } catch (e) {
+        // The guide has one voice. When it can't be reached, the session pauses
+        // (resume repeats the turn) rather than carrying on in a different voice.
+        this.debug('system', `voice unavailable: ${String((e as { message?: string })?.message ?? e)}`);
+        this.pause('error');
+        return;
+      }
       if (signal.aborted) return;
       if (line.pauseAfterMs > 0) {
         this.set('holding');

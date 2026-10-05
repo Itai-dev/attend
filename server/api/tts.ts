@@ -20,21 +20,31 @@ export async function GET(request: Request): Promise<Response> {
   const voice = ALLOWED.has(requested) ? requested : DEFAULT_VOICE;
   const model = process.env.ATTEND_TTS_MODEL ?? 'eleven_multilingual_v2';
 
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
-    method: 'POST',
-    headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
-    body: JSON.stringify({
-      text,
-      model_id: model,
-      voice_settings: { stability: 0.62, similarity_boost: 0.8, style: 0.08, use_speaker_boost: true, speed: 0.9 },
-    }),
-  });
+  const speak = (v: string) =>
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${v}?output_format=mp3_44100_128`, {
+      method: 'POST',
+      headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
+      body: JSON.stringify({
+        text,
+        model_id: model,
+        voice_settings: { stability: 0.62, similarity_boost: 0.8, style: 0.08, use_speaker_boost: true, speed: 0.9 },
+      }),
+    });
+
+  let res = await speak(voice);
+  // Library voices need a paid ElevenLabs plan (402). The app has no other voice to fall back
+  // on, so a refused voice is spoken as River instead of failing the session.
+  const substituted = !res.ok && voice !== DEFAULT_VOICE;
+  if (substituted) res = await speak(DEFAULT_VOICE);
   if (!res.ok || !res.body) return Response.json({ error: `voice ${res.status}` }, { status: 502 });
   return new Response(res.body, {
-    headers: {
-      'content-type': 'audio/mpeg',
-      'cache-control': 'public, max-age=2592000, immutable',
-      'cdn-cache-control': 'public, s-maxage=31536000, immutable',
-    },
+    headers: substituted
+      ? // Not cached: once the plan covers the chosen voice, the next request should get it.
+        { 'content-type': 'audio/mpeg', 'cache-control': 'no-store' }
+      : {
+          'content-type': 'audio/mpeg',
+          'cache-control': 'public, max-age=2592000, immutable',
+          'cdn-cache-control': 'public, s-maxage=31536000, immutable',
+        },
   });
 }

@@ -123,3 +123,53 @@ test('remote guide: a network failure is invisible to the person', async () => {
     globalThis.fetch = original;
   }
 });
+
+test('when the guide voice cannot be reached, the session pauses instead of switching voices', async () => {
+  const { SessionEngine } = await import('../src/engine/SessionEngine');
+  const { LocalGuideBrain } = await import('../src/engine/guide/LocalGuideBrain');
+  const { SessionRunner } = await import('../src/engine/SessionRunner');
+  const engine = new SessionEngine({ sessionType: 'notice', seed: 3 });
+  let failNext = true;
+  const spoken: string[] = [];
+  const states: Array<{ status: string; pausedBy?: string }> = [];
+  const runner = new SessionRunner({
+    engine,
+    brain: new LocalGuideBrain(),
+    onState: (s) => states.push({ status: s.status, pausedBy: s.pausedBy }),
+    voice: {
+      output: {
+        id: 'fake',
+        label: 'fake',
+        isAvailable: async () => true,
+        speak: async (text) => {
+          if (failNext) {
+            failNext = false;
+            throw { code: 'network', message: 'offline' };
+          }
+          spoken.push(text);
+        },
+        stop() {},
+        dispose() {},
+      },
+      input: {
+        id: 'fake',
+        label: 'fake',
+        isAvailable: async () => true,
+        requestPermission: async () => true,
+        listen: async () => ({ kind: 'aborted' }),
+        dispose() {},
+      },
+    },
+  });
+  const run = runner.run();
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(runner.isPaused);
+  assert.deepEqual(states[states.length - 1], { status: 'paused', pausedBy: 'error' });
+  assert.equal(spoken.length, 0);
+  // Resuming tries the voice again; the guide carries on in the same voice.
+  runner.resume();
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(spoken.length > 0);
+  runner.end();
+  await run;
+});

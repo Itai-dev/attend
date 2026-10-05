@@ -53,7 +53,7 @@ export interface SpeechOutput {
   isAvailable(): Promise<boolean>;
   /** Hint the lines coming next so they can be fetched while this one plays. */
   prepare?(texts: string[]): void;
-  /** Resolves when the line has finished, or immediately when aborted. */
+  /** Resolves when the line has finished, or immediately when aborted. Rejects if the line can't be voiced. */
   speak(text: string, signal: AbortSignal): Promise<void>;
   stop(): void;
   begin?(): Promise<void>;

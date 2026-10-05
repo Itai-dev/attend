@@ -18,14 +18,13 @@ import { DevTextInput } from './input/DevTextInput';
 import { OnDeviceSpeechInput } from './input/OnDeviceSpeechInput';
 import { SimulatedParticipantInput } from './input/SimulatedParticipantInput';
 import { ElevenLabsSpeechOutput } from './output/ElevenLabsSpeechOutput';
-import { SystemSpeechOutput } from './output/SystemSpeechOutput';
 import type { SpeechInput, SpeechOutput, VoiceError } from './types';
 
 /**
  * VoiceSessionProvider — the one place the app touches a voice session.
  *
- * It chooses the implementations (real or simulated listening, natural or
- * system voice, Claude or local guide), wires them into a SessionRunner, and
+ * It chooses the implementations (real or simulated listening, the
+ * ElevenLabs voice, Claude or local guide), wires them into a SessionRunner, and
  * exposes a small surface to the UI: start, pause, resume, end, and a status
  * the session screen can show in a single word. The UI never imports a
  * vendor.
@@ -87,10 +86,8 @@ async function chooseInput(mode: string): Promise<SpeechInput> {
 }
 
 function chooseOutput(voiceId?: string): SpeechOutput {
-  // ElevenLabs is the guide's voice. The phone's own voice only speaks a line the server could not deliver.
-  const system = new SystemSpeechOutput();
-  if (!hasRemote) return system;
-  return new ElevenLabsSpeechOutput({ apiUrl: config.apiUrl, headers: apiHeaders(), voiceId: voiceId ?? config.voiceId }, system);
+  // ElevenLabs is the guide's only voice. If it can't be reached the session pauses; it never switches to the phone's voice.
+  return new ElevenLabsSpeechOutput({ apiUrl: config.apiUrl, headers: apiHeaders(), voiceId: voiceId ?? config.voiceId });
 }
 
 function chooseBrain(pref: string): GuideBrain {

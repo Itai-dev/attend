@@ -74,7 +74,7 @@ src/
   voice/       SpeechInput / SpeechOutput interfaces and implementations:
                OnDeviceSpeechInput (expo-speech-recognition, on-device only),
                SimulatedParticipantInput, DevTextInput (dev only),
-               SystemSpeechOutput (expo-speech), ElevenLabsSpeechOutput (via proxy),
+               ElevenLabsSpeechOutput (via proxy; the only voice),
                VoiceSessionProvider (the only thing the UI talks to).
   data/        SessionRepository: SQLite on device, localStorage on web; seed samples.
   viz/         SkSL shaders (body field, breathing field), BodyMapState → uniforms.
