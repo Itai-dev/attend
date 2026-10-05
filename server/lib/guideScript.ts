@@ -49,6 +49,8 @@ export type GuideScript = {
   ACK_UNCERTAIN: string[];
   ACK_SILENCE: string[];
   EXPLORE_QUALITY: string[];
+  QUALITY_HINT: Line[][];
+  DEEPEN_BY_FAMILY: { [family: string]: string[] };
   EXPLORE_DEEPEN: string[];
   EXPLORE_SHAPE: string[];
   EXPLORE_EDGE: string[];
@@ -166,10 +168,42 @@ export const GUIDE_SCRIPT: GuideScript = {
   ACK_PLAIN: ['Notice that.', 'Stay there for a moment.', 'Give that a few seconds.', 'Interesting.'],
   ACK_UNCERTAIN: ["That's fine. It doesn't need a name.", "That's alright. Just stay near it."],
   ACK_SILENCE: ['Take your time.', 'Stay with it.', "There's no hurry."],
+  // Word menus. Somatic tracking is easier with words to choose from: a few concrete
+  // options, then "something else". Every word offered here is one the app understands
+  // when it's said back (src/domain/lexicon.ts), so the body map can follow.
   EXPLORE_QUALITY: [
-    'Does it feel more like pressure, pulling, squeezing, or something else?',
-    'If you had to describe it, is it more like tightness, burning, aching, or something else?',
+    'Does it feel more like pressure, tightness, or pulling? Or something else?',
+    'Is it more of an ache, a burning, or a buzzing? Or something else?',
+    'If you had to describe it: is it dull, sharp, heavy, or tingling?',
   ],
+
+  // When the first answer has no describing word ("it just hurts", "I don't know").
+  QUALITY_HINT: [
+    [
+      ["There's no right word.", 2500],
+      ['Some people notice tight, heavy, warm, or buzzing.', 3000],
+      ['Does any of those come close?', 0],
+    ],
+    [
+      ['Take your time. Just the nearest word is enough.', 3000],
+      ['Is it more squeezing, aching, burning, or tingling?', 0],
+    ],
+  ],
+
+  // A closer look, using the family of word the person chose: neighbouring words
+  // that help them tell the difference.
+  DEEPEN_BY_FAMILY: {
+    contract: ['Is that {noun} more like a squeeze, a knot, or a stiffness?', 'Does it feel clenched, or more cramping?'],
+    pull: ['Does it pull, stretch, or twist?', 'Is the pulling in one direction, or more like a stretch?'],
+    press: ['Is the pressure more heavy, or more like a squeeze?', 'Is it more like pressing, or more like tightness?'],
+    warm: ['Is it more warm, hot, or burning? Or more raw?', 'Is it a gentle warmth, or more like burning?'],
+    cold: ['Is it cool, or icy? Is there any numbness with it?'],
+    grain: ['Is it more buzzing, tingling, or like pins and needles?', 'Is it a fine tingling, or more electric?'],
+    point: ['Is it sharp in one point, or more shooting, along a line?'],
+    pulse: ['Is it throbbing, or more of a steady ache?'],
+    heavy: ['Is it more heavy, aching, dull, or sore?', 'Is it a deep ache, or more sore, near the surface?'],
+    mute: ['Is it numb, or more dull? Is there any tingling around it?'],
+  },
   EXPLORE_DEEPEN: ["What does '{word}' feel like right now?", 'When you say {word}, what is it like?', "What's the texture of that {noun}?"],
   EXPLORE_SHAPE: ['Is it a small spot, or more spread out?', 'Does it feel focused in one place, or more diffuse?'],
   EXPLORE_EDGE: ['Does it have a clear edge?', 'Can you find where it ends?'],

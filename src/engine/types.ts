@@ -22,6 +22,7 @@ export type AskKind =
   | 'locate_narrow'
   | 'quality'
   | 'quality_deepen'
+  | 'quality_hint'
   | 'shape'
   | 'edge'
   | 'temporal'

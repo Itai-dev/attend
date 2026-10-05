@@ -35,6 +35,13 @@ function hasTemperature(focus: BodySensation): boolean {
   });
 }
 
+/** Neighbouring words for the family the person's word belongs to; the open question when there's no menu. */
+function deepenMenu(focus: BodySensation): string[] {
+  const family = DESCRIPTORS.find((d) => d.word === focus.descriptors[0])?.family;
+  const menu = family ? L.DEEPEN_BY_FAMILY[family] : undefined;
+  return menu?.length ? menu : L.EXPLORE_DEEPEN;
+}
+
 /**
  * The reappraisal the session opens with: for fear, the difference between feeling and
  * reacting; otherwise, not needing to solve it. Later turns pick from the rest.
@@ -222,8 +229,13 @@ export function localTurn(ctx: GuideContext): GuideTurn {
       const generic = focus.descriptors.length === 0;
       let q: ReturnType<typeof question> | undefined;
       if (generic && !asked(ctx, 'quality')) q = question(pickText(L.EXPLORE_QUALITY, ctx), 'quality', ctx, focus);
-      else if (!generic && focus.descriptors.length < 3 && !asked(ctx, 'quality_deepen'))
-        q = question(pickText(L.EXPLORE_DEEPEN, ctx), 'quality_deepen', ctx, focus);
+      else if (generic && !asked(ctx, 'quality_hint')) {
+        // Still no describing word: offer a few to choose from, once, then move on either way.
+        const hint = lines(pickLines(L.QUALITY_HINT, ctx), ctx, focus);
+        const last = hint.pop()!;
+        return turn({ lines: [...prefix, ...react, ...hint, last], expectsResponse: true, ask: 'quality_hint', listenWindowMs: QUESTION_WINDOW_MS });
+      } else if (!generic && focus.descriptors.length < 3 && !asked(ctx, 'quality_deepen'))
+        q = question(pickText(deepenMenu(focus), ctx), 'quality_deepen', ctx, focus);
       else if (!focus.shape && !asked(ctx, 'shape')) q = question(pickText(L.EXPLORE_SHAPE, ctx), 'shape', ctx, focus);
       else if (!focus.edge && !asked(ctx, 'edge')) q = question(pickText(L.EXPLORE_EDGE, ctx), 'edge', ctx, focus);
       else if (!hasTemperature(focus) && !asked(ctx, 'temperature')) q = question(pickText(L.EXPLORE_TEMPERATURE, ctx), 'temperature', ctx, focus);
