@@ -1,6 +1,7 @@
 import { createAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
-import type { SpeechOutput } from '../types';
+import { beginSessionAudio } from '../audioSession';
+import type { SpeechOutput, VoiceError } from '../types';
 
 /**
  * The guide's voice: ElevenLabs, fetched through the Attend voice server so
@@ -12,8 +13,9 @@ import type { SpeechOutput } from '../types';
  * while the current one plays, so the silence between lines is the silence
  * the guide intended, not network latency.
  *
- * Only if a line cannot be fetched at all does the phone's own voice speak
- * it, so an eyes-closed session never simply stops.
+ * There is no second voice. A line that can't be fetched is retried; if it
+ * still can't be had, speak() rejects and the session pauses, so the person
+ * never hears the guide turn into a different, robotic voice mid-practice.
  *
  * Only the guide's own lines go to the server. A line may echo a single word
  * the person used ("Notice that tightness."), never their sentences.
@@ -26,7 +28,12 @@ export type ElevenLabsConfig = {
 };
 
 const PREFETCH = 3;
-const FETCH_TIMEOUT_MS = 9000;
+const FETCH_TIMEOUT_MS = 10_000;
+const ATTEMPTS = 3;
+
+function unavailable(message: string): VoiceError {
+  return { code: 'network', message };
+}
 
 function hash(s: string): string {
   let h1 = 0x811c9dc5;
@@ -47,17 +54,15 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
   private current?: AudioPlayer;
   failures = 0;
 
-  constructor(
-    private readonly cfg: ElevenLabsConfig,
-    private readonly fallback: SpeechOutput,
-  ) {}
+  constructor(private readonly cfg: ElevenLabsConfig) {}
 
   async isAvailable() {
     return !!this.cfg.apiUrl;
   }
 
   async begin() {
-    await this.fallback.begin?.();
+    // Without this the silent switch mutes the guide whenever nothing else set the audio mode (Expo Go).
+    await beginSessionAudio(false);
     try {
       const d = new Directory(Paths.cache, 'guide-voice', this.cfg.voiceId);
       d.create({ intermediates: true, idempotent: true });
@@ -82,28 +87,39 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       try {
         if (file.exists && file.size > 1000) return file.uri;
       } catch {}
-      try {
-        const download = File.downloadFileAsync(this.url(text), file, { headers: this.cfg.headers, idempotent: true });
-        const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), FETCH_TIMEOUT_MS));
-        const saved = await Promise.race([download, timeout]);
-        if (saved.size < 1000) {
-          // An error body (JSON), not audio.
-          try {
-            saved.delete();
-          } catch {}
-          return null;
-        }
-        return saved.uri;
-      } catch {
-        try {
-          if (file.exists) file.delete();
-        } catch {}
-        return null;
+      for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+        const uri = await this.download(text, file);
+        if (uri) return uri;
       }
+      return null;
     })();
     this.inflight.set(text, p);
     p.finally(() => setTimeout(() => this.inflight.delete(text), 0));
     return p;
+  }
+
+  private async download(text: string, file: File): Promise<string | null> {
+    try {
+      const download = File.downloadFileAsync(this.url(text), file, {
+        headers: this.cfg.headers,
+        idempotent: true,
+      });
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), FETCH_TIMEOUT_MS));
+      const saved = await Promise.race([download, timeout]);
+      if (saved.size < 1000) {
+        // An error body (JSON), not audio.
+        try {
+          saved.delete();
+        } catch {}
+        return null;
+      }
+      return saved.uri;
+    } catch {
+      try {
+        if (file.exists) file.delete();
+      } catch {}
+      return null;
+    }
   }
 
   prepare(texts: string[]) {
@@ -116,20 +132,20 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     if (signal.aborted) return;
     if (!uri) {
       this.failures++;
-      return this.fallback.speak(text, signal);
+      throw unavailable('The guide voice could not be reached.');
     }
-    return this.play(uri, text, signal);
+    return this.play(uri, signal);
   }
 
-  private play(uri: string, text: string, signal: AbortSignal): Promise<void> {
+  private play(uri: string, signal: AbortSignal): Promise<void> {
     let player: AudioPlayer;
     try {
       player = createAudioPlayer({ uri }, { updateInterval: 100 });
     } catch {
-      return this.fallback.speak(text, signal);
+      return Promise.reject(unavailable('The guide voice could not be played.'));
     }
     this.current = player;
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       let settled = false;
       const startedAt = Date.now();
       const sub = player.addListener('playbackStatusUpdate', (st: AudioStatus) => {
@@ -157,7 +173,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
           player.remove();
         } catch {}
         if (this.current === player) this.current = undefined;
-        if (failed && !signal.aborted) this.fallback.speak(text, signal).then(resolve);
+        if (failed && !signal.aborted) reject(unavailable('The guide voice could not be played.'));
         else resolve();
       };
       player.play();
@@ -168,7 +184,6 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     try {
       this.current?.pause();
     } catch {}
-    this.fallback.stop();
   }
 
   dispose() {
