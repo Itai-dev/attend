@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import type { SessionType } from '@/domain/types';
 import { haptic, IconButton, PrimaryButton, SectionLabel, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
 import { DEFAULT_LENGTH, SESSION_LENGTHS, SESSION_TYPE_LABELS, type SessionLength } from '@/engine/phases';
+import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { BreathingField } from '@/viz/BreathingField';
 import { greeting } from '../shared/format';
 
@@ -26,6 +27,10 @@ export function HomeScreen() {
   const { sessions, prefs, setPrefs } = useData();
   const [type, setType] = useState<SessionType>('notice');
   const minutes: SessionLength = prefs.sessionMinutes ?? DEFAULT_LENGTH;
+  const { warm } = useVoiceSession();
+  // Ready the chosen session while the person is still looking at Home (and again when the
+  // voice changes), so Begin goes straight into the guide's first words.
+  useEffect(() => warm(type), [type, prefs.voiceId, warm]);
   const lately = useMemo(() => analyzeJourney(sessions).insights[0]?.homeLine, [sessions]);
   const orb = Math.min(width - space.xl * 2, 300);
 

@@ -2,13 +2,13 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
-import { apiHeaders, config, hasRemote } from '../config';
+import { apiHeaders, config, GUIDE_VOICES, hasRemote } from '../config';
 import { repository } from '../data/repository';
 import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
 import { REGIONS } from '../domain/regions';
 import type { SessionType } from '../domain/types';
-import { applyOpening, applyScript, VOICE_DIRECTION } from '../engine/guide/lines';
+import { applyOpening, applyScript, ARRIVE, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
 import type { SessionLength } from '../engine/phases';
@@ -55,6 +55,8 @@ type VoiceSessionValue = {
   debug: DebugEntry[];
   devInput?: DevTextInput;
   start(type: SessionType, minutes?: SessionLength): Promise<void>;
+  /** Prepare a session of this type in the background (script, agent, opening audio). */
+  warm(type: SessionType): void;
   pause(): void;
   resume(): void;
   end(): void;
@@ -109,12 +111,35 @@ async function fetchAgent(type: SessionType): Promise<AgentSettings | undefined>
   return lastAgent[type];
 }
 
+const FRESH_MS = 10 * 60_000;
+const warmedAt: Partial<Record<SessionType, number>> = {};
+
+/**
+ * Get a session ready before it is started: the script, the agent and the audio of the
+ * opening lines. Called from Home, so Begin goes straight into the first word instead of
+ * a silence while these download.
+ */
+async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSettings | undefined> {
+  if (!hasRemote) return undefined;
+  if (Date.now() - (warmedAt[type] ?? 0) > FRESH_MS) {
+    await Promise.all([refreshScript(), fetchAgent(type)]);
+    warmedAt[type] = Date.now();
+  }
+  const agent = lastAgent[type];
+  applyOpening(type, agent?.firstMessage);
+  const opening = [...new Set(ARRIVE[type].flatMap((v) => v.map(([text]) => text)))];
+  const out = chooseOutput(voiceId, agent);
+  if (out instanceof ElevenLabsSpeechOutput) await out.warm(opening).catch(() => {});
+  return agent;
+}
+
 function chooseOutput(voiceId?: string, agent?: AgentSettings): SpeechOutput {
   // ElevenLabs is the guide's only voice. If it can't be reached the session pauses; it never switches to the phone's voice.
   return new ElevenLabsSpeechOutput({
     apiUrl: config.apiUrl,
     headers: apiHeaders(),
-    voiceId: agent?.voiceId ?? voiceId ?? config.voiceId,
+    // A voice chosen in Settings wins; otherwise the session type's agent decides.
+    voiceId: voiceId ?? agent?.voiceId ?? config.voiceId,
     settings: agent,
     direction: () => VOICE_DIRECTION,
   });
@@ -170,15 +195,16 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setDebug([]);
       setSessionType(type);
       setStatus('preparing');
-      // Script first: the agent's opening line is laid over the script's arrival.
-      let agent: AgentSettings | undefined;
-      if (hasRemote) {
-        [, agent] = await Promise.all([refreshScript(), fetchAgent(type)]);
-        applyOpening(type, agent?.firstMessage);
-      }
+      // Usually already warmed from Home. If not, wait briefly, then start with what is known:
+      // a slower network should cost a slightly less fresh script, not a silence.
+      const chosenVoice = GUIDE_VOICES.find((v) => v.id === prefs.voiceId)?.id;
+      const agent = await Promise.race([
+        warmSession(type, chosenVoice),
+        new Promise<AgentSettings | undefined>((r) => setTimeout(() => r(lastAgent[type]), 1500)),
+      ]);
 
       const input = await chooseInput(prefs.dev.inputMode);
-      const output = chooseOutput(prefs.voiceId, agent);
+      const output = chooseOutput(chosenVoice, agent);
       const brain = chooseBrain(prefs.dev.brain, agent);
       setLabels({ input: input.label, output: output.label, brain: brain.id });
       setDevInput(input instanceof DevTextInput ? input : undefined);
@@ -258,6 +284,11 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, []);
 
+  const warm = useCallback((type: SessionType) => {
+    const voiceId = GUIDE_VOICES.find((v) => v.id === dataRef.current.prefs.voiceId)?.id;
+    void warmSession(type, voiceId).catch(() => {});
+  }, []);
+
   const value = useMemo<VoiceSessionValue>(
     () => ({
       status,
@@ -271,6 +302,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       debug,
       devInput,
       start,
+      warm,
       pause: () => runner.current?.pause('button'),
       resume: () => {
         setError(undefined);
@@ -284,7 +316,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         setSessionType(undefined);
       },
     }),
-    [status, error, pausedBy, sessionType, completedSessionId, level, labels, debug, devInput, start],
+    [status, error, pausedBy, sessionType, completedSessionId, level, labels, debug, devInput, start, warm],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

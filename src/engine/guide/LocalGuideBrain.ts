@@ -268,7 +268,9 @@ export function localTurn(ctx: GuideContext): GuideTurn {
 
     case 'CLOSE': {
       const react = ctx.lastResult === 'speech' ? [line('Notice that.', 3500, ctx)] : [];
-      return turn({ lines: [...react, ...lines(L.CLOSE[ctx.sessionType], ctx, focus)], expectsResponse: false, end: true });
+      // Announce the end before it comes, then close: never straight from a question into "open your eyes".
+      const prepare = lines(pickLines(L.CLOSE_PREPARE[ctx.sessionType], ctx), ctx, focus);
+      return turn({ lines: [...react, ...prepare, ...lines(L.CLOSE[ctx.sessionType], ctx, focus)], expectsResponse: false, end: true });
     }
     case 'SAFETY_CLOSE':
       return turn({ lines: lines(L.SAFETY_CLOSE, ctx), expectsResponse: false, end: true });

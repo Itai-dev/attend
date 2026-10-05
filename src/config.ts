@@ -19,6 +19,22 @@ export const config = {
 
 export const hasRemote = config.apiUrl.length > 0;
 
+/**
+ * Voices the person can choose in Settings. ElevenLabs premade voices, which every plan can
+ * speak (library voices return 402 without a paid plan). Picked for a calm, unhurried read.
+ * Unset, each session type uses its agent's voice.
+ */
+export const GUIDE_VOICES = [
+  { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', detail: 'Calm, neutral' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', detail: 'Soft, reassuring' },
+  { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', detail: 'Warm, British' },
+  { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', detail: 'Gentle, friendly' },
+  { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', detail: 'Clear, British' },
+  { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George', detail: 'Warm, British' },
+  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', detail: 'Deep, steady' },
+  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', detail: 'Low, measured' },
+] as const;
+
 /** Headers every request to the proxy carries. */
 export function apiHeaders(): Record<string, string> {
   const h: Record<string, string> = {};
