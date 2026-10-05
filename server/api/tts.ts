@@ -1,10 +1,16 @@
-// GET /api/tts?text=&voice=  →  audio/mpeg from ElevenLabs.
+// GET /api/tts?text=&voice=&speed=&stability=&similarity=  →  audio/mpeg from ElevenLabs.
+// voice and the settings come from the session type's ElevenLabs agent (see api/agent.ts).
 // The ElevenLabs key lives only in this project's environment (ELEVENLABS_API_KEY).
 // Responses are cached at Vercel's edge: the same line in the same voice is fetched
 // from ElevenLabs once, then served from cache to every phone.
 
 const DEFAULT_VOICE = 'SAz9YHcvj6GT2YYXdXww'; // River
-const ALLOWED = new Set([DEFAULT_VOICE, 'ESDuPqgyZIDDVZTlIrH7', 'Lt0VPfndF8W0Iwvl0bDe']);
+// Any voice chosen in the agents; just a well-formed id.
+const VOICE_ID = /^[A-Za-z0-9]{16,32}$/;
+const param = (url: URL, name: string, min: number, max: number, fallback: number) => {
+  const v = Number(url.searchParams.get(name));
+  return url.searchParams.has(name) && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
+};
 const MAX_CHARS = 320; // a line plus its delivery tags
 
 export async function GET(request: Request): Promise<Response> {
@@ -17,7 +23,14 @@ export async function GET(request: Request): Promise<Response> {
   const text = (url.searchParams.get('text') ?? '').slice(0, MAX_CHARS).trim();
   if (!text) return Response.json({ error: 'no text' }, { status: 400 });
   const requested = url.searchParams.get('voice') ?? DEFAULT_VOICE;
-  const voice = ALLOWED.has(requested) ? requested : DEFAULT_VOICE;
+  const voice = VOICE_ID.test(requested) ? requested : DEFAULT_VOICE;
+  const settings = {
+    stability: param(url, 'stability', 0, 1, 0.5),
+    similarity_boost: param(url, 'similarity', 0, 1, 0.8),
+    style: 0,
+    use_speaker_boost: true,
+    speed: param(url, 'speed', 0.7, 1.2, 0.85),
+  };
   const model = process.env.ATTEND_TTS_MODEL ?? 'eleven_v4';
   // v3/v4 read delivery tags like [softly] [slowly]; older models would speak them aloud.
   const tagged = /^eleven_v[34]/.test(model);
@@ -32,7 +45,7 @@ export async function GET(request: Request): Promise<Response> {
       });
     // Slow and steady: a little under normal speed, high stability. Settings a model
     // doesn't accept (400/422) fall back to the voice's own defaults rather than failing.
-    const r = await call({ stability: 0.5, similarity_boost: 0.8, style: 0, use_speaker_boost: true, speed: 0.85 });
+    const r = await call(settings);
     return r.status === 400 || r.status === 422 ? call() : r;
   };
 

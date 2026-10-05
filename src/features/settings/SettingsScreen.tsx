@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { type ReactNode } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GUIDE_VOICES, hasRemote } from '@/config';
+import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
 import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
@@ -55,7 +55,6 @@ function Choice({ label, detail, selected, disabled, onPress }: { label: string;
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
-  const natural = hasRemote;
   const realCount = sessions.filter((s) => !s.isSample).length;
 
   return (
@@ -67,24 +66,14 @@ export function SettingsScreen() {
 
       <SectionLabel>Guide voice</SectionLabel>
       <Group>
-        {GUIDE_VOICES.map((v, i) => (
-          <View key={v.id}>
-            {i > 0 ? <Hairline /> : null}
-            <Choice
-              label={v.name}
-              detail={v.detail}
-              disabled={!hasRemote}
-              selected={natural && (prefs.voiceId ?? GUIDE_VOICES[0].id) === v.id}
-              onPress={() => setPrefs({ voiceOutput: 'natural', voiceId: v.id })}
-            />
-          </View>
-        ))}
+        <View style={styles.textBlock}>
+          <Txt variant="callout" tone="secondary">
+            {hasRemote
+              ? 'The guide’s voice, pace and tone are set for each kind of session in Attend’s ElevenLabs agents.'
+              : 'The guide’s voice needs the Attend voice server, which isn’t configured in this build.'}
+          </Txt>
+        </View>
       </Group>
-      {!hasRemote ? (
-        <Txt variant="footnote" tone="tertiary" style={styles.note}>
-          The guide’s voice needs the Attend voice server, which isn’t configured in this build.
-        </Txt>
-      ) : null}
 
       <SectionLabel style={styles.section}>Background</SectionLabel>
       <Group>

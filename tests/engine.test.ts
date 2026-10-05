@@ -212,3 +212,17 @@ test('an edited guide script changes the words; off-voice or malformed sections 
   assert.equal(lines.VOICE_DIRECTION, VOICE_DIRECTION);
   assert.equal((await runSession(NECK_SCRIPT)).spoken[0], 'Take a moment to settle in.');
 });
+
+test("the ElevenLabs agent's first message opens the session; an off-voice one is ignored", async () => {
+  const { applyOpening, resetScript } = await import('../src/engine/guide/lines');
+  try {
+    assert.equal(applyOpening('notice', "Let's arrive."), true);
+    const r = await runSession(NECK_SCRIPT);
+    assert.equal(r.spoken[0], "Let's arrive.");
+    assert.equal(applyOpening('notice', "Relax, you're safe."), false);
+    assert.equal((await runSession(NECK_SCRIPT)).spoken[0], "Let's arrive.");
+  } finally {
+    resetScript();
+  }
+  assert.equal((await runSession(NECK_SCRIPT)).spoken[0], 'Take a moment to settle in.');
+});
