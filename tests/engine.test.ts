@@ -237,3 +237,16 @@ test('the end is announced before the closing lines, and the last line is held i
   const { CLOSE } = await import('../src/engine/guide/lines');
   for (const type of ['notice', 'flare', 'sleep', 'fear'] as const) assert.ok(CLOSE[type][CLOSE[type].length - 1][1] >= 7000, type);
 });
+
+test('somatic tracking: curiosity framed at arrival, lightness once as watching begins, temperature asked when unknown', async () => {
+  const r = await runSession(NECK_SCRIPT, { minutes: 10 });
+  const arrival = r.spoken.slice(0, 4).join(' ');
+  assert.match(arrival, /curious|curiosity/);
+  const light = r.spoken.filter((l) => /lightness|nothing to get right|easy, and interested/.test(l));
+  assert.equal(light.length, 1, light.join(' | '));
+  assert.ok(r.asks.includes('temperature'), r.asks.join(', '));
+
+  // Already said it burns: temperature is known, so not asked.
+  const hot = await runSession({ ...NECK_SCRIPT, notice: 'My neck is burning on the left side.' }, { minutes: 10 });
+  assert.ok(!hot.asks.includes('temperature'), hot.asks.join(', '));
+});

@@ -25,6 +25,7 @@ export type AskKind =
   | 'shape'
   | 'edge'
   | 'temporal'
+  | 'temperature'
   | 'movement'
   | 'change'
   | 'reflect'

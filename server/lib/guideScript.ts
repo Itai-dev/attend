@@ -53,6 +53,8 @@ export type GuideScript = {
   EXPLORE_SHAPE: string[];
   EXPLORE_EDGE: string[];
   EXPLORE_TEMPORAL: string[];
+  EXPLORE_TEMPERATURE: string[];
+  LIGHTNESS: Line[][];
   HOLD: Line[][];
   OBSERVE_MOVEMENT_STATIC: string[];
   OBSERVE_MOVEMENT: string[];
@@ -82,12 +84,14 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let the phone rest, and let your eyes close.', 4500],
-        ["There's nothing you need to fix right now.", 5500],
+        ["There's nothing you need to fix right now.", 4000],
+        ["We're not trying to change anything. Just to watch, with curiosity.", 5000],
       ],
       [
         ['Take a moment to settle in.', 3500],
         ['Get comfortable, and let your eyes close.', 5000],
-        ["There's nothing you need to fix right now.", 5500],
+        ["There's nothing you need to fix right now.", 4000],
+        ["For the next few minutes, we'll simply be curious about what's there.", 5000],
       ],
     ],
     flare: [
@@ -95,7 +99,8 @@ export const GUIDE_SCRIPT: GuideScript = {
         ["Let's take this slowly.", 3500],
         ['Let the phone rest, and let your eyes close.', 4500],
         ["You don't have to make anything go away right now.", 5000],
-        ['Let your breath be however it is.', 5000],
+        ['Let your breath be however it is.', 4500],
+        ["We'll just watch it for a while, without needing it to change.", 5000],
       ],
     ],
     sleep: [
@@ -109,7 +114,8 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let your eyes close.', 4000],
-        ["We'll go slowly. You can stop at any time, just by saying so.", 5500],
+        ["We'll go slowly. You can stop at any time, just by saying so.", 4500],
+        ["We're not here to solve it. Just to look at it, with curiosity.", 5000],
       ],
     ],
   },
@@ -167,11 +173,35 @@ export const GUIDE_SCRIPT: GuideScript = {
   EXPLORE_DEEPEN: ["What does '{word}' feel like right now?", 'When you say {word}, what is it like?', "What's the texture of that {noun}?"],
   EXPLORE_SHAPE: ['Is it a small spot, or more spread out?', 'Does it feel focused in one place, or more diffuse?'],
   EXPLORE_EDGE: ['Does it have a clear edge?', 'Can you find where it ends?'],
+  // Temperature is one of the plainest qualities to notice, and rarely a frightening one.
+  EXPLORE_TEMPERATURE: ['Does it feel warm, cool, or neither?', 'Is there any temperature to it? Warm, cool, or neutral?'],
+
+  // Said once as watching begins. Somatic tracking works best with lightness — curiosity,
+  // even interest — rather than vigilance. Outcome-independent: nothing has to happen.
+  LIGHTNESS: [
+    [
+      ["See if you can watch it with a little lightness, the way you'd watch something interesting.", 7000],
+      ["Whatever it does next is fine. It doesn't need to change.", 6000],
+    ],
+    [
+      ["There's nothing to get right here.", 4000],
+      ['Just be curious about what it does next, as if you were noticing it for the first time.', 8000],
+    ],
+    [
+      ['Let your attention be easy, and interested.', 5000],
+      ["You're not waiting for it to go away. Only watching what it does.", 7000],
+    ],
+  ],
+
   EXPLORE_TEMPORAL: [
     'Is it steady, or does it pulse, or come in waves?',
     'Does it stay constant, or change from moment to moment?',
   ],
   HOLD: [
+    [
+      ['Stay with it, the way you might watch clouds pass.', 14000],
+      ['What is it doing now?', 0],
+    ],
     [
       ['Just stay with it for a while.', 14000],
       ["What's here now?", 0],
@@ -187,6 +217,11 @@ export const GUIDE_SCRIPT: GuideScript = {
     'And does it stay in one place, or do you notice any movement?',
   ],
   OBSERVE_CHANGE: [
+    [
+      ['Keep watching it closely.', 6000],
+      ['It might grow, or shrink, or move, or stay just the same. Any of these is fine.', 9000],
+      ['What do you notice now?', 0],
+    ],
     [
       ['Notice whether anything shifts when you simply observe it.', 10000],
       ['Is there any part of it that feels different from a moment ago?', 0],
@@ -231,6 +266,10 @@ export const GUIDE_SCRIPT: GuideScript = {
   REACT_BOUNDARY: [[['Notice the edges softening.', 6000], ['Let them be as clear, or as blurry, as they are.', 5000]]],
   REACT_QUALITY: [[['Notice that {noun}.', 5000], ['Let it be whatever it is now.', 4500]]],
   REAPPRAISE_CORE: [
+    [
+      ['Notice it simply as sensation. Pressure, warmth, tightness. Coming and going.', 8000],
+      ['See if you can let the area around it soften, without needing the sensation itself to change.', 10000],
+    ],
     [
       ["You don't need to solve the sensation right now.", 5000],
       ['See if you can notice it without immediately treating it as an emergency.', 9000],
