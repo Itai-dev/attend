@@ -17,7 +17,15 @@ export async function GET(request: Request): Promise<Response> {
   if (!id) return Response.json({ error: 'unknown type' }, { status: 400 });
 
   const res = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${id}`, { headers: { 'xi-api-key': key } });
-  if (!res.ok) return Response.json({ error: `agent ${res.status}` }, { status: 502 });
+  if (!res.ok) {
+    // ElevenLabs says why (e.g. which permission the key lacks). Its message names no secrets.
+    let detail: unknown;
+    try {
+      const body = await res.json();
+      detail = body?.detail?.message ?? body?.detail?.status ?? body?.detail ?? body;
+    } catch {}
+    return Response.json({ error: `agent ${res.status}`, detail }, { status: 502 });
+  }
   const a = await res.json();
   const tts = a?.conversation_config?.tts ?? {};
   const agent = a?.conversation_config?.agent ?? {};
