@@ -226,3 +226,14 @@ test("the ElevenLabs agent's first message opens the session; an off-voice one i
   }
   assert.equal((await runSession(NECK_SCRIPT)).spoken[0], 'Take a moment to settle in.');
 });
+
+test('the end is announced before the closing lines, and the last line is held in silence', async () => {
+  for (const minutes of [3, 5, 10] as const) {
+    const r = await runSession(NECK_SCRIPT, { minutes });
+    const announced = r.spoken.findIndex((l) => /coming toward the end|begin to come back/.test(l));
+    const room = r.spoken.findIndex((l) => /room around you/.test(l));
+    assert.ok(announced >= 0 && announced < room, `${minutes} min: ${r.spoken.slice(-8).join(' | ')}`);
+  }
+  const { CLOSE } = await import('../src/engine/guide/lines');
+  for (const type of ['notice', 'flare', 'sleep', 'fear'] as const) assert.ok(CLOSE[type][CLOSE[type].length - 1][1] >= 7000, type);
+});

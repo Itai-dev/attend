@@ -69,8 +69,8 @@ function mulberry32(seed: number) {
 const NARROWING_ASKS: AskKind[] = ['locate_where', 'locate_narrow', 'locate_side'];
 /** Do not let observation run past this share of the session if there is still time to fill with silence. */
 const OBSERVE_EXTRA_TURNS = 2;
-/** Roughly how long the closing lines take to speak and hold. */
-const CLOSE_RESERVE_MS = 40_000;
+/** Roughly how long the close takes: the announcement, the closing lines and the final silence. */
+const CLOSE_RESERVE_MS = 70_000;
 
 export class SessionEngine {
   readonly sessionId: string;

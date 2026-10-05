@@ -70,6 +70,7 @@ export type GuideScript = {
   REAPPRAISE_URGE: Line[];
   REAPPRAISE_FAMILIAR: Line[];
   REAPPRAISE_REFLECT: string[];
+  CLOSE_PREPARE: ByType<Line[][]>;
   CLOSE: ByType<Line[]>;
 };
 
@@ -247,33 +248,66 @@ export const GUIDE_SCRIPT: GuideScript = {
   ],
   REAPPRAISE_FAMILIAR: [["This is a sensation you've met many times before.", 5000]],
   REAPPRAISE_REFLECT: ['What do you notice when you meet it this way?', 'What is it like to be with it like this?'],
+  // Said first, so the end never arrives unannounced. The person gets a moment to finish
+  // what they were noticing before attention turns back to the room.
+  CLOSE_PREPARE: {
+    notice: [
+      [
+        ["We're coming toward the end of this practice.", 5000],
+        ['Take a few more moments with whatever is here.', 9000],
+      ],
+      [
+        ["In a little while, we'll begin to come back.", 5000],
+        ['For now, just stay with what you notice.', 9000],
+      ],
+    ],
+    flare: [
+      [
+        ["We're coming toward the end of this practice.", 5500],
+        ["There's no rush. Take a few more breaths with it.", 10000],
+      ],
+    ],
+    sleep: [
+      [
+        ['Soon, I will go quiet, and let you rest.', 7000],
+        ['For a few more moments, just let things be as they are.', 11000],
+      ],
+    ],
+    fear: [
+      [
+        ["We're coming toward the end of this practice.", 5000],
+        ['Take a few more moments with it, at your own pace.', 9000],
+      ],
+    ],
+  },
+
   CLOSE: {
     notice: [
       ["Now let the sensation do whatever it's going to do.", 5000],
       ["There's no need to check it again.", 4500],
       ['Notice the room around you.', 4500],
       ['Feel where your body meets the chair, or the bed, or the floor.', 5000],
-      ["When you're ready, open your eyes.", 0],
+      ["When you're ready, open your eyes.", 7000],
     ],
     flare: [
       ["Now let the sensation do whatever it's going to do.", 5000],
       ["There's no need to check it again.", 4500],
       ['Notice the sounds around you.', 4500],
       ['Feel where your body is supported.', 5000],
-      ["When you're ready, open your eyes, and move gently.", 0],
+      ["When you're ready, open your eyes, and move gently.", 7000],
     ],
     sleep: [
       ["Now let the sensation do whatever it's going to do.", 6500],
       ["There's no need to check it again.", 6500],
       ['Let your body be heavy, and supported.', 8000],
-      ["There's nothing else to do now. Just rest.", 0],
+      ["There's nothing else to do now. Just rest.", 12000],
     ],
     fear: [
       ["Now let the sensation do whatever it's going to do.", 5000],
       ["There's no need to check it again.", 4500],
       ['Notice the room around you.', 4500],
       ['Feel where your body meets the chair, or the bed, or the floor.', 5000],
-      ["When you're ready, open your eyes.", 0],
+      ["When you're ready, open your eyes.", 7000],
     ],
   },
 };

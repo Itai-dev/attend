@@ -67,6 +67,11 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
   async begin() {
     // Without this the silent switch mutes the guide whenever nothing else set the audio mode (Expo Go).
     await beginSessionAudio(false);
+    this.ensureDir();
+  }
+
+  private ensureDir() {
+    if (this.dir) return;
     try {
       const d = new Directory(Paths.cache, 'guide-voice', this.cfg.voiceId);
       d.create({ intermediates: true, idempotent: true });
@@ -74,6 +79,15 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     } catch {
       this.dir = null;
     }
+  }
+
+  /**
+   * Download lines ahead of a session (from Home), without touching the audio session.
+   * The session's opening lines are then already on the phone when it starts.
+   */
+  warm(texts: string[]): Promise<unknown> {
+    this.ensureDir();
+    return Promise.all(texts.map((t) => this.fetchLine(this.say(t))));
   }
 
   private url(text: string) {
