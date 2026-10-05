@@ -46,18 +46,18 @@ export function HomeScreen() {
         accessibilityLabel={`Begin a ${minutes} minute session`}
         accessibilityHint="Eyes closed. The guide speaks and listens."
         onPress={begin}
-        style={styles.center}
+        // Pressed dimming lives here, not on the fading-in view: a layout animation and a style
+        // that both drive opacity crash Reanimated on web.
+        style={({ pressed }) => [styles.center, { opacity: pressed ? 0.6 : 1 }]}
       >
-        {({ pressed }) => (
-          <Animated.View entering={FadeIn.duration(1400)} style={{ alignItems: 'center', opacity: pressed ? 0.6 : 1 }}>
-            <Txt variant="display" style={{ fontSize: 44, lineHeight: 50 }}>
-              Begin
-            </Txt>
-            <Txt variant="callout" tone="tertiary" style={{ marginTop: space.s }}>
-              Eyes closed. Just talk.
-            </Txt>
-          </Animated.View>
-        )}
+        <Animated.View entering={FadeIn.duration(1400)} style={{ alignItems: 'center' }}>
+          <Txt variant="display" style={{ fontSize: 44, lineHeight: 50 }}>
+            Begin
+          </Txt>
+          <Txt variant="callout" tone="tertiary" style={{ marginTop: space.s }}>
+            Eyes closed. Just talk.
+          </Txt>
+        </Animated.View>
       </Pressable>
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + space.l }]}>
