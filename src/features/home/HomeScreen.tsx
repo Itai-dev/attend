@@ -8,7 +8,7 @@ import { analyzeJourney } from '@/domain/journey';
 import type { SessionType } from '@/domain/types';
 import { haptic, IconButton, PrimaryButton, SectionLabel, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
-import { SESSION_TYPE_LABELS } from '@/engine/phases';
+import { DEFAULT_LENGTH, SESSION_LENGTHS, SESSION_TYPE_LABELS, type SessionLength } from '@/engine/phases';
 import { BreathingField } from '@/viz/BreathingField';
 import { greeting } from '../shared/format';
 
@@ -23,8 +23,9 @@ const TYPES: SessionType[] = ['notice', 'flare', 'sleep', 'fear'];
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { sessions } = useData();
+  const { sessions, prefs, setPrefs } = useData();
   const [type, setType] = useState<SessionType>('notice');
+  const minutes: SessionLength = prefs.sessionMinutes ?? DEFAULT_LENGTH;
   const lately = useMemo(() => analyzeJourney(sessions).insights[0]?.homeLine, [sessions]);
   const orb = Math.min(width - space.xl * 2, 300);
 
@@ -51,10 +52,35 @@ export function HomeScreen() {
         A few minutes, eyes closed. Just talk.
       </Txt>
 
+      {/* Length first, then begin — chosen with the eyes open, so nothing needs deciding once they close. */}
+      <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Session length">
+        {SESSION_LENGTHS.map((m) => {
+          const selected = m === minutes;
+          return (
+            <Pressable
+              key={m}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              accessibilityLabel={`${m} minutes`}
+              onPress={() => {
+                if (selected) return;
+                haptic('select');
+                setPrefs({ sessionMinutes: m });
+              }}
+              style={({ pressed }) => [styles.length, selected && styles.lengthOn, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Txt variant="callout" tone={selected ? 'inverse' : 'secondary'}>
+                {m} min
+              </Txt>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <PrimaryButton
         label="Begin a session"
-        detail={`${SESSION_TYPE_LABELS[type].detail} · Eyes closed`}
-        onPress={() => router.push({ pathname: '/session', params: { type } })}
+        detail={`${minutes} minutes · Eyes closed`}
+        onPress={() => router.push({ pathname: '/session', params: { type, minutes: String(minutes) } })}
       />
 
       <View style={{ marginTop: space.xl }} accessibilityRole="radiogroup">
@@ -108,6 +134,28 @@ const styles = StyleSheet.create({
   wordmark: {
     letterSpacing: 3.2,
     fontSize: 12,
+  },
+  lengths: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    gap: space.xs,
+    padding: space.xs,
+    marginBottom: space.l,
+    borderRadius: radius.pill,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.hairline,
+  },
+  length: {
+    minWidth: 76,
+    minHeight: HIT - 4,
+    paddingHorizontal: space.l,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+  },
+  lengthOn: {
+    backgroundColor: color.text,
   },
   row: {
     flexDirection: 'row',

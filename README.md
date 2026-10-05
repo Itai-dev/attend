@@ -81,6 +81,9 @@ src/
   design/      Tokens and a handful of components. System type, Dynamic Type.
   features/    Screens. app/ holds routes only.
 supabase/functions/attend   The proxy: POST /guide (Claude), GET /tts (ElevenLabs).
+server/                     The voice server on Vercel: GET /tts (ElevenLabs v4), GET /script, POST /guide.
+server/lib/guideScript.ts   Everything the guide says. Edit and commit: the next session on every
+                            phone uses it, no rebuild. Safety lines stay fixed in the app.
 tests/                      node:test, run through tsx.
 ```
 

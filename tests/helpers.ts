@@ -2,6 +2,7 @@ import { SessionEngine } from '../src/engine/SessionEngine';
 import { LocalGuideBrain } from '../src/engine/guide/LocalGuideBrain';
 import type { AskKind, GuideBrain } from '../src/engine/types';
 import type { SessionType } from '../src/domain/types';
+import type { SessionLength } from '../src/engine/phases';
 
 export type Script = Partial<Record<AskKind | 'default', string | string[] | null>>;
 
@@ -12,10 +13,10 @@ export type Script = Partial<Record<AskKind | 'default', string | string[] | nul
  */
 export async function runSession(
   script: Script,
-  opts: { type?: SessionType; brain?: GuideBrain; seed?: number; maxTurns?: number } = {},
+  opts: { type?: SessionType; minutes?: SessionLength; brain?: GuideBrain; seed?: number; maxTurns?: number } = {},
 ) {
   let t = 1_000_000;
-  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', now: () => t, seed: opts.seed ?? 3 });
+  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', minutes: opts.minutes, now: () => t, seed: opts.seed ?? 3 });
   const brain = opts.brain ?? new LocalGuideBrain();
   const spoken: string[] = [];
   const asks: Array<AskKind | undefined> = [];

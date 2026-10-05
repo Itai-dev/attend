@@ -5,7 +5,7 @@
 
 const DEFAULT_VOICE = 'SAz9YHcvj6GT2YYXdXww'; // River
 const ALLOWED = new Set([DEFAULT_VOICE, 'ESDuPqgyZIDDVZTlIrH7', 'Lt0VPfndF8W0Iwvl0bDe']);
-const MAX_CHARS = 260;
+const MAX_CHARS = 320; // a line plus its delivery tags
 
 export async function GET(request: Request): Promise<Response> {
   const key = process.env.ELEVENLABS_API_KEY;
@@ -18,18 +18,23 @@ export async function GET(request: Request): Promise<Response> {
   if (!text) return Response.json({ error: 'no text' }, { status: 400 });
   const requested = url.searchParams.get('voice') ?? DEFAULT_VOICE;
   const voice = ALLOWED.has(requested) ? requested : DEFAULT_VOICE;
-  const model = process.env.ATTEND_TTS_MODEL ?? 'eleven_multilingual_v2';
+  const model = process.env.ATTEND_TTS_MODEL ?? 'eleven_v4';
+  // v3/v4 read delivery tags like [softly] [slowly]; older models would speak them aloud.
+  const tagged = /^eleven_v[34]/.test(model);
+  const spoken = tagged ? text : text.replace(/\[[^\]]*\]\s*/g, '').trim();
 
-  const speak = (v: string) =>
-    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${v}?output_format=mp3_44100_128`, {
-      method: 'POST',
-      headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
-      body: JSON.stringify({
-        text,
-        model_id: model,
-        voice_settings: { stability: 0.62, similarity_boost: 0.8, style: 0.08, use_speaker_boost: true, speed: 0.9 },
-      }),
-    });
+  const speak = async (v: string) => {
+    const call = (voice_settings?: Record<string, unknown>) =>
+      fetch(`https://api.elevenlabs.io/v1/text-to-speech/${v}?output_format=mp3_44100_128`, {
+        method: 'POST',
+        headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
+        body: JSON.stringify({ text: spoken, model_id: model, ...(voice_settings ? { voice_settings } : {}) }),
+      });
+    // Slow and steady: a little under normal speed, high stability. Settings a model
+    // doesn't accept (400/422) fall back to the voice's own defaults rather than failing.
+    const r = await call({ stability: 0.5, similarity_boost: 0.8, style: 0, use_speaker_boost: true, speed: 0.85 });
+    return r.status === 400 || r.status === 422 ? call() : r;
+  };
 
   let res = await speak(voice);
   // Library voices need a paid ElevenLabs plan (402). The app has no other voice to fall back

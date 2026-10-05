@@ -173,3 +173,42 @@ test('when the guide voice cannot be reached, the session pauses instead of swit
   runner.end();
   await run;
 });
+
+test('the length chosen on Home sets the session length; shorter says less, it does not hurry', async () => {
+  const short = await runSession(NECK_SCRIPT, { minutes: 3 });
+  const mid = await runSession(NECK_SCRIPT, { minutes: 5 });
+  const long = await runSession(NECK_SCRIPT, { minutes: 10 });
+  for (const r of [short, mid, long]) {
+    assert.equal(r.session.outcome, 'completed');
+    assert.match(r.spoken[r.spoken.length - 1], /open your eyes/);
+  }
+  assert.ok(short.durationMs < 4 * 60_000, `3 min ran ${short.durationMs}`);
+  assert.ok(mid.durationMs < 6.5 * 60_000, `5 min ran ${mid.durationMs}`);
+  assert.ok(long.durationMs > mid.durationMs && long.durationMs < 12 * 60_000, `10 min ran ${long.durationMs}`);
+  assert.ok(short.asks.length < long.asks.length, `${short.asks.length} vs ${long.asks.length}`);
+});
+
+test('an edited guide script changes the words; off-voice or malformed sections keep the bundled words', async () => {
+  const { applyScript, resetScript, VOICE_DIRECTION } = await import('../src/engine/guide/lines');
+  const { GUIDE_SCRIPT } = await import('../server/lib/guideScript');
+  try {
+    const edited = JSON.parse(JSON.stringify(GUIDE_SCRIPT));
+    edited.ARRIVE.notice = [[['Arrive here, slowly.', 4000]]];
+    edited.voice.direction = '[whispers]';
+    edited.CLOSE.notice = [["You're safe now. Open your eyes.", 0]]; // forbidden language
+    edited.HOLD = 'not a list'; // malformed
+    const rejected = applyScript(edited);
+    assert.deepEqual(rejected.sort(), ['CLOSE', 'HOLD']);
+    const r = await runSession(NECK_SCRIPT);
+    assert.equal(r.spoken[0], 'Arrive here, slowly.');
+    assert.ok(!r.spoken.some((l) => /safe now/.test(l)));
+    assert.match(r.spoken[r.spoken.length - 1], /open your eyes/);
+    const lines = await import('../src/engine/guide/lines');
+    assert.equal(lines.VOICE_DIRECTION, '[whispers]');
+  } finally {
+    resetScript();
+  }
+  const lines = await import('../src/engine/guide/lines');
+  assert.equal(lines.VOICE_DIRECTION, VOICE_DIRECTION);
+  assert.equal((await runSession(NECK_SCRIPT)).spoken[0], 'Take a moment to settle in.');
+});

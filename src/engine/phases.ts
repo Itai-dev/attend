@@ -47,6 +47,7 @@ export type SessionPlan = {
   reappraiseTurns: number;
 };
 
+/** Each type's shape at its natural length (BASE_MINUTES); planFor scales it to the length chosen on Home. */
 export const PLANS: Record<SessionType, SessionPlan> = {
   notice: { targetMs: 7 * 60_000, pauseScale: 1, exploreTurns: 3, observeTurns: 3, reappraiseTurns: 1 },
   flare: { targetMs: 6 * 60_000, pauseScale: 1.1, exploreTurns: 2, observeTurns: 2, reappraiseTurns: 2 },
@@ -54,11 +55,39 @@ export const PLANS: Record<SessionType, SessionPlan> = {
   fear: { targetMs: 8 * 60_000, pauseScale: 1.15, exploreTurns: 3, observeTurns: 2, reappraiseTurns: 2 },
 };
 
+/** The lengths offered before a session, Headspace-style. Short by default: the app is used, then left. */
+export const SESSION_LENGTHS = [3, 5, 10] as const;
+export type SessionLength = (typeof SESSION_LENGTHS)[number];
+export const DEFAULT_LENGTH: SessionLength = 5;
+
+/**
+ * The plan for a chosen length. Time is the hard limit (the engine closes on
+ * time whatever phase it is in); the turn counts scale with it so a short
+ * session doesn't spend itself on questions. Pauses never shrink — a shorter
+ * session says less, it doesn't hurry — and a longer one holds longer silences.
+ */
+export function planFor(type: SessionType, minutes?: SessionLength): SessionPlan {
+  const base = PLANS[type];
+  if (!minutes) return base;
+  const f = Math.min((minutes * 60_000) / base.targetMs, 1.4);
+  const turns = (n: number) => Math.max(1, Math.round(n * f));
+  return {
+    ...base,
+    targetMs: minutes * 60_000,
+    // A longer session is filled with more silence, not more questions.
+    pauseScale: base.pauseScale * Math.max(1, f),
+    exploreTurns: turns(base.exploreTurns),
+    // Long sessions spend their extra time watching (holds and silence), not exploring.
+    observeTurns: turns(base.observeTurns * (f > 1 ? 1.5 : 1)),
+    reappraiseTurns: turns(base.reappraiseTurns),
+  };
+}
+
 export const SESSION_TYPE_LABELS: Record<SessionType, { title: string; detail: string }> = {
-  notice: { title: 'Just notice what’s here', detail: 'About 7 minutes' },
-  flare: { title: 'Pain flare', detail: 'About 6 minutes, slower' },
-  sleep: { title: 'Before sleep', detail: 'About 8 minutes, ends in rest' },
-  fear: { title: 'Fear around a sensation', detail: 'About 8 minutes' },
+  notice: { title: 'Just notice what’s here', detail: 'Whatever is asking for attention' },
+  flare: { title: 'Pain flare', detail: 'Slower' },
+  sleep: { title: 'Before sleep', detail: 'Ends in rest' },
+  fear: { title: 'Fear around a sensation', detail: 'Goes gently' },
 };
 
 /** Phases during which new detail is elaboration, not change. */

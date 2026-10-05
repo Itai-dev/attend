@@ -16,7 +16,7 @@ import {
   type SessionSignals,
   type SessionType,
 } from '../domain/types';
-import { isClosing, isDescribing, PLANS, type Phase, type SessionPlan } from './phases';
+import { isClosing, isDescribing, planFor, type Phase, type SessionLength, type SessionPlan } from './phases';
 import type { AskKind, GuideContext, GuideLine, GuideTurn, HistoryItem, RemoteObservations, UserTurn } from './types';
 
 /**
@@ -33,6 +33,8 @@ import type { AskKind, GuideContext, GuideLine, GuideTurn, HistoryItem, RemoteOb
 
 export type EngineOptions = {
   sessionType: SessionType;
+  /** Length chosen before the session. Omitted: the type's natural length. */
+  minutes?: SessionLength;
   now?: () => number;
   newId?: (prefix?: string) => string;
   seed?: number;
@@ -67,6 +69,8 @@ function mulberry32(seed: number) {
 const NARROWING_ASKS: AskKind[] = ['locate_where', 'locate_narrow', 'locate_side'];
 /** Do not let observation run past this share of the session if there is still time to fill with silence. */
 const OBSERVE_EXTRA_TURNS = 2;
+/** Roughly how long the closing lines take to speak and hold. */
+const CLOSE_RESERVE_MS = 40_000;
 
 export class SessionEngine {
   readonly sessionId: string;
@@ -107,7 +111,7 @@ export class SessionEngine {
 
   constructor(opts: EngineOptions) {
     this.sessionType = opts.sessionType;
-    this.plan = PLANS[opts.sessionType];
+    this.plan = planFor(opts.sessionType, opts.minutes);
     this.now = opts.now ?? Date.now;
     this.newId = opts.newId ?? defaultNewId;
     this.random = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
@@ -572,7 +576,8 @@ export class SessionEngine {
     const elapsed = this.elapsedMs;
     const target = this.plan.targetMs;
     const early: Phase[] = ['NOTICE', 'LOCATE', 'EXPLORE', 'OBSERVE'];
-    if (elapsed > target * 0.95) this.setPhase('CLOSE');
+    // Closing takes about half a minute; start it early enough that a short session still ends on time.
+    if (elapsed > Math.min(target * 0.95, target - CLOSE_RESERVE_MS)) this.setPhase('CLOSE');
     else if (elapsed > target * 0.75 && early.includes(this._phase) && this.focus)
       this.setPhase(this.reappraiseAllowed() ? 'REAPPRAISE' : 'CLOSE');
     else if (elapsed > target * 0.5 && (this._phase === 'LOCATE' || this._phase === 'EXPLORE') && this.focus) this.setPhase('OBSERVE');

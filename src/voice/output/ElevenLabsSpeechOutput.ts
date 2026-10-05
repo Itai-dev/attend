@@ -25,6 +25,8 @@ export type ElevenLabsConfig = {
   apiUrl: string;
   headers?: Record<string, string>;
   voiceId: string;
+  /** ElevenLabs v4 delivery tags spoken before every line, e.g. "[softly] [slowly]". From the guide script. */
+  direction?: () => string;
 };
 
 const PREFETCH = 3;
@@ -122,13 +124,19 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     }
   }
 
+  /** What is sent to the voice: the line with its delivery direction. Part of the cache key, so a new direction re-records. */
+  private say(text: string) {
+    const d = this.cfg.direction?.().trim();
+    return d ? `${d} ${text}` : text;
+  }
+
   prepare(texts: string[]) {
-    for (const t of texts.slice(0, PREFETCH)) void this.fetchLine(t);
+    for (const t of texts.slice(0, PREFETCH)) void this.fetchLine(this.say(t));
   }
 
   async speak(text: string, signal: AbortSignal): Promise<void> {
     if (signal.aborted) return;
-    const uri = await this.fetchLine(text);
+    const uri = await this.fetchLine(this.say(text));
     if (signal.aborted) return;
     if (!uri) {
       this.failures++;
