@@ -74,6 +74,8 @@ export type GuideScript = {
   REAPPRAISE_URGE: Line[];
   REAPPRAISE_FAMILIAR: Line[];
   REAPPRAISE_REFLECT: string[];
+  LONGER_ACK: Line[][];
+  WRAP_ACK: Line[][];
   CLOSE_PREPARE: ByType<Line[][]>;
   CLOSE: ByType<Line[]>;
 };
@@ -321,6 +323,12 @@ export const GUIDE_SCRIPT: GuideScript = {
   ],
   REAPPRAISE_FAMILIAR: [["This is a sensation you've met many times before.", 5000]],
   REAPPRAISE_REFLECT: ['What do you notice when you meet it this way?', 'What is it like to be with it like this?'],
+  // "A little longer": a short yes, then the guide carries on where it was.
+  LONGER_ACK: [[['Of course. A little longer.', 3000]], [["Okay. We'll take a few more minutes.", 3000]]],
+
+  // "That's enough for today": no announcement, straight to a gentle close.
+  WRAP_ACK: [[['Okay.', 2500]], [["Alright. Let's finish here.", 3000]]],
+
   // Said first, so the end never arrives unannounced. The person gets a moment to finish
   // what they were noticing before attention turns back to the room.
   CLOSE_PREPARE: {

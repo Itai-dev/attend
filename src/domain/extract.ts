@@ -23,7 +23,7 @@ export type RegionMention = {
 };
 
 export type IntensityShift = 'softer' | 'stronger' | 'same';
-export type Command = 'pause' | 'resume' | 'stop' | 'repeat';
+export type Command = 'pause' | 'resume' | 'stop' | 'repeat' | 'longer' | 'wrap';
 
 export type Observation = {
   raw: string;
@@ -52,6 +52,7 @@ export type Observation = {
   acceptance: boolean;
   urgeToFix: boolean;
   fear: boolean;
+  flare: boolean;
   wordCount: number;
 };
 
@@ -277,13 +278,20 @@ export function extract(raw: string): Observation {
     else if (/^(what|sorry|pardon|repeat( that)?|say (that|it) again|come again|can you repeat( that)?|i didn'?t (hear|catch) (that|it))\??$/.test(text))
       command = 'repeat';
   }
-  if (/\b(stop the session|end (the )?session|i want to stop|i'?m done|that'?s enough for (now|today)|let'?s stop|i need to stop|stop now|end now)\b/.test(text))
+  // "Enough for today" closes gently (back to the room); "stop" ends now.
+  if (/\b(that'?s enough( for (now|today))?|i'?m done|i think i'?m done|let'?s (finish|wrap up|wrap it up)|we can (finish|end) (now|here)|ready to (finish|end))\b/.test(text))
+    command = 'wrap';
+  if (/\b(stop the session|end (the )?session|i want to stop|let'?s stop|i need to stop|stop now|end now)\b/.test(text))
     command = 'stop';
+  if (wordCount <= 10 && /\b(a (little|bit) longer|(some )?more time|longer please|can we (go|keep going) (a bit )?longer|keep going (a bit|a little) (longer|more)|not (done|finished) yet|i'?d like more time)\b/.test(text))
+    command = 'longer';
 
   const acceptance =
     /\b(let(ting)? it (be|happen|move|stay|do)|it'?s (okay|ok|fine|alright)|just (watching|noticing|observing|feeling) (it)?|allow(ing)? it|accept\w*|curious|interesting|i can (stay|be) with it|i can (watch|observe|notice|feel) it|not fighting|without (trying|needing) to|it can (stay|be there)|being with it)\b/.test(text) &&
     !/\bnot (okay|ok|fine)\b/.test(text);
   const urgeToFix = /\b(want(ing)? (it|this) (to )?(stop|go away|gone|to leave)|make it (stop|go away)|trying to (relax|fix|stop|get rid)|can'?t stand|need it to|wish it would|get rid of|just want it gone)\b/.test(text);
+  // A flare, in the person's words: the guide slows down and goes gentler.
+  const flare = /\b(flar\w*|really bad|so bad|very bad|worse than usual|worst (it'?s|it has) been|excruciating|unbearable|killing me|a lot of pain|so much pain|really (hurts|painful|intense)|very (painful|intense))\b/.test(text);
   const fear = /\b(scar\w*|afraid|fear\w*|worr\w*|anxious|anxiety|panic\w*|nervous|frighten\w*|dread|alarm\w*|terrif\w*)\b/.test(text);
 
   return {
@@ -307,6 +315,7 @@ export function extract(raw: string): Observation {
     acceptance,
     urgeToFix,
     fear,
+    flare,
     wordCount,
   };
 }

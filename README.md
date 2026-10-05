@@ -46,19 +46,22 @@ on-device voice and the local adaptive guide — fully offline.
 ## The loop
 
 ```
-Practice ──tap──▶ Session (eyes closed, voice only) ──▶ Recap: "Here's what you noticed." ──▶ Journey
+Begin ──tap──▶ Session (eyes closed, voice only) ──▶ Recap: "Here's what you noticed." ──▶ Begin
+                                                                     Lately (Journey + Body) ◀── a link on Begin
 ```
 
+The app is the session. One screen: the breathing field, **Begin**, and 3 · 5 · 10 min. No session
+types to choose and no tab bar — the guide moves to flare pacing ("it's really bad today") or
+the fear framing ("I'm worried about it") from what's said in the first answers.
+
 1. **Session** — the guide speaks, holds silence, listens, adapts. No tapping, no transcript.
-   Pause / end are there for the eyes-open moments; "pause", "continue", "stop" and "sorry?"
-   also work by voice.
+   Pause / end are there for the eyes-open moments; by voice: "pause", "continue", "sorry?",
+   "a little longer" (+2 min, up to +6), "that's enough for today" (a gentle close) and "stop".
 2. **Recap** — the body map fades in as the eyes open. A short qualitative reflection built
-   only from what was said. "At first / By the end" shows the change on the figure.
-3. **Journey** — earliest map beside the latest, then evidence-backed statements
-   ("Fixed in 4 of your first 4 sessions. Moving or changing in 3 of your last 3."), then
-   every session on a timeline.
-4. **Body** — everything attended to, recent places brighter, and the places returned to in
-   your own words.
+   only from what was said, then back to Begin.
+3. **Lately** — Journey (earliest map beside the latest, evidence-backed statements, every
+   session on a timeline) and Body (everything attended to, the places returned to in your
+   own words), on one quiet page behind Begin.
 
 ---
 

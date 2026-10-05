@@ -96,6 +96,10 @@ export type GuideContext = {
   lastChanges: SensationChange[];
   resumed: boolean;
   repeatRequested: boolean;
+  /** The person just asked for a little longer: acknowledge it before going on. */
+  extended: boolean;
+  /** The person said it's enough for today: close gently, without the "coming to an end" announcement. */
+  closeRequested: boolean;
   lastQuestion?: GuideLine;
   history: HistoryItem[];
   /** Deterministic randomness, so sessions vary but tests do not. */

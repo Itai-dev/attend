@@ -27,8 +27,11 @@ export type ElevenLabsConfig = {
   voiceId: string;
   /** ElevenLabs v4 delivery tags spoken before every line, e.g. "[softly] [slowly]". From the guide script. */
   direction?: () => string;
-  /** Voice settings from the session type's ElevenLabs agent. Part of the cache key, so a change re-records. */
-  settings?: { speed?: number; stability?: number; similarity?: number };
+  /**
+   * Voice settings from the ElevenLabs agent for the session's current type (it can change
+   * mid-session, when the guide adapts to a flare). Part of the cache key, so a change re-records.
+   */
+  settings?: () => { speed?: number; stability?: number; similarity?: number } | undefined;
 };
 
 const PREFETCH = 3;
@@ -92,7 +95,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
 
   private url(text: string) {
     const base = this.cfg.apiUrl.replace(/\/$/, '');
-    const s = this.cfg.settings ?? {};
+    const s = this.cfg.settings?.() ?? {};
     const extra = (['speed', 'stability', 'similarity'] as const)
       .filter((k) => typeof s[k] === 'number')
       .map((k) => `&${k}=${s[k]}`)
