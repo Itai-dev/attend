@@ -1,18 +1,17 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { useEffect, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GUIDE_VOICES, hasRemote } from '@/config';
+import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
 import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
 import { speechModule } from '@/voice/speechModule';
-import { previewVoice, stopPreview } from '@/voice/voicePreview';
 
 /**
- * Settings, kept short. Voice, privacy, samples, what this is not — and, in
+ * Settings, kept short. Background sound, privacy, samples, what this is not — and, in
  * development builds only, the switches for testing without a microphone.
  */
 
@@ -56,9 +55,6 @@ function Choice({ label, detail, selected, disabled, onPress }: { label: string;
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
-  useEffect(() => stopPreview, []);
-  // A voice saved by an older build that is no longer offered counts as no choice.
-  const chosenVoice = GUIDE_VOICES.find((v) => v.id === prefs.voiceId)?.id;
   const realCount = sessions.filter((s) => !s.isSample).length;
 
   return (
@@ -68,40 +64,7 @@ export function SettingsScreen() {
         <QuietButton label="Done" tone="primary" onPress={() => router.back()} />
       </View>
 
-      <SectionLabel>Guide voice</SectionLabel>
-      {hasRemote ? (
-        <Group>
-          <Choice
-            label="Each session’s own voice"
-            detail="Set for each kind of session in ElevenLabs"
-            selected={!chosenVoice}
-            onPress={() => {
-              stopPreview();
-              setPrefs({ voiceId: undefined });
-            }}
-          />
-          {GUIDE_VOICES.map((v) => (
-            <View key={v.id}>
-              <Hairline />
-              <Choice
-                label={v.name}
-                detail={v.detail}
-                selected={chosenVoice === v.id}
-                onPress={() => {
-                  setPrefs({ voiceId: v.id });
-                  previewVoice(v.id);
-                }}
-              />
-            </View>
-          ))}
-        </Group>
-      ) : (
-        <Txt variant="footnote" tone="tertiary" style={styles.note}>
-          The guide’s voice needs the Attend voice server, which isn’t configured in this build.
-        </Txt>
-      )}
-
-      <SectionLabel style={styles.section}>Background</SectionLabel>
+      <SectionLabel>Background</SectionLabel>
       <Group>
         <Choice
           label="Soft tone"
@@ -221,9 +184,6 @@ function DeveloperSettings() {
           </Txt>
         </View>
         <Hairline />
-        <Pressable accessibilityRole="button" onPress={() => setPrefs({ onboarded: false })} style={styles.row}>
-          <Txt variant="body">Show onboarding again</Txt>
-        </Pressable>
       </Group>
     </>
   );

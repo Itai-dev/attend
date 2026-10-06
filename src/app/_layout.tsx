@@ -27,6 +27,8 @@ function RootStack() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="recap/[id]" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
+      <Stack.Screen name="body" options={{ presentation: 'card', animation: 'default' }} />
+      <Stack.Screen name="journey/index" options={{ presentation: 'card', animation: 'default' }} />
       <Stack.Screen name="journey/[id]" options={{ presentation: 'card', animation: 'default' }} />
       <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="settings" options={{ presentation: 'modal' }} />

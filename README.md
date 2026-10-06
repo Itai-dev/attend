@@ -46,8 +46,15 @@ on-device voice and the local adaptive guide — fully offline.
 ## The loop
 
 ```
-Practice ──tap──▶ Session (eyes closed, voice only) ──▶ Recap: "Here's what you noticed." ──▶ Journey
+Welcome (a short chat) ──▶ Today / Explore ──tap──▶ Session (eyes closed, voice only) ──▶ Recap ──▶ Journey
 ```
+
+Three tabs: **Today** (the session set up in the welcome, its length, a few others),
+**Explore** (every ready-made session, by what it's for) and **You** (Body, Journey, the
+welcome again, Settings). Each ready-made session (`src/domain/presets.ts`) carries its own
+type, length and voice, so one tap begins it. The welcome (`src/domain/welcome.ts`) asks what
+brings the person here, how much time they have and which voice feels right — never how bad
+anything is — and ends on the safety note.
 
 1. **Session** — the guide speaks, holds silence, listens, adapts. No tapping, no transcript.
    Pause / end are there for the eyes-open moments; "pause", "continue", "stop" and "sorry?"

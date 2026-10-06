@@ -27,7 +27,7 @@ export function JourneyScreen() {
   const pairW = (Math.min(width, 520) - space.xl * 2 - space.m) / 2;
 
   return (
-    <TitledScroll title="Journey">
+    <TitledScroll title="Journey" onBack={() => router.back()}>
       {hasSamples ? (
         <View style={styles.banner}>
           <Txt variant="footnote" tone="secondary" style={{ flex: 1 }}>

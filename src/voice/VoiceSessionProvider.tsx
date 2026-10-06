@@ -54,9 +54,10 @@ type VoiceSessionValue = {
   labels: { input: string; output: string; brain: string };
   debug: DebugEntry[];
   devInput?: DevTextInput;
-  start(type: SessionType, minutes?: SessionLength): Promise<void>;
+  /** `voiceId` is the preset's voice; without one, the person's own choice, then the session type's agent. */
+  start(type: SessionType, minutes?: SessionLength, voiceId?: string): Promise<void>;
   /** Prepare a session of this type in the background (script, agent, opening audio). */
-  warm(type: SessionType): void;
+  warm(type: SessionType, voiceId?: string): void;
   pause(): void;
   resume(): void;
   end(): void;
@@ -133,6 +134,11 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
   return agent;
 }
 
+/** Only voices the app offers; an id saved by an older build counts as no choice. */
+function knownVoice(id?: string): string | undefined {
+  return GUIDE_VOICES.find((v) => v.id === id)?.id;
+}
+
 function chooseOutput(voiceId?: string, agent?: AgentSettings): SpeechOutput {
   // ElevenLabs is the guide's only voice. If it can't be reached the session pauses; it never switches to the phone's voice.
   return new ElevenLabsSpeechOutput({
@@ -187,7 +193,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   dataRef.current = data;
 
   const start = useCallback(
-    async (type: SessionType, minutes?: SessionLength) => {
+    async (type: SessionType, minutes?: SessionLength, voiceId?: string) => {
       if (runner.current) return;
       const prefs = dataRef.current.prefs;
       setError(undefined);
@@ -197,7 +203,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setStatus('preparing');
       // Usually already warmed from Home. If not, wait briefly, then start with what is known:
       // a slower network should cost a slightly less fresh script, not a silence.
-      const chosenVoice = GUIDE_VOICES.find((v) => v.id === prefs.voiceId)?.id;
+      const chosenVoice = knownVoice(voiceId) ?? knownVoice(prefs.voiceId);
       const agent = await Promise.race([
         warmSession(type, chosenVoice),
         new Promise<AgentSettings | undefined>((r) => setTimeout(() => r(lastAgent[type]), 1500)),
@@ -285,9 +291,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  const warm = useCallback((type: SessionType) => {
-    const voiceId = GUIDE_VOICES.find((v) => v.id === dataRef.current.prefs.voiceId)?.id;
-    void warmSession(type, voiceId).catch(() => {});
+  const warm = useCallback((type: SessionType, voiceId?: string) => {
+    void warmSession(type, knownVoice(voiceId) ?? knownVoice(dataRef.current.prefs.voiceId)).catch(() => {});
   }, []);
 
   const value = useMemo<VoiceSessionValue>(
