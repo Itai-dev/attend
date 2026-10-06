@@ -11,7 +11,6 @@ import { color, space } from '@/design/theme';
 import { SESSION_LENGTHS } from '@/engine/phases';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import { BreathingField, type BreathMode } from '@/viz/BreathingField';
-import { VoiceGlow } from '@/viz/VoiceGlow';
 import { clock } from '../shared/format';
 import { DevPanel } from './DevPanel';
 
@@ -91,8 +90,8 @@ export function SessionScreen() {
   return (
     <View style={styles.root}>
       <StatusBar hidden />
-      <BreathingField width={width} height={height} mode={breathMode(vs.status)} level={vs.level} style={StyleSheet.absoluteFill} />
-      <VoiceGlow width={width} mode={breathMode(vs.status)} level={vs.level} />
+      {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
+      <BreathingField width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
         <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="none">
