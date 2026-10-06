@@ -170,7 +170,10 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
   private play(uri: string, signal: AbortSignal): Promise<void> {
     let player: AudioPlayer;
     try {
-      player = createAudioPlayer({ uri }, { updateInterval: 100 });
+      // keepAudioSessionActive: by default expo-audio switches the audio session off ~100 ms after a
+      // player finishes or pauses. Listening starts right after a line, so that cut the recogniser's
+      // microphone mid-start ("audio-capture"/"interrupted") and the session paused after every line.
+      player = createAudioPlayer({ uri }, { updateInterval: 100, keepAudioSessionActive: true });
     } catch {
       return Promise.reject(unavailable('The guide voice could not be played.'));
     }

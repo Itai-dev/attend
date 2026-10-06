@@ -1,4 +1,4 @@
-import { setAudioModeAsync } from 'expo-audio';
+import { setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
 import { Platform } from 'react-native';
 import { speechModule } from './speechModule';
 
@@ -47,6 +47,11 @@ export async function beginSessionAudio(recording: boolean): Promise<void> {
 }
 
 export async function endSessionAudio(): Promise<void> {
+  // The session's players keep the audio session active on purpose; release it here, once,
+  // so other apps' audio can come back.
+  try {
+    await setIsAudioActiveAsync(false);
+  } catch {}
   try {
     await setAudioModeAsync({
       playsInSilentMode: true,

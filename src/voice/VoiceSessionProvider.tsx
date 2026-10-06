@@ -14,6 +14,7 @@ import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
 import type { SessionLength } from '../engine/phases';
 import { SessionEngine } from '../engine/SessionEngine';
 import { SessionRunner, type PauseReason, type RunnerStatus } from '../engine/SessionRunner';
+import { WelcomeRunner, type WelcomeResult } from '../engine/WelcomeRunner';
 import type { GuideBrain } from '../engine/types';
 import { Ambience } from './ambience';
 import { endSessionAudio } from './audioSession';
@@ -58,6 +59,11 @@ type VoiceSessionValue = {
   start(type: SessionType, minutes?: SessionLength, voiceId?: string): Promise<void>;
   /** Prepare a session of this type in the background (script, agent, opening audio). */
   warm(type: SessionType, voiceId?: string): void;
+  /**
+   * The spoken welcome. Resolves with what was understood; `ended` means fall back to tapping
+   * through (asked to, or listening isn't available here).
+   */
+  startWelcome(): Promise<WelcomeResult>;
   pause(): void;
   resume(): void;
   end(): void;
@@ -187,7 +193,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const [debug, setDebug] = useState<DebugEntry[]>([]);
   const [devInput, setDevInput] = useState<DevTextInput | undefined>();
   const level = useSharedValue(0);
-  const runner = useRef<SessionRunner | null>(null);
+  // A session or the spoken welcome: both pause, resume and end the same way.
+  const runner = useRef<SessionRunner | WelcomeRunner | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -276,12 +283,67 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         input.dispose();
         output.dispose();
         ambience?.stop();
-        endSessionAudio().catch(() => {});
+        // After the tone's fade-out: releasing the audio session stops every player at once.
+        // Skipped if another session has started by then.
+        setTimeout(() => {
+          if (!runner.current) endSessionAudio().catch(() => {});
+        }, ambience ? 1400 : 0);
         level.value = 0;
       }
     },
     [level],
   );
+
+  const startWelcome = useCallback(async (): Promise<WelcomeResult> => {
+    if (runner.current) return { answers: {}, ended: true };
+    const prefs = dataRef.current.prefs;
+    setError(undefined);
+    setDebug([]);
+    setStatus('preparing');
+    const input = await chooseInput(prefs.dev.inputMode);
+    setDevInput(input instanceof DevTextInput ? input : undefined);
+    if (!hasRemote || !(await input.isAvailable())) {
+      setStatus('idle');
+      return { answers: {}, ended: true, error: { code: 'unavailable', message: 'Listening isn’t available here.' } };
+    }
+    if (!(await input.requestPermission())) {
+      setStatus('idle');
+      return { answers: {}, ended: true, error: { code: 'permission', message: 'Microphone or speech recognition not allowed.' } };
+    }
+    const welcomeVoice = GUIDE_VOICES[0];
+    const ambience = prefs.ambience === false ? undefined : new Ambience();
+    const r = new WelcomeRunner({
+      input,
+      outputFor: (voiceId) => chooseOutput(voiceId),
+      welcomeVoice,
+      voices: GUIDE_VOICES,
+      onState: (s) => {
+        setStatus(s.status);
+        setPausedBy(s.pausedBy);
+        ambience?.follow(s.status);
+      },
+      onLevel: (l) => {
+        ambience?.hear(l);
+        level.value = withTiming(l, { duration: 160 });
+      },
+      onDebug: __DEV__ ? (e) => setDebug((prev) => [...prev.slice(-80), { ...e, at: Date.now() }]) : undefined,
+    });
+    runner.current = r;
+    activateKeepAwakeAsync('attend-session').catch(() => {});
+    try {
+      return await r.run();
+    } finally {
+      runner.current = null;
+      deactivateKeepAwake('attend-session');
+      input.dispose();
+      ambience?.stop();
+      setTimeout(() => {
+        if (!runner.current) endSessionAudio().catch(() => {});
+      }, ambience ? 1400 : 0);
+      level.value = 0;
+      setStatus('idle');
+    }
+  }, [level]);
 
   // Leaving the app mid-session pauses it; the person resumes when they come back.
   useEffect(() => {
@@ -309,6 +371,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       devInput,
       start,
       warm,
+      startWelcome,
       pause: () => runner.current?.pause('button'),
       resume: () => {
         setError(undefined);
@@ -322,7 +385,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         setSessionType(undefined);
       },
     }),
-    [status, error, pausedBy, sessionType, completedSessionId, level, labels, debug, devInput, start, warm],
+    [status, error, pausedBy, sessionType, completedSessionId, level, labels, debug, devInput, start, warm, startWelcome],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
