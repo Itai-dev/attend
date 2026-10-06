@@ -46,7 +46,7 @@ export function BodyScreen() {
   const mapW = Math.min(width - space.xl * 2, 480);
 
   return (
-    <TitledScroll title="Body">
+    <TitledScroll title="Body" onBack={() => router.back()}>
       <Txt variant="callout" tone="secondary" style={{ marginTop: -space.m, marginBottom: space.l }}>
         Everywhere you’ve attended to. Recent sessions glow brighter.
       </Txt>

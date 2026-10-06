@@ -1,5 +1,5 @@
 import type { EngineDraft } from '../engine/SessionEngine';
-import type { Session, SessionMoment } from '../domain/types';
+import type { Session, SessionMoment, SessionType } from '../domain/types';
 
 /**
  * Local-first storage. No account, no server: sessions live on this device
@@ -33,7 +33,10 @@ export type Prefs = {
   onboarded: boolean;
   samplesSeeded: boolean;
   voiceOutput: VoiceOutputPref;
+  /** The voice chosen in the welcome, used for the session Today offers. Presets carry their own. */
   voiceId?: string;
+  /** What the person said brings them here, in the welcome. Shapes the session Today offers. */
+  focus?: SessionType;
   /** Last length picked on Home, offered again next time. */
   sessionMinutes?: 3 | 5 | 10;
   /** The soft tone under the session. On unless turned off in Settings. */

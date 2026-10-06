@@ -209,10 +209,11 @@ export function IconButton({
 export function TitledScroll({
   title,
   right,
+  onBack,
   children,
   contentStyle,
   ...rest
-}: ScrollViewProps & { title: string; right?: ReactNode; contentStyle?: StyleProp<ViewStyle> }) {
+}: ScrollViewProps & { title: string; right?: ReactNode; onBack?: () => void; contentStyle?: StyleProp<ViewStyle> }) {
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
@@ -221,6 +222,7 @@ export function TitledScroll({
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={[{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }, contentStyle]}
     >
+      {onBack ? <IconButton icon="chevron.left" label="Back" onPress={onBack} tint={color.textSecondary} style={{ marginLeft: -space.m }} /> : null}
       <View style={styles.titleRow}>
         <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
           {title}
@@ -282,6 +284,64 @@ export function Segmented<T extends string>({
   );
 }
 
+/**
+ * A ready answer, as a pill: the welcome's replies, Explore's categories. Right-aligned
+ * stacks of these read as "your side" of the conversation.
+ */
+export function Chip({
+  label,
+  selected,
+  onPress,
+  style,
+}: {
+  label: string;
+  selected?: boolean;
+  onPress: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const p = usePressScale(0.96);
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
+      accessibilityLabel={label}
+      onPressIn={p.onPressIn}
+      onPressOut={p.onPressOut}
+      onPress={() => {
+        haptic('select');
+        onPress();
+      }}
+      style={[styles.chip, selected && styles.chipOn, p.style, style]}
+    >
+      <Txt variant="headline" tone={selected ? 'inverse' : 'primary'} style={{ fontWeight: '500' }}>
+        {label}
+      </Txt>
+      <View style={[styles.chipDot, selected && styles.chipDotOn]} />
+    </AnimatedPressable>
+  );
+}
+
+/** A rounded surface that can be tapped: a preset, a place in You. */
+export function Card({ children, onPress, label, style }: { children: ReactNode; onPress?: () => void; label?: string; style?: StyleProp<ViewStyle> }) {
+  const p = usePressScale(0.98);
+  if (!onPress) return <View style={[styles.card, style]}>{children}</View>;
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPressIn={p.onPressIn}
+      onPressOut={p.onPressOut}
+      onPress={() => {
+        haptic('select');
+        onPress();
+      }}
+      style={[styles.card, p.style, style]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
+
 export function SampleBadge() {
   return (
     <View style={styles.badge} accessibilityLabel="Sample session">
@@ -327,6 +387,38 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: space.m,
+    minHeight: 52,
+    paddingLeft: space.xl,
+    paddingRight: space.l,
+    borderRadius: radius.pill,
+    backgroundColor: color.surfaceStrong,
+  },
+  chipOn: {
+    backgroundColor: color.text,
+  },
+  chipDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  chipDotOn: {
+    backgroundColor: color.onAccent,
+    borderWidth: 5,
+    borderColor: color.text,
+  },
+  card: {
+    borderRadius: radius.l,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.hairline,
+    overflow: 'hidden',
   },
   badge: {
     borderWidth: StyleSheet.hairlineWidth,

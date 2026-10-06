@@ -20,9 +20,9 @@ export const config = {
 export const hasRemote = config.apiUrl.length > 0;
 
 /**
- * Voices the person can choose in Settings. ElevenLabs premade voices, which every plan can
- * speak (library voices return 402 without a paid plan). Picked for a calm, unhurried read.
- * Unset, each session type uses its agent's voice.
+ * The guide voices: built into the presets (src/domain/presets.ts) and offered in the welcome.
+ * ElevenLabs premade voices, which every plan can speak (library voices return 402 without a
+ * paid plan). Picked for a calm, unhurried read. Unset, each session type uses its agent's voice.
  */
 export const GUIDE_VOICES = [
   { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', detail: 'Calm, neutral' },

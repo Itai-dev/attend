@@ -1,150 +1,131 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { analyzeJourney } from '@/domain/journey';
-import type { SessionType } from '@/domain/types';
-import { haptic, IconButton, PrimaryButton, SectionLabel, Txt } from '@/design/components';
+import { PRESETS, recommendedPreset } from '@/domain/presets';
+import { Card, haptic, PrimaryButton, SectionLabel, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
-import { DEFAULT_LENGTH, SESSION_LENGTHS, SESSION_TYPE_LABELS, type SessionLength } from '@/engine/phases';
+import { DEFAULT_LENGTH, SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { BreathingField } from '@/viz/BreathingField';
 import { greeting } from '../shared/format';
+import { PresetCard, startPreset } from '../shared/PresetCard';
 
 /**
- * Practice. One clear thing to do: begin. A handful of contexts below it,
- * and — if Journey has found something — one sentence about lately.
- * No numbers, no streaks, no library.
+ * Today. One clear thing to do: begin the session set up in the welcome. Its length can
+ * change here; everything else was decided with the eyes open, so nothing needs deciding
+ * once they close. Below it, a few other ready sessions and — if Journey has found
+ * something — one sentence about lately. No numbers, no streaks.
  */
-
-const TYPES: SessionType[] = ['notice', 'flare', 'sleep', 'fear'];
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { sessions, prefs, setPrefs } = useData();
-  const [type, setType] = useState<SessionType>('notice');
   const minutes: SessionLength = prefs.sessionMinutes ?? DEFAULT_LENGTH;
+  const yours = useMemo(() => recommendedPreset({ focus: prefs.focus, minutes, voiceId: prefs.voiceId }), [prefs.focus, prefs.voiceId, minutes]);
+  const more = useMemo(
+    () => [...PRESETS.filter((p) => p.type === yours.type && p.id !== yours.id), ...PRESETS.filter((p) => p.type !== yours.type)].slice(0, 3),
+    [yours],
+  );
   const { warm } = useVoiceSession();
-  // Ready the chosen session while the person is still looking at Home (and again when the
-  // voice changes), so Begin goes straight into the guide's first words.
-  useEffect(() => warm(type), [type, prefs.voiceId, warm]);
+  // Ready the session while the person is still looking at Today, so Begin goes straight into the guide's first words.
+  useEffect(() => warm(yours.type, yours.voiceId), [yours.type, yours.voiceId, warm]);
   const lately = useMemo(() => analyzeJourney(sessions).insights[0]?.homeLine, [sessions]);
-  const orb = Math.min(width - space.xl * 2, 300);
+  const orb = Math.min(width - space.xl * 4, 220);
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + space.s, paddingBottom: insets.bottom + 110, paddingHorizontal: space.xl }}
+      contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
     >
-      <View style={styles.header}>
-        <Txt variant="caption" tone="tertiary" style={styles.wordmark} accessibilityRole="header">
-          ATTEND
-        </Txt>
-        <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={color.textSecondary} />
-      </View>
+      <Txt variant="caption" tone="tertiary" style={styles.wordmark} accessibilityRole="header">
+        ATTEND
+      </Txt>
+      <Txt variant="display" style={{ marginTop: space.s }}>
+        {greeting()}
+      </Txt>
 
+      {/* The orb sits on the page, not in the card: the field paints its own background. */}
       <Animated.View entering={FadeIn.duration(1200)} style={{ alignItems: 'center', marginTop: space.l }}>
         <BreathingField width={orb} height={orb} mode="idle" dim={0.85} />
       </Animated.View>
 
-      <Txt variant="title" align="center" style={{ marginTop: space.l }}>
-        {greeting()}
-      </Txt>
-      <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.s, marginBottom: space.xl }}>
-        A few minutes, eyes closed. Just talk.
-      </Txt>
+      <Card style={styles.hero}>
+        <Txt variant="caption" tone="tertiary" align="center" style={styles.kicker}>
+          YOUR SESSION
+        </Txt>
+        <Txt variant="title2" align="center">
+          {yours.title}
+        </Txt>
+        <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.xs }}>
+          {yours.voiceName}’s voice · Eyes closed. Just talk.
+        </Txt>
 
-      {/* Length first, then begin — chosen with the eyes open, so nothing needs deciding once they close. */}
-      <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Session length">
-        {SESSION_LENGTHS.map((m) => {
-          const selected = m === minutes;
-          return (
-            <Pressable
-              key={m}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              accessibilityLabel={`${m} minutes`}
-              onPress={() => {
-                if (selected) return;
-                haptic('select');
-                setPrefs({ sessionMinutes: m });
-              }}
-              style={({ pressed }) => [styles.length, selected && styles.lengthOn, { opacity: pressed ? 0.6 : 1 }]}
-            >
-              <Txt variant="callout" tone={selected ? 'inverse' : 'secondary'}>
-                {m} min
-              </Txt>
-            </Pressable>
-          );
-        })}
-      </View>
+        <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Session length">
+          {SESSION_LENGTHS.map((m) => {
+            const selected = m === minutes;
+            return (
+              <Pressable
+                key={m}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                accessibilityLabel={`${m} minutes`}
+                onPress={() => {
+                  if (selected) return;
+                  haptic('select');
+                  setPrefs({ sessionMinutes: m });
+                }}
+                style={({ pressed }) => [styles.length, selected && styles.lengthOn, { opacity: pressed ? 0.6 : 1 }]}
+              >
+                <Txt variant="callout" tone={selected ? 'inverse' : 'secondary'}>
+                  {m} min
+                </Txt>
+              </Pressable>
+            );
+          })}
+        </View>
 
-      <PrimaryButton
-        label="Begin a session"
-        detail={`${minutes} minutes · Eyes closed`}
-        onPress={() => router.push({ pathname: '/session', params: { type, minutes: String(minutes) } })}
-      />
-
-      <View style={{ marginTop: space.xl }} accessibilityRole="radiogroup">
-        {TYPES.map((t) => {
-          const selected = t === type;
-          return (
-            <Pressable
-              key={t}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              accessibilityLabel={SESSION_TYPE_LABELS[t].title}
-              onPress={() => {
-                if (!selected) haptic('select');
-                setType(t);
-              }}
-              style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
-            >
-              <View style={[styles.dot, selected && styles.dotOn]} />
-              <Txt variant="body" tone={selected ? 'primary' : 'secondary'}>
-                {SESSION_TYPE_LABELS[t].title}
-              </Txt>
-            </Pressable>
-          );
-        })}
-      </View>
+        <PrimaryButton label="Begin" detail={`${minutes} minutes`} onPress={() => startPreset(yours)} />
+      </Card>
 
       {lately ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityHint="Opens Journey"
-          onPress={() => router.navigate('/journey')}
-          style={({ pressed }) => [styles.lately, { opacity: pressed ? 0.7 : 1 }]}
-        >
+        <Card label="Lately. Opens Journey" onPress={() => router.push('/journey')} style={styles.lately}>
           <SectionLabel>Lately</SectionLabel>
           <Txt variant="title2" style={{ fontWeight: '300' }}>
             {lately}
           </Txt>
-        </Pressable>
+        </Card>
       ) : null}
+
+      <SectionLabel style={{ marginTop: space.xxl }}>Also here</SectionLabel>
+      <View style={{ gap: space.m }}>
+        {more.map((p) => (
+          <PresetCard key={p.id} preset={p} />
+        ))}
+      </View>
+      <Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={({ pressed }) => [styles.all, { opacity: pressed ? 0.6 : 1 }]}>
+        <Txt variant="callout" tone="secondary">
+          All sessions in Explore
+        </Txt>
+      </Pressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: HIT,
-  },
-  wordmark: {
-    letterSpacing: 3.2,
-    fontSize: 12,
-  },
+  wordmark: { letterSpacing: 3.2, fontSize: 12 },
+  hero: { marginTop: space.l, padding: space.xl },
+  kicker: { letterSpacing: 1.6, marginBottom: space.xs },
   lengths: {
     flexDirection: 'row',
     alignSelf: 'center',
     gap: space.xs,
     padding: space.xs,
+    marginTop: space.xl,
     marginBottom: space.l,
     borderRadius: radius.pill,
     backgroundColor: color.surface,
@@ -159,33 +140,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.pill,
   },
-  lengthOn: {
-    backgroundColor: color.text,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.m,
-    minHeight: HIT + 4,
-    paddingHorizontal: space.xs,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1.2,
-    borderColor: color.textTertiary,
-  },
-  dotOn: {
-    backgroundColor: color.text,
-    borderColor: color.text,
-  },
-  lately: {
-    marginTop: space.xxl,
-    padding: space.xl,
-    borderRadius: radius.l,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
-  },
+  lengthOn: { backgroundColor: color.text },
+  lately: { marginTop: space.l, padding: space.xl },
+  all: { minHeight: HIT, alignItems: 'center', justifyContent: 'center', marginTop: space.m },
 });
