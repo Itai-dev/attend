@@ -43,7 +43,8 @@ export class Ambience {
   start() {
     if (this.player) return;
     try {
-      this.player = createAudioPlayer(require('../../assets/audio/tone-432.wav'));
+      // Pausing must not switch the audio session off under the recogniser (see ElevenLabsSpeechOutput.play).
+      this.player = createAudioPlayer(require('../../assets/audio/tone-432.wav'), { keepAudioSessionActive: true });
       this.player.loop = true;
       this.player.volume = 0;
       this.player.play();

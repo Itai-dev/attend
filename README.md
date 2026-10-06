@@ -54,7 +54,9 @@ Three tabs: **Today** (the session set up in the welcome, its length, a few othe
 welcome again, Settings). Each ready-made session (`src/domain/presets.ts`) carries its own
 type, length and voice, so one tap begins it. The welcome (`src/domain/welcome.ts`) asks what
 brings the person here, how much time they have and which voice feels right — never how bad
-anything is — and ends on the safety note.
+anything is — and ends on the safety note. It is spoken (`engine/WelcomeRunner.ts`): the same
+screen and loop as a session, answers understood on the device, voices auditioned by ear. A
+tap-through version is the fallback when listening isn't available or the person prefers it.
 
 1. **Session** — the guide speaks, holds silence, listens, adapts. No tapping, no transcript.
    Pause / end are there for the eyes-open moments; "pause", "continue", "stop" and "sorry?"

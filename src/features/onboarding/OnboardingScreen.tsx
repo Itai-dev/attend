@@ -11,14 +11,19 @@ import { Chip, haptic, PrimaryButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
 import { BreathingField } from '@/viz/BreathingField';
+import { VoiceWelcome } from './VoiceWelcome';
 
 /**
- * The welcome, as a short conversation (domain/welcome.ts). The guide's lines appear on the
- * left; the person answers by tapping a ready answer, which stays on the right. Tapping an
- * earlier answer goes back to that question. It ends by setting up the session Today offers.
- *
- * The words are on screen here — this is the one place the app is read, before the eyes close.
+ * The welcome is spoken first (VoiceWelcome): the same experience as a session. This
+ * tap-through version is its fallback — the guide's lines on the left, ready answers on the
+ * right, tapping an earlier answer goes back to it. Both end by setting up the session Today
+ * offers.
  */
+
+export function OnboardingScreen() {
+  const [mode, setMode] = useState<'voice' | 'text'>('voice');
+  return mode === 'voice' ? <VoiceWelcome onTapInstead={() => setMode('text')} /> : <TextWelcome />;
+}
 
 const LATER = 'later';
 
@@ -60,7 +65,8 @@ function GuideLines({ lines, fresh }: { lines: string[]; fresh: boolean }) {
   );
 }
 
-export function OnboardingScreen() {
+/** The tap-through welcome: for when listening isn't available, or the person prefers it. */
+export function TextWelcome() {
   const insets = useSafeAreaInsets();
   const { setPrefs } = useData();
   const [started, setStarted] = useState(false);

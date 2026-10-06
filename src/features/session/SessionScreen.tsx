@@ -20,14 +20,14 @@ import { DevPanel } from './DevPanel';
  * transcript, no questions written out, no body diagram.
  */
 
-const STATUS_WORD: Partial<Record<SessionStatus, string>> = {
+export const STATUS_WORD: Partial<Record<SessionStatus, string>> = {
   preparing: 'Preparing',
   speaking: 'Speaking',
   listening: 'Listening',
   paused: 'Paused',
 };
 
-function breathMode(s: SessionStatus): BreathMode {
+export function breathMode(s: SessionStatus): BreathMode {
   if (s === 'speaking') return 'speaking';
   if (s === 'listening') return 'listening';
   if (s === 'paused' || s === 'error' || s === 'unavailable') return 'paused';
