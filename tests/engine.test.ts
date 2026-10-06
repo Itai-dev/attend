@@ -237,3 +237,44 @@ test('the end is announced before the closing lines, and the last line is held i
   const { CLOSE } = await import('../src/engine/guide/lines');
   for (const type of ['notice', 'flare', 'sleep', 'fear'] as const) assert.ok(CLOSE[type][CLOSE[type].length - 1][1] >= 7000, type);
 });
+
+test('a brief listening interruption is retried instead of pausing the session', async () => {
+  const { SessionEngine } = await import('../src/engine/SessionEngine');
+  const { SessionRunner } = await import('../src/engine/SessionRunner');
+  const engine = new SessionEngine({ sessionType: 'notice', seed: 3 });
+  let listens = 0;
+  const states: string[] = [];
+  // Asks straight away, with no silences, so the test reaches listening at once.
+  const brain = {
+    id: 'ask',
+    next: async () => ({ lines: [{ text: 'What do you notice?', pauseAfterMs: 0 }], expectsResponse: true, source: 'local' as const }),
+  };
+  const runner = new SessionRunner({
+    engine,
+    brain,
+    onState: (s) => states.push(s.status),
+    voice: {
+      output: { id: 'fake', label: 'fake', isAvailable: async () => true, speak: async () => {}, stop() {}, dispose() {} },
+      input: {
+        id: 'fake',
+        label: 'fake',
+        isAvailable: async () => true,
+        requestPermission: async () => true,
+        listen: async (_opts, signal) => {
+          listens++;
+          if (listens === 1) return { kind: 'error', error: { code: 'interrupted', message: 'busy' } };
+          // Then wait to be ended, like a person still noticing.
+          await new Promise((r) => signal.addEventListener('abort', r, { once: true }));
+          return { kind: 'aborted' };
+        },
+        dispose() {},
+      },
+    },
+  });
+  const run = runner.run();
+  await new Promise((r) => setTimeout(r, 1000));
+  assert.equal(listens, 2);
+  assert.ok(!states.includes('paused'));
+  runner.end();
+  await run;
+});

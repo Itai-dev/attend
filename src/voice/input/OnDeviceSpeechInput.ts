@@ -15,10 +15,17 @@ import type { ListenOptions, ListenResult, SpeechInput } from '../types';
  * no new words ends the answer — longer if the last word suggests they are
  * still going ("and", "but", "um", "like"). Silence before any words is
  * not an answer, it is time spent noticing, and is reported as such.
+ *
+ * iOS ends recognition by itself after a few seconds without speech ("no
+ * speech detected"). Reported as silence, that cut a 14-second window to a few
+ * seconds, and a run of those short "silences" walked the engine through its
+ * phases and closed the session while the person was still noticing. So until
+ * the window is used up, the recogniser is simply started again.
  */
 
 const TRAILING = /\b(and|but|or|so|um+|uh+|er+|like|because|it's|its|the|a|kind of|sort of|maybe|then)\s*$/i;
 const VOLUME_SPEAKING = 1.5; // volumechange runs -2..10; above this, someone is making sound.
+const RESTART_DELAY_MS = 300;
 
 export class OnDeviceSpeechInput implements SpeechInput {
   readonly id = 'on-device';
@@ -67,6 +74,7 @@ export class OnDeviceSpeechInput implements SpeechInput {
     if (!m) return Promise.resolve({ kind: 'error', error: { code: 'unavailable', message: 'Speech recognition is not in this build.' } });
     if (signal.aborted) return Promise.resolve({ kind: 'aborted' });
 
+    const onDeviceOnly = this.onDeviceOnly;
     return new Promise<ListenResult>((resolve) => {
       const startedAt = Date.now();
       let transcript = '';
@@ -75,6 +83,7 @@ export class OnDeviceSpeechInput implements SpeechInput {
       let soundAt = 0;
       let settled = false;
       let stopping = false;
+      let restartTimer: ReturnType<typeof setTimeout> | undefined;
 
       const subs = [
         m.addListener('result', (e) => {
@@ -94,7 +103,7 @@ export class OnDeviceSpeechInput implements SpeechInput {
         }),
         m.addListener('error', (e) => {
           if (settled) return;
-          if (e.error === 'no-speech' || e.error === 'speech-timeout') return finish('silence');
+          if (e.error === 'no-speech' || e.error === 'speech-timeout') return recogniserEnded();
           if (e.error === 'aborted') return; // our own abort
           if (e.error === 'not-allowed') return finish('error', { code: 'permission', message: e.message });
           if (e.error === 'audio-capture' || e.error === 'interrupted' || e.error === 'busy')
@@ -104,7 +113,7 @@ export class OnDeviceSpeechInput implements SpeechInput {
           finish('error', { code: 'unknown', message: e.message });
         }),
         m.addListener('end', () => {
-          if (!settled) finish();
+          if (!settled) recogniserEnded();
         }),
       ];
 
@@ -130,6 +139,19 @@ export class OnDeviceSpeechInput implements SpeechInput {
       };
       signal.addEventListener('abort', onAbort, { once: true });
 
+      // The recogniser stopped on its own. With words, that is the answer; without, listen again
+      // until the window is used up (an 'error' and an 'end' both arrive; one restart covers them).
+      function recogniserEnded() {
+        if (settled) return;
+        if (stopping || transcript) return finish();
+        if (restartTimer) return;
+        if (Date.now() - startedAt >= opts.maxWaitMs) return finish('silence');
+        restartTimer = setTimeout(() => {
+          restartTimer = undefined;
+          if (!settled) startRecogniser();
+        }, RESTART_DELAY_MS);
+      }
+
       function requestStop() {
         if (stopping) return;
         stopping = true;
@@ -142,6 +164,7 @@ export class OnDeviceSpeechInput implements SpeechInput {
 
       function cleanup() {
         clearInterval(tick);
+        if (restartTimer) clearTimeout(restartTimer);
         subs.forEach((s) => s.remove());
         signal.removeEventListener('abort', onAbort);
       }
@@ -158,27 +181,30 @@ export class OnDeviceSpeechInput implements SpeechInput {
         resolve({ kind: 'speech', text: transcript, durationMs: Date.now() - (firstWordAt || startedAt) });
       }
 
-      try {
-        m.start({
-          lang: 'en-US',
-          interimResults: true,
-          continuous: true,
-          maxAlternatives: 1,
-          requiresOnDeviceRecognition: this.onDeviceOnly,
-          addsPunctuation: true,
-          contextualStrings: opts.contextualStrings?.slice(0, 100),
-          iosTaskHint: 'dictation',
-          iosCategory: {
-            category: sessionCategoryIOS().category,
-            categoryOptions: [...sessionCategoryIOS().categoryOptions],
-            mode: sessionCategoryIOS().mode,
-          },
-          volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
-          recordingOptions: { persist: false },
-        });
-      } catch (e) {
-        finish('error', { code: 'unavailable', message: String(e) });
+      function startRecogniser() {
+        try {
+          m!.start({
+            lang: 'en-US',
+            interimResults: true,
+            continuous: true,
+            maxAlternatives: 1,
+            requiresOnDeviceRecognition: onDeviceOnly,
+            addsPunctuation: true,
+            contextualStrings: opts.contextualStrings?.slice(0, 100),
+            iosTaskHint: 'dictation',
+            iosCategory: {
+              category: sessionCategoryIOS().category,
+              categoryOptions: [...sessionCategoryIOS().categoryOptions],
+              mode: sessionCategoryIOS().mode,
+            },
+            volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
+            recordingOptions: { persist: false },
+          });
+        } catch (e) {
+          finish('error', { code: 'unavailable', message: String(e) });
+        }
       }
+      startRecogniser();
     });
   }
 

@@ -1,4 +1,4 @@
-import { sleep, type ListenResult, type VoiceError, type VoiceIO } from '../voice/types';
+import { sleep, type ListenOptions, type ListenResult, type VoiceError, type VoiceIO } from '../voice/types';
 import type { Session, SessionMoment } from '../domain/types';
 import type { EngineDraft, SessionEngine } from './SessionEngine';
 import type { Phase } from './phases';
@@ -46,6 +46,13 @@ function withTimeout<T>(p: Promise<T> | undefined, ms: number): Promise<T | unde
   return Promise.race([p, new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), ms))]);
 }
 const MAX_UTTERANCE_MS = 45_000;
+/**
+ * The recogniser can fail to start for a moment ("busy", "audio-capture") while the
+ * guide's audio is being released. Paused on the first one, the session stopped by itself
+ * mid-practice; a real interruption (a call, Siri) still fails again and pauses.
+ */
+const LISTEN_RETRIES = 2;
+const LISTEN_RETRY_MS = 600;
 
 export class SessionRunner {
   private paused: PauseReason | null = null;
@@ -108,7 +115,7 @@ export class SessionRunner {
 
         this.set('listening');
         const lastLine = turn.lines[turn.lines.length - 1]?.text;
-        const result = await this.d.voice.input.listen(
+        const result = await this.listen(
           {
             maxWaitMs: turn.listenWindowMs ?? 14_000,
             endOfUtteranceMs: END_OF_UTTERANCE_MS,
@@ -173,6 +180,16 @@ export class SessionRunner {
       this.paused = null;
       this.resumeWaiters.forEach((w) => w());
       this.resumeWaiters = [];
+    }
+  }
+
+  private async listen(opts: ListenOptions, signal: AbortSignal): Promise<ListenResult> {
+    for (let attempt = 0; ; attempt++) {
+      const r = await this.d.voice.input.listen(opts, signal);
+      if (r.kind !== 'error' || r.error.code !== 'interrupted' || attempt >= LISTEN_RETRIES || signal.aborted) return r;
+      this.debug('system', `listen interrupted (${r.error.message}); listening again`);
+      await sleep(LISTEN_RETRY_MS, signal);
+      if (signal.aborted) return { kind: 'aborted' };
     }
   }
 

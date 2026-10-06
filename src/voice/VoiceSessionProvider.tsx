@@ -234,6 +234,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
           if (s.error) setError(s.error);
         },
         onLevel: (l) => {
+          ambience?.hear(l);
           // Smoothed on the UI thread so the visual follows the voice without flicker.
           level.value = withTiming(l, { duration: 160 });
         },
