@@ -55,6 +55,8 @@ export interface SpeechOutput {
   prepare?(texts: string[]): void;
   /** Resolves when the line has finished, or immediately when aborted. Rejects if the line can't be voiced. */
   speak(text: string, signal: AbortSignal): Promise<void>;
+  /** A short sound that says "your turn", played after a question and before listening. Never rejects. */
+  cue?(signal: AbortSignal): Promise<void>;
   stop(): void;
   begin?(): Promise<void>;
   end?(): Promise<void>;

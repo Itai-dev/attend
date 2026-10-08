@@ -34,7 +34,7 @@ export type RemoteConfig = {
 
 const MAX_LINE_CHARS = 220;
 const MAX_PAUSE_MS = 20_000;
-const LOCAL_ONLY_PHASES = new Set(['ARRIVE', 'SAFETY_CHECK', 'OPEN_AWARENESS']);
+const LOCAL_ONLY_PHASES = new Set(['ARRIVE', 'SCAN', 'SAFETY_CHECK', 'OPEN_AWARENESS']);
 
 export class RemoteGuideBrain implements GuideBrain {
   readonly id = 'claude';
@@ -49,7 +49,10 @@ export class RemoteGuideBrain implements GuideBrain {
       proposal.end ||
       isClosing(ctx.phase) ||
       LOCAL_ONLY_PHASES.has(ctx.phase) ||
-      ctx.repeatRequested
+      // A repeat is the same words again; a question is answered in the model's words,
+      // except a medical one, whose answer is fixed.
+      (ctx.repeatRequested && !(ctx.userQuestion && ctx.userQuestion !== 'cause')) ||
+      ctx.userQuestion === 'cause'
     ) {
       return proposal;
     }
@@ -90,7 +93,10 @@ export class RemoteGuideBrain implements GuideBrain {
   }
 }
 
-/** The context the model sees. It is the conversation and the map, never anything stored from earlier sessions. */
+/**
+ * The context the model sees: the conversation, the map, and from earlier sessions only the
+ * usual place and words (never their transcripts or dates).
+ */
 export function buildPayload(ctx: GuideContext, proposal: GuideTurn, model?: string) {
   const focus = ctx.focus;
   return {
@@ -126,6 +132,10 @@ export function buildPayload(ctx: GuideContext, proposal: GuideTurn, model?: str
     history: ctx.history.slice(-14).map((h) =>
       h.role === 'silence' ? { role: 'silence', seconds: Math.round(h.ms / 1000) } : { role: h.role, text: h.text },
     ),
+    personAsked: ctx.userQuestion ? ctx.lastObservation?.raw ?? null : null,
+    earlier: ctx.memory.usual
+      ? { sessions: ctx.memory.sessions, usualPlace: speakPlace(ctx.memory.usual.region, ctx.memory.usual.side), usualWords: ctx.memory.usual.words }
+      : null,
     proposal: proposal.lines.map((l) => ({ text: l.text, pauseAfterMs: l.pauseAfterMs })),
   };
 }
@@ -146,6 +156,9 @@ function sanitize(raw: unknown, proposal: GuideTurn): GuideLine[] | undefined {
     const last = lines[lines.length - 1];
     if (!/\?\s*$/.test(last.text) && !/^(notice|say|tell)/i.test(last.text)) return undefined;
     last.pauseAfterMs = 0;
+  } else if (lines.some((l) => /\?\s*$/.test(l.text))) {
+    // Nobody is listening after a guidance turn: a question there would go unanswered.
+    return undefined;
   }
   return lines;
 }

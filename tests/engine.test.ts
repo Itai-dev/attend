@@ -278,3 +278,98 @@ test('a brief listening interruption is retried instead of pausing the session',
   runner.end();
   await run;
 });
+
+// ——— Guided body scan, guidance between questions, answering questions, memory ———
+
+test('every session opens with a guided body scan, sized to its length, with nothing asked', async () => {
+  const L = await import('../src/engine/guide/lines');
+  for (const [minutes, steps] of [[5, L.SCAN_SHORT], [10, L.SCAN_FULL]] as const) {
+    const r = await runSession(NECK_SCRIPT, { minutes });
+    const firstAsk = r.transcript.findIndex((t) => t.startsWith('GUIDE ['));
+    const scan = r.transcript.slice(1, firstAsk);
+    assert.equal(scan.length, steps.length, scan.join('\n'));
+    assert.ok(scan.every((t, i) => t.includes(steps[i][0][0])), scan.join('\n'));
+  }
+  const short = await runSession(NECK_SCRIPT, { minutes: 3 });
+  assert.match(short.transcript[1], /your feet/);
+  assert.match(short.transcript[2], /\[notice\]/);
+});
+
+test('observation guides between questions instead of asking "what now?" on repeat', async () => {
+  const r = await runSession(NECK_SCRIPT, { minutes: 10 });
+  const turns = r.transcript.filter((t) => t.startsWith('GUIDE'));
+  const observeFrom = turns.findIndex((t) => t.includes('[movement]'));
+  // After every answer in observation, the next turn guides and asks nothing.
+  for (let i = observeFrom; i < turns.length - 1; i++) {
+    if (turns[i].startsWith('GUIDE [') && turns[i + 1].startsWith('GUIDE [')) assert.fail(`two questions in a row:\n${turns[i]}\n${turns[i + 1]}`);
+  }
+  const L = await import('../src/engine/guide/lines');
+  const guidance = L.GUIDE_OBSERVE.map((v) => v[0][0]);
+  assert.ok(r.spoken.filter((l) => guidance.includes(l)).length >= 2);
+});
+
+test('a question to the guide is answered, then its own question comes again', async () => {
+  const r = await runSession({ ...NECK_SCRIPT, notice: ['What am I supposed to do?', 'My neck is tight on the left side.'] }, { minutes: 5 });
+  const said = r.spoken.join(' ');
+  assert.match(said, /nothing to get right/);
+  assert.deepEqual(r.asks.slice(0, 2), ['notice', 'notice']);
+  assert.equal(r.session.bodyMapStart.sensations[0].region, 'neck');
+});
+
+test('"is this serious?" gets no reassurance: the guide says it cannot tell, and asks once whether it is familiar', async () => {
+  const r = await runSession({ ...NECK_SCRIPT, notice: ['Is this serious?', 'My neck is tight.'] }, { minutes: 5 });
+  const said = r.spoken.join(' ');
+  assert.match(said, /can't tell what's causing it/);
+  assert.match(said, /doctor/);
+  assert.ok(r.asks.includes('familiar'));
+  assert.equal(r.session.outcome, 'completed');
+  const { violatesGuideLanguage } = await import('../src/domain/safety');
+  for (const l of r.spoken) assert.ok(!violatesGuideLanguage(l), l);
+});
+
+test('questions are read from how a sentence opens, not mistaken for answers', async () => {
+  const { extract } = await import('../src/domain/extract');
+  assert.equal(extract('how should I breathe').question, 'breath');
+  assert.equal(extract('is it bad that it hurts this much').question, 'cause');
+  assert.equal(extract('how long is left').question, 'time');
+  assert.equal(extract('can I move my legs').question, 'move');
+  assert.equal(extract('what I feel is a pull in my neck').question, undefined);
+  assert.equal(extract('it does move a bit').question, undefined);
+  assert.equal(extract('what?').question, undefined); // a request to repeat
+});
+
+test('memory: the guide starts where earlier sessions did, and keeps their place and words', async () => {
+  const { buildMemory } = await import('../src/domain/memory');
+  const a = await runSession({ ...BACK_SCRIPT, notice: 'The left side of my lower back.' }, { minutes: 5 });
+  const b = await runSession({ ...BACK_SCRIPT, notice: 'My lower back, on the left. Heavy.' }, { minutes: 5, seed: 9 });
+  const memory = buildMemory([a.session, b.session]);
+  assert.equal(memory.usual?.region, 'lower_back');
+  assert.equal(memory.usual?.side, 'left');
+  assert.equal(memory.usual?.times, 2);
+
+  // Said loosely today ("my back"), it is still the same place, drawn in the same place.
+  const r = await runSession({ ...BACK_SCRIPT, usual_place: 'My back. Heavy again.', usual_word: 'Yes.' }, { minutes: 5, memory });
+  assert.equal(r.asks[0], 'usual_place');
+  assert.match(r.spoken.join(' '), /the left side of your lower back, where you've noticed something before/);
+  const s = r.session.bodyMapStart.sensations[0];
+  assert.equal(s.region, 'lower_back');
+  assert.equal(s.side, 'left');
+  assert.ok(!r.asks.includes('locate_side'), r.asks.join());
+
+  // With no word yet, the word from before is offered first.
+  const w = await runSession({ ...BACK_SCRIPT, usual_place: 'Yes.', usual_word: 'Yes, still.' }, { minutes: 5, memory });
+  assert.ok(w.asks.includes('usual_word'), w.asks.join());
+  assert.ok(w.session.bodyMapStart.sensations[0].descriptors.includes(memory.usual!.words[0]));
+
+  // Somewhere else today is followed, not overridden.
+  const n = await runSession({ ...NECK_SCRIPT, usual_place: 'Actually my neck today, on the left.' }, { minutes: 5, memory });
+  assert.equal(n.session.bodyMapStart.sensations[0].region, 'neck');
+});
+
+test('memory ignores sample sessions, and a first session has none', async () => {
+  const { buildMemory } = await import('../src/domain/memory');
+  const a = await runSession(NECK_SCRIPT, { minutes: 5 });
+  assert.deepEqual(buildMemory([{ ...a.session, isSample: true }]), { sessions: 0 });
+  const r = await runSession(NECK_SCRIPT, { minutes: 5 });
+  assert.equal(r.asks[0], 'notice');
+});

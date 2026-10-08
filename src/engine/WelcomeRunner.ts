@@ -239,6 +239,8 @@ export class WelcomeRunner {
   private async ask(lines: string[], signal: AbortSignal, voiceId?: string): Promise<string | null | undefined> {
     await this.say(lines, signal, voiceId);
     if (signal.aborted) return undefined;
+    await this.out(voiceId ?? this.d.welcomeVoice.id).cue?.(signal);
+    if (signal.aborted) return undefined;
     this.set('listening');
     const r = await this.listen(signal);
     if (signal.aborted || r.kind === 'aborted') return undefined;

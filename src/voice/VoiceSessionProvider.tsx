@@ -6,9 +6,10 @@ import { apiHeaders, config, GUIDE_VOICES, hasRemote } from '../config';
 import { repository } from '../data/repository';
 import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
+import { buildMemory } from '../domain/memory';
 import { REGIONS } from '../domain/regions';
 import type { SessionType } from '../domain/types';
-import { applyOpening, applyScript, ARRIVE, VOICE_DIRECTION } from '../engine/guide/lines';
+import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
 import type { SessionLength } from '../engine/phases';
@@ -136,7 +137,12 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
   applyOpening(type, agent?.firstMessage);
   const opening = [...new Set(ARRIVE[type].flatMap((v) => v.map(([text]) => text)))];
   const out = chooseOutput(voiceId, agent);
-  if (out instanceof ElevenLabsSpeechOutput) await out.warm(opening).catch(() => {});
+  if (out instanceof ElevenLabsSpeechOutput) {
+    await out.warm(opening).catch(() => {});
+    // The scan follows straight after and is the same words every time: fetched once, then cached.
+    const scan = [...SCAN_BRIEF.flat(), ...SCAN_SHORT.flat(), ...SCAN_FULL.flat()].map(([text]) => text);
+    void out.warm([...new Set(scan)]).catch(() => {});
+  }
   return agent;
 }
 
@@ -233,7 +239,9 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const engine = new SessionEngine({ sessionType: type, minutes, keepTranscript: __DEV__ && prefs.dev.keepTranscripts });
+      // Earlier sessions shape this one (where to start, which words): read fresh from the device each time.
+      const memory = buildMemory(dataRef.current.sessions);
+      const engine = new SessionEngine({ sessionType: type, minutes, memory, keepTranscript: __DEV__ && prefs.dev.keepTranscripts });
       const ambience = prefs.ambience === false ? undefined : new Ambience();
       const r = new SessionRunner({
         engine,

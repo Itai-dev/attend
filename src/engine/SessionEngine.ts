@@ -1,9 +1,10 @@
-import { applyObservation, cloneMap, consolidateChanges, type MapState } from '../domain/bodyMap';
-import { extract, hasBodyContent, type Command, type Observation } from '../domain/extract';
+import { applyObservation, cloneMap, consolidateChanges, isWithin, type MapState } from '../domain/bodyMap';
+import { extract, hasBodyContent, type Command, type Observation, type QuestionTopic } from '../domain/extract';
 import { newId as defaultNewId } from '../domain/ids';
 import { DESCRIPTORS } from '../domain/lexicon';
+import type { SessionMemory } from '../domain/memory';
 import { buildRecap } from '../domain/recap';
-import { REGIONS } from '../domain/regions';
+import { REGIONS, speakPlace } from '../domain/regions';
 import { screen } from '../domain/safety';
 import {
   EMPTY_SIGNALS,
@@ -39,6 +40,8 @@ export type EngineOptions = {
   newId?: (prefix?: string) => string;
   seed?: number;
   keepTranscript?: boolean;
+  /** Earlier sessions, so the guide starts where the person usually does and keeps their words. */
+  memory?: SessionMemory;
 };
 
 export type IngestOutcome = { command?: Command };
@@ -66,7 +69,9 @@ function mulberry32(seed: number) {
   };
 }
 
-const NARROWING_ASKS: AskKind[] = ['locate_where', 'locate_narrow', 'locate_side'];
+const NARROWING_ASKS: AskKind[] = ['locate_where', 'locate_narrow', 'locate_side', 'usual_place'];
+/** "Yes", or "same as before": agreement with what was remembered. */
+const SAME = /\b(same|like before|again|that'?s (it|right)|exactly)\b/;
 /** Do not let observation run past this share of the session if there is still time to fill with silence. */
 const OBSERVE_EXTRA_TURNS = 2;
 /** Roughly how long the close takes: the announcement, the closing lines and the final silence. */
@@ -85,6 +90,10 @@ export class SessionEngine {
 
   private _phase: Phase = 'ARRIVE';
   private phaseTurn = 0;
+  private phaseStep = 0;
+  private guided = false;
+  private userQuestion?: QuestionTopic;
+  private readonly memory: SessionMemory;
   private observeSince?: number;
   private observedMs = 0;
   private map: MapState = { current: { sensations: [] }, baseline: { sensations: [] } };
@@ -116,6 +125,7 @@ export class SessionEngine {
     this.newId = opts.newId ?? defaultNewId;
     this.random = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
     this.keepTranscript = opts.keepTranscript ?? false;
+    this.memory = opts.memory ?? { sessions: 0 };
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
   }
@@ -146,6 +156,10 @@ export class SessionEngine {
       plan: this.plan,
       phase: this._phase,
       phaseTurn: this.phaseTurn,
+      phaseStep: this.phaseStep,
+      guided: this.guided,
+      userQuestion: this.userQuestion,
+      memory: this.memory,
       elapsedMs: this.elapsedMs,
       map: this.map.current,
       baseline: this.map.baseline,
@@ -189,12 +203,21 @@ export class SessionEngine {
   afterGuideTurn(turn: GuideTurn): void {
     this.resumed = false;
     this.repeatRequested = false;
+    this.userQuestion = undefined;
     if (turn.end || isClosing(this._phase)) {
       if (turn.end || this._phase === 'DONE') this.setPhase('DONE');
       return;
     }
     if (turn.expectsResponse) {
       if (turn.advance) this.advanceAfterAnswer = true;
+      return;
+    }
+    // Guidance that belongs to this phase (a step of the scan, a moment of attention between
+    // questions): the phase goes on, and the next turn may ask.
+    if (turn.stay && !turn.advance) {
+      this.phaseStep++;
+      this.guided = true;
+      this.timeGuard();
       return;
     }
     // A turn with nothing to wait for: the brain spoke (or had nothing to say) and is done with this phase.
@@ -206,6 +229,7 @@ export class SessionEngine {
   ingest(user: UserTurn): IngestOutcome {
     if (isClosing(this._phase)) return {};
     this.lastChanges = [];
+    this.guided = false;
 
     if (user.kind === 'silence') {
       this.history.push({ role: 'silence', ms: user.waitedMs });
@@ -218,7 +242,7 @@ export class SessionEngine {
       return {};
     }
 
-    const obs = extract(user.text);
+    const obs = this.withMemory(extract(user.text));
     this.history.push({ role: 'user', text: user.text });
     this.lastResult = 'speech';
     this.lastObservation = obs;
@@ -250,6 +274,28 @@ export class SessionEngine {
       this.outcome = 'safety_pause';
       this.setPhase('SAFETY_CLOSE');
       this.pushMoment('user', user.text);
+      return {};
+    }
+    // A question to the guide is answered, then the guide's own question is asked again.
+    // Whether something is serious is the one question the guide can't answer: it says so,
+    // and, if nobody has yet, asks once whether the sensation is familiar.
+    if (obs.question) {
+      this.userQuestion = obs.question;
+      const content = hasBodyContent(obs) && this._phase !== 'SAFETY_CHECK';
+      if (content) this.applyToMap(obs);
+      this.pushMoment('user', user.text);
+      if (obs.question === 'cause' && !this.signals.familiarConfirmed && !this.safetyChecked) {
+        this.safetyChecked = true;
+        this.phaseBeforeCheck = content ? this.nextPhaseAfter(this._phase) : this._phase;
+        this.setPhase('SAFETY_CHECK');
+        return {};
+      }
+      if (!content) {
+        if (this.lastQuestion) this.repeatRequested = true;
+        return {};
+      }
+      this.phaseTurn++;
+      this.policy();
       return {};
     }
     if (this._phase === 'SAFETY_CHECK') {
@@ -471,6 +517,27 @@ export class SessionEngine {
     this.changes.push(...res.changes);
   }
 
+  /**
+   * "Yes" to "is it in your lower back, like before?" means the remembered place; "yes" to
+   * "before, you called it tight — is that the word today?" means the remembered word.
+   */
+  private withMemory(obs: Observation): Observation {
+    const usual = this.memory.usual;
+    if (!usual || obs.command || obs.question) return obs;
+    const agrees = obs.answer === 'yes' || SAME.test(obs.text);
+    if (this.lastAsk === 'usual_place' && !obs.nothing && !obs.movement) {
+      const at = (side = usual.side) => ({ ...obs, regions: [{ region: usual.region, side, index: 0, phrase: speakPlace(usual.region, side) }] });
+      // "Tight." or "yes": about the place they were asked to rest on.
+      if (obs.regions.length === 0 && (agrees || hasBodyContent(obs))) return at();
+      // "My back", asked about the lower back: the same place, said more loosely.
+      const r = obs.regions.length === 1 ? obs.regions[0] : undefined;
+      if (r && (r.region === usual.region || isWithin(usual.region, r.region))) return at(r.side ?? usual.side);
+    }
+    if (this.lastAsk === 'usual_word' && agrees && obs.descriptors.length === 0 && usual.words[0])
+      return { ...obs, descriptors: [usual.words[0]] };
+    return obs;
+  }
+
   private needsLocate(f: BodySensation): boolean {
     const info = REGIONS[f.region];
     if (info.broad && !this.asked.includes('locate_narrow')) return true;
@@ -485,6 +552,8 @@ export class SessionEngine {
   private nextPhaseAfter(p: Phase): Phase {
     switch (p) {
       case 'ARRIVE':
+        return 'SCAN';
+      case 'SCAN':
         return 'NOTICE';
       case 'NOTICE': {
         const f = this.focus;
@@ -518,6 +587,7 @@ export class SessionEngine {
     if (!observing(this._phase) && observing(p)) this.observeSince = this.now();
     this._phase = p;
     this.phaseTurn = 0;
+    this.phaseStep = 0;
     this.advanceAfterAnswer = false;
   }
 
