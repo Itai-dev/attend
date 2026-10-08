@@ -54,7 +54,16 @@ export async function GET(request: Request): Promise<Response> {
   // on, so a refused voice is spoken as River instead of failing the session.
   const substituted = !res.ok && voice !== DEFAULT_VOICE;
   if (substituted) res = await speak(DEFAULT_VOICE);
-  if (!res.ok || !res.body) return Response.json({ error: `voice ${res.status}` }, { status: 502 });
+  if (!res.ok || !res.body) {
+    // Pass ElevenLabs' reason through (as api/agent.ts does): a 401 alone can mean credits used
+    // up (quota_exceeded), a key without the Text to Speech permission, or a free-tier block.
+    let detail: unknown;
+    try {
+      const body = (await res.json()) as { detail?: { status?: string; message?: string } | string };
+      detail = typeof body?.detail === 'object' ? { status: body.detail.status, message: body.detail.message } : (body?.detail ?? body);
+    } catch {}
+    return Response.json({ error: `voice ${res.status}`, detail }, { status: 502, headers: { 'cache-control': 'no-store' } });
+  }
   return new Response(res.body, {
     headers: substituted
       ? // Not cached: once the plan covers the chosen voice, the next request should get it.
