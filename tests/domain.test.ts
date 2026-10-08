@@ -142,3 +142,24 @@ test('body map: never more fields than the shader holds', () => {
   assert.ok(fieldsFor({ sensations }, 'front').length <= MAX_FIELDS);
   assert.ok(comp.map.sensations.length <= MAX_FIELDS);
 });
+
+test('3D figure: sensations sit inside the body at their depth, every side in sight', async () => {
+  const { fieldsFor3d, bodyUniforms, zFor } = await import('../src/viz/bodyUniforms');
+  // Felt on the front → toward the front; in the back → toward the back; all through → the centre.
+  assert.ok(zFor('throat') > 0);
+  assert.ok(zFor('lower_back') < 0);
+  assert.equal(zFor('shoulder'), 0);
+  assert.equal(zFor('whole_body'), 0);
+  // Never on or past the skin: within the shallowest depth of the figure.
+  for (const r of ['throat', 'lower_back', 'eye', 'forehead', 'upper_back', 'neck'] as const) assert.ok(Math.abs(zFor(r)) <= 0.034, r);
+
+  const back = { id: 'a', region: 'lower_back', side: 'left', descriptors: ['tight'], primary: true } as never;
+  const front = { id: 'b', region: 'throat', descriptors: ['tight'] } as never;
+  const fields = fieldsFor3d({ sensations: [back, front] });
+  // Both drawn at full strength: the figure turns, so the back is not "the other side".
+  assert.ok(fields.every((f) => f.a[3] > 0.5), JSON.stringify(fields.map((f) => f.a[3])));
+  assert.ok(fields[0].z![0] < 0 && fields[1].z![0] > 0);
+  // Only the 3D shader gets depth uniforms; the flat one would reject them.
+  assert.ok('uZ0' in bodyUniforms(fields, { depth: true }));
+  assert.ok(!('uZ0' in bodyUniforms(fields)));
+});

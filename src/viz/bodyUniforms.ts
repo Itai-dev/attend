@@ -33,7 +33,21 @@ export type FieldSpec = {
   b: [number, number, number, number];
   c: [number, number, number, number];
   k: [number, number, number];
+  /** 3D figure only: depth of the field's centre and of its destination (front of the body is +z). */
+  z?: [number, number];
 };
+
+/**
+ * How deep inside the 3D figure a region's sensation sits. Felt on the front → toward the
+ * front, felt in the back → toward the back, felt all the way through → at the centre.
+ * Always inside the surface: the figure shows sensations within the body, never on its skin.
+ */
+export function zFor(region: BodyRegion): number {
+  const info = REGIONS[region];
+  if (region === 'whole_body' || info.view === 'both') return 0;
+  const depth = Math.min(0.034, info.radius * 0.62);
+  return info.view === 'front' ? depth : -depth;
+}
 
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
@@ -55,14 +69,22 @@ function viewWeight(region: BodyRegion, view: View): number {
   return v === 'both' || v === view ? 1 : 0.5;
 }
 
-export function fieldsFor(map: BodyMapState, view: View, opts: { weights?: Map<string, number> } = {}): FieldSpec[] {
+/**
+ * The fields for the turning 3D figure: positions in figure space (as seen from the front),
+ * each with its depth. No view weighting: every side of the body is in sight as it turns.
+ */
+export function fieldsFor3d(map: BodyMapState, opts: { weights?: Map<string, number> } = {}): FieldSpec[] {
+  return fieldsFor(map, 'front', { ...opts, allSides: true });
+}
+
+export function fieldsFor(map: BodyMapState, view: View, opts: { weights?: Map<string, number>; allSides?: boolean } = {}): FieldSpec[] {
   const out: FieldSpec[] = [];
   const ordered = [...map.sensations].sort((a, b) => Number(!!b.primary) - Number(!!a.primary));
   for (const s of ordered) {
     const info = REGIONS[s.region];
     const family = familyOf(s.descriptors);
     const weight = opts.weights?.get(s.id) ?? (s.primary ? 0.95 : 0.62);
-    const intensity = weight * viewWeight(s.region, view);
+    const intensity = weight * (opts.allSides ? 1 : viewWeight(s.region, view));
     const shape = s.shape ?? 'unknown';
     // Fields read larger than the region itself: a feeling has no hard border on the figure.
     const radius = s.region === 'whole_body' ? 0.32 : info.radius * 1.45 * (shape === 'line' ? 1.1 : 1);
@@ -82,6 +104,7 @@ export function fieldsFor(map: BodyMapState, view: View, opts: { weights?: Map<s
         b: [FAMILY_CODE[family], SHAPE_CODE[shape], TEMPORAL_CODE[s.temporalQuality ?? 'unknown'], MOVE_CODE[s.movement?.type ?? 'unknown']],
         c: [dest[0], dest[1], dest[2], s.edge === 'clear' ? 0.8 : 0],
         k: hexToRgb(familyColor[family]),
+        z: [zFor(s.region), destRegion ? zFor(destRegion) : 0],
       });
     }
   }
@@ -91,7 +114,7 @@ export function fieldsFor(map: BodyMapState, view: View, opts: { weights?: Map<s
 const EMPTY_FIELD: FieldSpec = { a: [0, 0, 0, 0], b: [10, 4, 4, 0], c: [0, 0, 0, 0], k: [0, 0, 0] };
 
 /** Flatten into the uniform names the shader declares. */
-export function bodyUniforms(fields: FieldSpec[]): Record<string, number[]> {
+export function bodyUniforms(fields: FieldSpec[], opts: { depth?: boolean } = {}): Record<string, number[]> {
   const u: Record<string, number[]> = {};
   for (let i = 0; i < MAX_FIELDS; i++) {
     const f = fields[i] ?? EMPTY_FIELD;
@@ -99,6 +122,8 @@ export function bodyUniforms(fields: FieldSpec[]): Record<string, number[]> {
     u[`uB${i}`] = f.b;
     u[`uC${i}`] = f.c;
     u[`uK${i}`] = f.k;
+    // Only the 3D shader declares depth uniforms.
+    if (opts.depth) u[`uZ${i}`] = f.z ?? [0, 0];
   }
   return u;
 }
