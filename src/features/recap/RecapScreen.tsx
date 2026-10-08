@@ -4,7 +4,8 @@ import { Alert, Platform, ScrollView, StyleSheet, useWindowDimensions, View } fr
 import Animated, { Easing, FadeIn, FadeInDown, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import { consolidateChanges } from '@/domain/bodyMap';
+import { consolidateChanges, primarySensation } from '@/domain/bodyMap';
+import { speakPlace } from '@/domain/regions';
 import type { Session } from '@/domain/types';
 import { Hairline, IconButton, PrimaryButton, QuietButton, SampleBadge, Segmented, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
@@ -128,6 +129,7 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
                 />
               ) : null}
             </View>
+            <CloseUp session={session} showStart={showStart} view={view} width={mapW} />
           </View>
         ) : null}
 
@@ -212,7 +214,30 @@ function Changes({ session }: { session: Session }) {
   );
 }
 
+/**
+ * A fragment of the figure around the main sensation, zoomed in — the place the person
+ * spent the session with, at the scale they attended to it. Same field, same words.
+ */
+function CloseUp({ session, showStart, view, width }: { session: Session; showStart: boolean; view: FigureView; width: number }) {
+  const map = showStart ? session.bodyMapStart : session.bodyMapEnd;
+  const p = primarySensation(map);
+  if (!p || p.region === 'whole_body') return null;
+  const size = Math.min(width - space.xl * 2, 360);
+  return (
+    <View style={[styles.closeUp, { width: size }]}>
+      <View style={styles.closeUpCard}>
+        <BodyField map={map} view={view} width={size} height={size * 0.75} scale={3.2} accessibilityLabel="" />
+      </View>
+      <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s, textTransform: 'uppercase' }}>
+        Close up · {speakPlace(p.region, p.side)}
+      </Txt>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  closeUp: { marginTop: space.xl },
+  closeUpCard: { borderRadius: radius.m, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
   root: { flex: 1, backgroundColor: color.bg },
   pad: { paddingHorizontal: space.xl },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },

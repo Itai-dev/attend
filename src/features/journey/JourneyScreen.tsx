@@ -24,7 +24,8 @@ export function JourneyScreen() {
   const withMaps = sessions.filter((s) => s.bodyMapEnd.sensations.length > 0);
   const earliest = withMaps[withMaps.length - 1];
   const latest = withMaps[0];
-  const pairW = (Math.min(width, 520) - space.xl * 2 - space.m) / 2;
+  // Small multiples: one figure per session, oldest first, so movement reads across the row.
+  const cellW = (Math.min(width, 520) - space.xl * 2 - space.s * 2) / 3;
 
   return (
     <TitledScroll title="Journey" onBack={() => router.back()}>
@@ -38,14 +39,18 @@ export function JourneyScreen() {
       ) : null}
 
       <SectionLabel>{analysis.spanLabel}</SectionLabel>
-      {earliest && latest && earliest.id !== latest.id ? (
+      {withMaps.length > 1 ? (
         <View
-          style={styles.pair}
+          style={styles.grid}
           accessible
-          accessibilityLabel={`Your earliest map, from ${shortDate(earliest.startedAt)}, beside your latest, from ${shortDate(latest.startedAt)}.`}
+          accessibilityLabel={`Your maps over time, one for each session, from ${shortDate(earliest.startedAt)} to ${shortDate(latest.startedAt)}.`}
         >
-          <ThenNow session={earliest} label="Earlier" width={pairW} />
-          <ThenNow session={latest} label="Lately" width={pairW} />
+          {[...withMaps]
+            .slice(0, 12)
+            .reverse()
+            .map((s, i, all) => (
+              <Small key={s.id} session={s} width={cellW} label={i === 0 ? 'Earlier' : i === all.length - 1 ? 'Lately' : undefined} />
+            ))}
         </View>
       ) : null}
 
@@ -83,14 +88,15 @@ export function JourneyScreen() {
   );
 }
 
-function ThenNow({ session, label, width }: { session: Session; label: string; width: number }) {
+function Small({ session, width, label }: { session: Session; width: number; label?: string }) {
   return (
     <Pressable onPress={() => router.push({ pathname: '/journey/[id]', params: { id: session.id } })} style={{ width }} accessibilityElementsHidden>
       <View style={styles.pairCard}>
-        <BodyField map={session.bodyMapEnd} view={preferredView(session.bodyMapEnd)} width={width} height={width * 1.25} animated={false} scale={1.65} />
+        <BodyField map={session.bodyMapEnd} view={preferredView(session.bodyMapEnd)} width={width} height={width * 1.45} animated={false} scale={1.25} accessibilityLabel="" />
       </View>
-      <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s, textTransform: 'uppercase' }}>
-        {label} · {shortDate(session.startedAt)}
+      <Txt variant="caption" tone="tertiary" style={{ marginTop: space.xs, textTransform: 'uppercase', fontSize: 10 }} numberOfLines={1}>
+        {label ? `${label} · ` : ''}
+        {shortDate(session.startedAt)}
       </Txt>
     </Pressable>
   );
@@ -147,7 +153,7 @@ const styles = StyleSheet.create({
   },
   lead: { marginTop: space.xl, marginBottom: space.xl },
   insight: { marginBottom: space.l },
-  pair: { flexDirection: 'row', gap: space.m, marginTop: space.xs },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, rowGap: space.m, marginTop: space.xs },
   pairCard: { borderRadius: radius.m, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
   row: { flexDirection: 'row', gap: space.l, alignItems: 'center' },
   rail: { width: 58, alignItems: 'center', alignSelf: 'stretch', justifyContent: 'center' },

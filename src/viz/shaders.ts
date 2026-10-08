@@ -2,8 +2,12 @@
  * The two SkSL shaders that carry Attend's visual identity.
  *
  * BODY: an abstract figure built from a smooth union of soft primitives,
- * drawn as a faint luminous rim and a fine dot screen, with up to six
- * sensation fields living inside it. Each quality has its own motion
+ * drawn as a faint luminous rim and a dense point cloud, with up to six
+ * sensation fields living inside it. The whole cloud is always faintly alive —
+ * slow drifting light and twinkling points everywhere, because a body is never
+ * silent — in neutral moonlight only, so it can never be read as something the
+ * person said. Described sensations carry soft contour rings, like a
+ * topographic map of attention, in their own quiet colours. Each quality has its own motion
  * language — tightness draws inward, pressure breathes, pulling streams
  * along a direction, warmth drifts, buzzing grains, throbbing pulses,
  * sharpness concentrates, heaviness sinks, numbness barely moves. These are
@@ -204,14 +208,22 @@ half4 main(float2 fragCoord) {
   float px = 1.0 / figH;
   float inside = smoothstep(px * 1.2, -px * 1.2, d);
 
-  float2 g = p * 150.0;
-  float2 cell = fract(g) - 0.5;
-  float jitter = noise(floor(g) * 0.37);
-  float dotMask = smoothstep(0.2, 0.08, length(cell)) * inside;
+  // A dense point cloud. Each point is nudged off the grid so it reads as scattered, not printed.
+  float2 g = p * 200.0;
+  float2 id = floor(g);
+  float jitter = hash(id * 0.37);
+  float2 cell = fract(g) - 0.5 - (float2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.45;
+  float dotMask = smoothstep(0.21, 0.07, length(cell)) * inside;
+
+  // Always alive: slow light drifting through the whole figure, and points that twinkle on their own clocks.
+  float drift = fbm(p * 6.5 + float2(t * 0.08, -t * 0.12));
+  float swell = smoothstep(0.28, 0.72, drift);
+  float twinkle = 0.5 + 0.5 * sin(t * (0.6 + jitter * 0.9) + jitter * 6.283);
+  float alive = swell * (0.55 + 0.45 * twinkle);
 
   float rim = exp(-abs(d) * 110.0) * 0.5 + exp(-max(d, 0.0) * 28.0) * 0.06;
   float3 moon = float3(0.93, 0.91, 0.87);
-  float3 col = moon * (inside * 0.035 + dotMask * (0.07 + 0.04 * jitter) + rim * 0.32);
+  float3 col = moon * (inside * (0.028 + 0.06 * swell) + dotMask * (0.045 + 0.03 * jitter + 0.55 * alive) + rim * 0.32);
 
   float3 acc = float3(0.0);
   acc += field(p, uA0, uB0, uC0, uK0, t);
@@ -220,6 +232,10 @@ half4 main(float2 fragCoord) {
   acc += field(p, uA3, uB3, uC3, uK3, t);
   acc += field(p, uA4, uB4, uC4, uK4, t);
   acc += field(p, uA5, uB5, uC5, uK5, t);
+
+  // Contour rings through what was described: where attention gathered, never how much it hurt.
+  float level = dot(acc, float3(0.333));
+  acc *= 0.82 + 0.18 * (0.5 + 0.5 * sin(level * 46.0 - t * 0.5));
 
   float outside = (1.0 - inside) * exp(-max(d, 0.0) * 20.0) * 0.7;
   float3 light = acc * (inside * 0.95 + outside) + acc * dotMask * 1.7;
