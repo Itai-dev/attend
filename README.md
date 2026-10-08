@@ -110,12 +110,22 @@ The separations the brief asked for, and where they are enforced:
 
 ### The guide
 
-- **Phases** (never named to the person): ARRIVE → NOTICE → LOCATE → EXPLORE → OBSERVE →
+- **Phases** (never named to the person): ARRIVE → SCAN → NOTICE → LOCATE → EXPLORE → OBSERVE →
   REAPPRAISE → CLOSE, plus SAFETY_CHECK / SAFETY_CLOSE / CRISIS_CLOSE / OPEN_AWARENESS /
   EARLY_CLOSE. Budgets per session type (`engine/phases.ts`); the session closes gently on time.
 - **Adaptive, not a questionnaire**: each answer is read by `domain/extract.ts`; the guide
   reacts to it first, in the person's words, then asks only what is still unknown. Known slots
   are never asked. When nothing is left to ask, it holds silence.
+- **Guided, not only asked**: SCAN is a body scan from the feet up (one sweep, three steps or
+  seven, by length) with nothing asked. While observing, every answer is followed by a turn of
+  guidance (breath around it, widening attention, softening what braces) before the next question.
+- **Questions are answered**: "how should I breathe?", "what am I meant to do?" get a short
+  answer, then the guide's own question again. "Is this serious?" gets fixed text — the guide
+  can't tell, see a doctor if it's new or changing — and the one familiarity question.
+- **Memory**: the usual place and words from earlier sessions (`domain/memory.ts`) decide where
+  attention goes after the scan, settle a loosely named place ("my back") onto the usual one,
+  and offer the word used before — so the same pattern is recorded as the same pattern.
+- **Turn cue**: a soft bell (`assets/audio/turn-cue.wav`) before the guide listens.
 - **Silence is a feature**: every line carries its own pause; holds of 10–15 s are normal.
 - **Describe vs observe**: detail given while describing fills the *baseline*; anything that
   differs once the session turns to watching is recorded as a *change*, with the person's
@@ -134,8 +144,11 @@ local or from the model — that claims safety, diagnoses, or turns into cheerle
 - Local-first: SQLite on the device, no account.
 - Speech is recognised **on the device** (`requiresOnDeviceRecognition`); audio is never saved.
 - Transcripts are not persisted (a developer toggle can keep them for debugging).
-- With the proxy configured, the *words* of the session go to Claude to adapt the guide, and
-  the guide's own lines go to ElevenLabs. Nothing is stored there.
+- The guide remembers earlier sessions (`domain/memory.ts`): built on the device from the
+  saved sessions at the start of each one — the usual place and the words used for it.
+- With the proxy configured, the *words* of the session, plus that usual place and words,
+  go to Claude to adapt the guide, and the guide's own lines go to ElevenLabs. Nothing is
+  stored there.
 - No analytics.
 - Settings → Delete all sessions.
 

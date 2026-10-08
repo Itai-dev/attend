@@ -1,4 +1,5 @@
 import { nounOf } from '../../domain/lexicon';
+import { isWithin } from '../../domain/bodyMap';
 import { REGIONS, speakPlace } from '../../domain/regions';
 import type { BodySensation, SensationChange } from '../../domain/types';
 import { isClosing } from '../phases';
@@ -33,7 +34,10 @@ function fill(text: string, ctx: GuideContext, focus?: BodySensation): string {
   const dest = focus?.movement?.destinationRegion
     ? speakPlace(focus.movement.destinationRegion, focus.movement.destinationSide)
     : '';
+  const usual = ctx.memory.usual;
   return text
+    .replace('{usual}', usual ? speakPlace(usual.region, usual.side) : 'that place')
+    .replace('{usualWord}', usual?.words[0] ?? 'it')
     .replace('{word}', word ?? 'that')
     .replace('{noun}', word ? nounOf(word) : 'sensation')
     .replace('{place}', place)
@@ -84,6 +88,8 @@ function asked(ctx: GuideContext, kind: AskKind): boolean {
 
 /** React to the last answer in a sentence or two, before anything else is asked. */
 function reaction(ctx: GuideContext, focus?: BodySensation): GuideLine[] {
+  // Already reacted to, in the guidance spoken since that answer.
+  if (ctx.guided) return [];
   if (ctx.lastResult === 'silence') {
     if (ctx.phase === 'NOTICE') return [];
     return [line(pickText(L.ACK_SILENCE, ctx), 4000, ctx)];
@@ -117,7 +123,7 @@ function reaction(ctx: GuideContext, focus?: BodySensation): GuideLine[] {
 
   const obs = ctx.lastObservation;
   if (obs.uncertain || obs.nothing) return [line(pickText(L.ACK_UNCERTAIN, ctx), 3500, ctx)];
-  if (ctx.lastAsk === 'notice' && focus) {
+  if ((ctx.lastAsk === 'notice' || ctx.lastAsk === 'usual_place') && focus) {
     const several = ctx.map.sensations.length > 1;
     return [line(several ? L.LOCATE_ACK[0] : pickText(L.LOCATE_ACK, ctx), 4500, ctx, focus)];
   }
@@ -151,7 +157,40 @@ function turn(partial: Omit<GuideTurn, 'source'>): GuideTurn {
   return { ...partial, source: 'local' };
 }
 
+/** Phases where nothing but the fixed lines may be said, not even an answer. */
+const NO_ANSWER = new Set(['SAFETY_CLOSE', 'CRISIS_CLOSE', 'EARLY_CLOSE', 'DONE']);
+
+/**
+ * The person asked something. It is answered first, in a line or two, then the turn goes on:
+ * usually the guide's own question again. Medical questions get the fixed answer.
+ */
+function answerLines(ctx: GuideContext): GuideLine[] {
+  const q = ctx.userQuestion;
+  if (!q || NO_ANSWER.has(ctx.phase)) return [];
+  return lines(q === 'cause' ? L.ANSWER_CAUSE : L.ANSWER[q], ctx, ctx.focus);
+}
+
+/** The scan's steps for this session's depth, spoken in order. */
+function scanSteps(ctx: GuideContext): L.Line[][] {
+  if (ctx.plan.scan === 'brief') return [pickLines(L.SCAN_BRIEF, ctx)];
+  return ctx.plan.scan === 'full' ? L.SCAN_FULL : L.SCAN_SHORT;
+}
+
+/** Earlier sessions knew this place more exactly than the person has said it today. */
+function usualRefines(ctx: GuideContext, focus: BodySensation): boolean {
+  const u = ctx.memory.usual;
+  if (!u || asked(ctx, 'usual_place')) return false;
+  if (u.region === focus.region) return !focus.side && !!u.side;
+  return isWithin(u.region, focus.region);
+}
+
 export function localTurn(ctx: GuideContext): GuideTurn {
+  const t = phaseTurn(ctx);
+  const answer = answerLines(ctx);
+  return answer.length ? { ...t, lines: [...answer, ...t.lines] } : t;
+}
+
+function phaseTurn(ctx: GuideContext): GuideTurn {
   const focus = ctx.focus;
 
   if (ctx.repeatRequested && ctx.lastQuestion && !isClosing(ctx.phase)) {
@@ -166,6 +205,14 @@ export function localTurn(ctx: GuideContext): GuideTurn {
     case 'ARRIVE':
       return turn({ lines: lines(pickLines(L.ARRIVE[ctx.sessionType], ctx), ctx), expectsResponse: false, advance: true });
 
+    case 'SCAN': {
+      // One region per turn, so a pause cuts in between regions and resumes at the next.
+      const steps = scanSteps(ctx);
+      const step = steps[Math.min(ctx.phaseStep, steps.length - 1)];
+      const last = ctx.phaseStep >= steps.length - 1;
+      return turn({ lines: [...prefix, ...lines(step, ctx)], expectsResponse: false, stay: !last, advance: last });
+    }
+
     case 'NOTICE': {
       if (ctx.lastResult === 'silence' && ctx.silenceStreak > 0) {
         const ls = lines(pickLines(L.NOTICE_SILENCE, ctx), ctx);
@@ -176,7 +223,11 @@ export function localTurn(ctx: GuideContext): GuideTurn {
         const [text] = pick(L.NOTICE_RETRY, ctx, (v) => v[0]);
         return turn({ lines: [...prefix, line(text, 0, ctx)], expectsResponse: true, ask: 'notice', listenWindowMs: 16_000 });
       }
-      const q = question(pickText(L.NOTICE_ASK[ctx.sessionType], ctx), 'notice', ctx, undefined, 16_000);
+      // Straight after the scan: start where earlier sessions usually started, if they did.
+      const first = !asked(ctx, 'notice') && !asked(ctx, 'usual_place') && ctx.sessionType !== 'fear';
+      const usual = first && !!ctx.memory.usual;
+      const bank = usual ? L.SCAN_USUAL : first ? L.SCAN_NOTICE : L.NOTICE_ASK[ctx.sessionType];
+      const q = question(pickText(bank, ctx), usual ? 'usual_place' : 'notice', ctx, undefined, 16_000);
       return turn({ lines: [...prefix, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
     }
 
@@ -187,6 +238,10 @@ export function localTurn(ctx: GuideContext): GuideTurn {
         return turn({ lines: [...prefix, ...react, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
       }
       const info = REGIONS[focus.region];
+      if (usualRefines(ctx, focus)) {
+        const q = question(pickText(L.LOCATE_USUAL, ctx), 'usual_place', ctx, focus);
+        return turn({ lines: [...prefix, ...react, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
+      }
       if (info.broad && !asked(ctx, 'locate_narrow')) {
         const q = question(pickText(L.LOCATE_NARROW, ctx), 'locate_narrow', ctx, focus);
         return turn({ lines: [...prefix, ...react, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
@@ -203,13 +258,20 @@ export function localTurn(ctx: GuideContext): GuideTurn {
       const react = reaction(ctx, focus);
       const generic = focus.descriptors.length === 0;
       let q: ReturnType<typeof question> | undefined;
-      if (generic && !asked(ctx, 'quality')) q = question(pickText(L.EXPLORE_QUALITY, ctx), 'quality', ctx, focus);
+      const usualWord = ctx.memory.usual?.region === focus.region ? ctx.memory.usual.words[0] : undefined;
+      // The same pattern in the same words: offer the word from before before offering a list.
+      if (generic && usualWord && !asked(ctx, 'usual_word') && !asked(ctx, 'quality'))
+        q = question(pickText(L.EXPLORE_USUAL_WORD, ctx), 'usual_word', ctx, focus);
+      else if (generic && !asked(ctx, 'quality')) q = question(pickText(L.EXPLORE_QUALITY, ctx), 'quality', ctx, focus);
       else if (!generic && focus.descriptors.length < 3 && !asked(ctx, 'quality_deepen'))
         q = question(pickText(L.EXPLORE_DEEPEN, ctx), 'quality_deepen', ctx, focus);
       else if (!focus.shape && !asked(ctx, 'shape')) q = question(pickText(L.EXPLORE_SHAPE, ctx), 'shape', ctx, focus);
       else if (!focus.edge && !asked(ctx, 'edge')) q = question(pickText(L.EXPLORE_EDGE, ctx), 'edge', ctx, focus);
       else if (!focus.temporalQuality && !asked(ctx, 'temporal')) q = question(pickText(L.EXPLORE_TEMPORAL, ctx), 'temporal', ctx, focus);
 
+      // A longer exploration pauses once to guide, so it doesn't become a run of questions.
+      if (q && ctx.phaseTurn >= 2 && ctx.phaseStep === 0 && !ctx.guided)
+        return turn({ lines: [...prefix, ...react, ...lines(pickLines(L.GUIDE_OBSERVE, ctx), ctx, focus)], expectsResponse: false, stay: true });
       if (q) {
         return turn({ lines: [...prefix, ...react, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
       }
@@ -221,12 +283,17 @@ export function localTurn(ctx: GuideContext): GuideTurn {
 
     case 'OBSERVE': {
       if (!focus) return turn({ lines: [], expectsResponse: false, advance: true });
-      const react = reaction(ctx, focus);
+      // Guide, then ask. After every answer the guide gives attention something to do and
+      // leaves silence for it, rather than asking "what do you notice now?" again.
+      if (!ctx.guided) {
+        const react = reaction(ctx, focus);
+        return turn({ lines: [...prefix, ...react, ...lines(pickLines(L.GUIDE_OBSERVE, ctx), ctx, focus)], expectsResponse: false, stay: true });
+      }
+      const react: GuideLine[] = [];
       if (!asked(ctx, 'movement')) {
         const isStatic = focus.movement?.type === 'static';
         const q = question(pickText(isStatic ? L.OBSERVE_MOVEMENT_STATIC : L.OBSERVE_MOVEMENT, ctx), 'movement', ctx, focus);
-        const settle = react.length === 0 ? [line(pickText(L.ACK_PLAIN, ctx), 6000, ctx, focus)] : [];
-        return turn({ lines: [...prefix, ...react, ...settle, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
+        return turn({ lines: [...prefix, q.line], expectsResponse: true, ask: q.ask, listenWindowMs: q.listenWindowMs });
       }
       if (!asked(ctx, 'change')) {
         const ls = lines(pickLines(L.OBSERVE_CHANGE, ctx), ctx, focus);

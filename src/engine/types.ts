@@ -1,4 +1,5 @@
-import type { Observation } from '../domain/extract';
+import type { Observation, QuestionTopic } from '../domain/extract';
+import type { SessionMemory } from '../domain/memory';
 import type { BodyMapState, BodySensation, SensationChange, SessionSignals, SessionType } from '../domain/types';
 import type { Phase, SessionPlan } from './phases';
 
@@ -29,6 +30,8 @@ export type AskKind =
   | 'change'
   | 'reflect'
   | 'familiar'
+  | 'usual_place'
+  | 'usual_word'
   | 'resume';
 
 /** Structured observations a remote model may return alongside its lines. */
@@ -55,6 +58,12 @@ export type GuideTurn = {
   end?: boolean;
   /** The brain has nothing more to do in this phase. */
   advance?: boolean;
+  /**
+   * A guidance turn with nothing to wait for that stays in its phase: a step of the body scan,
+   * or a moment of guided attention between questions. Without it a turn that asks nothing
+   * moves the session on.
+   */
+  stay?: boolean;
   observations?: RemoteObservations;
   source: 'local' | 'remote' | 'fallback';
 };
@@ -75,6 +84,14 @@ export type GuideContext = {
   phase: Phase;
   /** Questions already asked in this phase. */
   phaseTurn: number;
+  /** Guidance turns (stay) already spoken in this phase: the body scan's position. */
+  phaseStep: number;
+  /** A guidance turn has been spoken since the person last answered, so the next one may ask. */
+  guided: boolean;
+  /** The person's last words were a question to the guide; it is answered before anything else. */
+  userQuestion?: QuestionTopic;
+  /** Earlier sessions, read on the device. Empty for a first session. */
+  memory: SessionMemory;
   elapsedMs: number;
   map: BodyMapState;
   baseline: BodyMapState;

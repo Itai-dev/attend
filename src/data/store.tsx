@@ -27,6 +27,25 @@ type DataStore = {
 
 const Ctx = createContext<DataStore | null>(null);
 
+/**
+ * A session interrupted by the app being closed is kept as a shorter session, not lost.
+ * A draft from an older build may no longer rebuild; it is dropped rather than failing
+ * every launch after it.
+ */
+async function recoverDraft() {
+  try {
+    const draft = await repository.getDraft();
+    if (draft && draft.map.current.sensations.length > 0) {
+      const { session, moments } = SessionEngine.build({ ...draft, outcome: draft.outcome === 'completed' ? 'ended_early' : draft.outcome }, draft.updatedAt);
+      await repository.saveSession(session, moments);
+    }
+  } catch {
+    // Unrecoverable draft: nothing to keep.
+  } finally {
+    await repository.clearDraft().catch(() => {});
+  }
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -41,18 +60,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (async () => {
       await repository.init();
       let p = await repository.getPrefs();
+      // Prefs go into state before anything that can fail: when draft recovery threw, the
+      // catch below left the defaults (onboarded: false) in place and the welcome ran on
+      // every launch.
+      if (!cancelled) setPrefsState(p);
       if (!p.samplesSeeded) {
         for (const s of buildSampleSessions()) await repository.saveSession(s, []);
         p = await repository.setPrefs({ samplesSeeded: true });
       }
-      // A session interrupted by the app being closed is kept as a shorter session, not lost.
-      const draft = await repository.getDraft();
-      if (draft && draft.map.current.sensations.length > 0) {
-        const { session, moments } = SessionEngine.build({ ...draft, outcome: draft.outcome === 'completed' ? 'ended_early' : draft.outcome }, draft.updatedAt);
-        await repository.saveSession(session, moments);
-      }
-      if (draft) await repository.clearDraft();
+      await recoverDraft();
       const list = await repository.listSessions();
+      // Someone with sessions of their own has been welcomed, whatever the flag says.
+      if (!p.onboarded && list.some((s) => !s.isSample)) p = await repository.setPrefs({ onboarded: true });
       if (cancelled) return;
       setPrefsState(p);
       setSessions(list);

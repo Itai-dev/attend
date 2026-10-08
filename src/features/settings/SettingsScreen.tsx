@@ -80,8 +80,8 @@ export function SettingsScreen() {
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
-            Your sessions are stored only on this iPhone. There is no account. What you say is turned into words on the device and the audio is never saved.
-            {hasRemote ? ' To adapt the guide, the words of the session (never audio) are sent through Attend’s guide service to Anthropic’s Claude, which phrases the guide’s next lines. Attend doesn’t store them.' : ''}
+            Your sessions are stored only on this iPhone. There is no account. What you say is turned into words on the device and the audio is never saved. The guide remembers your earlier sessions from what is stored here, so it can start where you usually notice something.
+            {hasRemote ? ' To adapt the guide, the words of the session (never audio), and the place and words you usually use from earlier sessions, are sent through Attend’s guide service to Anthropic’s Claude, which phrases the guide’s next lines. Attend doesn’t store them.' : ''}
           </Txt>
         </View>
         <Hairline />

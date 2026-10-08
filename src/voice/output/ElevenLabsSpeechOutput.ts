@@ -1,4 +1,4 @@
-import { createAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
+import { createAudioPlayer, type AudioPlayer, type AudioSource, type AudioStatus } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
 import { beginSessionAudio } from '../audioSession';
 import type { SpeechOutput, VoiceError } from '../types';
@@ -164,16 +164,27 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       this.failures++;
       throw unavailable('The guide voice could not be reached.');
     }
-    return this.play(uri, signal);
+    return this.play({ uri }, signal);
   }
 
-  private play(uri: string, signal: AbortSignal): Promise<void> {
+  /**
+   * A soft bell before the guide listens (assets/audio/turn-cue.wav), so an eyes-closed person
+   * knows it is their turn without the question ending abruptly into silence. Bundled, so it
+   * never waits on the network; if it can't play, listening simply starts.
+   */
+  async cue(signal: AbortSignal): Promise<void> {
+    if (signal.aborted) return;
+    await this.play(require('../../../assets/audio/turn-cue.wav'), signal, 0.5).catch(() => {});
+  }
+
+  private play(source: AudioSource, signal: AbortSignal, volume?: number): Promise<void> {
     let player: AudioPlayer;
     try {
       // keepAudioSessionActive: by default expo-audio switches the audio session off ~100 ms after a
       // player finishes or pauses. Listening starts right after a line, so that cut the recogniser's
       // microphone mid-start ("audio-capture"/"interrupted") and the session paused after every line.
-      player = createAudioPlayer({ uri }, { updateInterval: 100, keepAudioSessionActive: true });
+      player = createAudioPlayer(source, { updateInterval: 100, keepAudioSessionActive: true });
+      if (volume !== undefined) player.volume = volume;
     } catch {
       return Promise.reject(unavailable('The guide voice could not be played.'));
     }

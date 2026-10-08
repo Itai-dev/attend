@@ -113,6 +113,9 @@ export class SessionRunner {
         if (engine.done) break;
         if (!turn.expectsResponse) continue;
 
+        // The cue goes before "listening" so the recogniser never hears it as the person's answer.
+        await this.d.voice.output.cue?.(step.signal);
+        if (this.cutShort(step)) continue;
         this.set('listening');
         const lastLine = turn.lines[turn.lines.length - 1]?.text;
         const result = await this.listen(

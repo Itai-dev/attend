@@ -23,6 +23,15 @@ export type { GuideScript };
 
 // Live bindings: applyScript reassigns these, and `import * as L` sees the change.
 export let ARRIVE = GUIDE_SCRIPT.ARRIVE;
+export let SCAN_BRIEF = GUIDE_SCRIPT.SCAN_BRIEF;
+export let SCAN_SHORT = GUIDE_SCRIPT.SCAN_SHORT;
+export let SCAN_FULL = GUIDE_SCRIPT.SCAN_FULL;
+export let SCAN_NOTICE = GUIDE_SCRIPT.SCAN_NOTICE;
+export let SCAN_USUAL = GUIDE_SCRIPT.SCAN_USUAL;
+export let LOCATE_USUAL = GUIDE_SCRIPT.LOCATE_USUAL;
+export let EXPLORE_USUAL_WORD = GUIDE_SCRIPT.EXPLORE_USUAL_WORD;
+export let GUIDE_OBSERVE = GUIDE_SCRIPT.GUIDE_OBSERVE;
+export let ANSWER = GUIDE_SCRIPT.ANSWER;
 export let NOTICE_ASK = GUIDE_SCRIPT.NOTICE_ASK;
 export let NOTICE_RETRY = GUIDE_SCRIPT.NOTICE_RETRY;
 export let NOTICE_SILENCE = GUIDE_SCRIPT.NOTICE_SILENCE;
@@ -64,6 +73,15 @@ export let VOICE_DIRECTION = GUIDE_SCRIPT.voice.direction;
 
 function setAll(s: GuideScript) {
   ARRIVE = s.ARRIVE;
+  SCAN_BRIEF = s.SCAN_BRIEF;
+  SCAN_SHORT = s.SCAN_SHORT;
+  SCAN_FULL = s.SCAN_FULL;
+  SCAN_NOTICE = s.SCAN_NOTICE;
+  SCAN_USUAL = s.SCAN_USUAL;
+  LOCATE_USUAL = s.LOCATE_USUAL;
+  EXPLORE_USUAL_WORD = s.EXPLORE_USUAL_WORD;
+  GUIDE_OBSERVE = s.GUIDE_OBSERVE;
+  ANSWER = s.ANSWER;
   NOTICE_ASK = s.NOTICE_ASK;
   NOTICE_RETRY = s.NOTICE_RETRY;
   NOTICE_SILENCE = s.NOTICE_SILENCE;
@@ -194,3 +212,13 @@ export const EARLY_CLOSE: Line[] = [
   ["When you're ready, open your eyes.", 0],
 ];
 export const RESUME: Line = ["Let's continue.", 2500];
+/**
+ * "Is this serious?", "Why does it hurt?" — fixed, like the safety lines: the guide can't
+ * know, says so, and points to a professional for anything new or changing. Never a
+ * reassurance in either direction.
+ */
+export const ANSWER_CAUSE: Line[] = [
+  ["I can't tell what's causing it. That's a question for a doctor.", 3500],
+  ['If it feels new, or is changing, or worries you, have it looked at.', 4000],
+  ['Here, we only notice it.', 3000],
+];

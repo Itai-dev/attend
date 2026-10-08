@@ -346,7 +346,7 @@ function setBoth(
 }
 
 /** Is `inner` a narrower way of naming somewhere inside `outer`? */
-function isWithin(inner: string, outer: string): boolean {
+export function isWithin(inner: string, outer: string): boolean {
   const groups: Record<string, string[]> = {
     head: ['head_back', 'forehead', 'temple', 'eye', 'jaw', 'face'],
     mid_back: ['upper_back', 'lower_back', 'sacrum', 'spine'],

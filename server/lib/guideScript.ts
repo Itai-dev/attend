@@ -17,6 +17,9 @@
  *     its timing.
  *   - {noun}, {word}, {place}, {dest} are filled with the person's own words
  *     ("tightness", "tight", "the left side of your neck", where it moved to).
+ *     {usual} and {usualWord} are the place and word from their earlier
+ *     sessions ("your lower back", "tight"); lines using them are only chosen
+ *     when there is something remembered.
  *   - Keep the guide's voice: short, calm, sparse. No "thank you for sharing",
  *     no praise, no apologies for pain, never "you're safe" or "nothing is
  *     wrong". The app rejects any line that crosses those lines and keeps the
@@ -35,6 +38,15 @@ type ByType<T> = { notice: T; flare: T; sleep: T; fear: T };
 export type GuideScript = {
   voice: { direction: string };
   ARRIVE: ByType<Line[][]>;
+  SCAN_BRIEF: Line[][];
+  SCAN_SHORT: Line[][];
+  SCAN_FULL: Line[][];
+  SCAN_NOTICE: string[];
+  SCAN_USUAL: string[];
+  LOCATE_USUAL: string[];
+  EXPLORE_USUAL_WORD: string[];
+  GUIDE_OBSERVE: Line[][];
+  ANSWER: { how: Line[]; breath: Line[]; move: Line[]; time: Line[]; other: Line[] };
   NOTICE_ASK: ByType<string[]>;
   NOTICE_RETRY: Line[];
   NOTICE_SILENCE: Line[][];
@@ -113,6 +125,106 @@ export const GUIDE_SCRIPT: GuideScript = {
       ],
     ],
   },
+  // The body scan, after arriving: attention travels from the feet to the head, one region per
+  // step, with silence to feel each one. SCAN_BRIEF is one step (3-minute sessions), SCAN_SHORT
+  // and SCAN_FULL are spoken in order, step by step (5 and 10 minutes). Nothing is asked here.
+  SCAN_BRIEF: [
+    [
+      ["Let's take a slow look through the body.", 3500],
+      ['Start with your feet, and let attention travel up, through the legs, the hips, the belly and the back.', 9000],
+      ['Up through the chest and shoulders, the arms, the neck, and the face.', 9000],
+    ],
+  ],
+  SCAN_SHORT: [
+    [
+      ["Let's take a slow look through the body, from the feet up.", 3500],
+      ['Bring your attention to your feet. Then let it rise slowly through your legs.', 11000],
+    ],
+    [
+      ['Now the hips, the belly, and the lower back.', 6000],
+      ['Notice what is there, without changing anything.', 9000],
+    ],
+    [
+      ['Let attention move up, through the chest and upper back, into the shoulders and arms.', 9000],
+      ['Then the neck, the jaw, the face.', 9000],
+    ],
+  ],
+  SCAN_FULL: [
+    [
+      ["Let's take a slow look through the body, from the feet up.", 4000],
+      ['Bring your attention to your feet. The soles, the toes, where they rest.', 12000],
+    ],
+    [
+      ['Now let it rise into your ankles and calves, your knees, your thighs.', 12000],
+    ],
+    [
+      ['Into the hips and the pelvis.', 6000],
+      ['Notice the weight of your body, held by whatever is under you.', 10000],
+    ],
+    [
+      ['Now the belly, and the lower back.', 6000],
+      ['Let the breath move here, however it wants to.', 11000],
+    ],
+    [
+      ['Up through the chest and the upper back.', 6000],
+      ['Notice the ribs widening, and settling, with each breath.', 10000],
+    ],
+    [
+      ['Into the shoulders, down the arms, into your hands.', 11000],
+    ],
+    [
+      ['Now the neck, the jaw, the face.', 7000],
+      ['And the top of your head.', 9000],
+    ],
+  ],
+  // After the scan. Asked only if nothing was remembered from earlier sessions.
+  SCAN_NOTICE: [
+    'Of everything you passed through, what is asking for your attention most?',
+    'Coming back from the scan, what stood out most?',
+  ],
+  // After the scan, when earlier sessions point somewhere: start where they usually started.
+  SCAN_USUAL: [
+    "Now let your attention rest on {usual}, where you've noticed something before. What's there today?",
+    'Now bring your attention to {usual}. What do you notice there today?',
+  ],
+  // A broad place ("my back") or a missing side, and earlier sessions knew more.
+  LOCATE_USUAL: ['Is it in {usual}, like before, or somewhere else?', 'Is it {usual} again, or somewhere different today?'],
+  // No word for it yet, and earlier sessions had one.
+  EXPLORE_USUAL_WORD: ["Before, you called it {usualWord}. Is that the word today, or is it different?"],
+  // Guidance between questions: something to do with attention while watching, then silence.
+  // Spoken instead of asking again, so observation isn't one question on repeat.
+  GUIDE_OBSERVE: [
+    [
+      ['Let your breath move around it.', 6000],
+      ["Not to change it. Just so it isn't alone there.", 12000],
+    ],
+    [
+      ['Let your attention widen, so it holds the sensation and the space around it.', 12000],
+      ['The places nearby that feel neutral, or easy.', 10000],
+    ],
+    [
+      ['Notice if any muscles around it are bracing.', 6000],
+      ['If they can let go a little, let them. If not, that is fine.', 12000],
+    ],
+    [
+      ['See if you can be curious about it, the way you might watch a cloud.', 12000],
+      ['Its edges. Its texture. Whether it stays.', 10000],
+    ],
+    [
+      ['Notice what is underneath it, or beside it.', 12000],
+    ],
+  ],
+  // When the person asks something. Medical questions are answered by fixed text in the app.
+  ANSWER: {
+    how: [
+      ["There's nothing to get right here.", 3000],
+      ['Just notice what is there, and say it in your own words. Even "I don\'t know" is an answer.', 4000],
+    ],
+    breath: [["Breathe however your body wants to. There's no need to change it.", 4000]],
+    move: [["Do whatever keeps you comfortable. You can move, or shift, whenever you need to.", 4000]],
+    time: [["There's a little time left. I'll tell you before we finish.", 4000]],
+    other: [["That's worth wondering about. For now, let's stay with what you notice.", 4000]],
+  },
   NOTICE_ASK: {
     notice: [
       'Notice what is asking for your attention in your body right now.',
@@ -174,11 +286,15 @@ export const GUIDE_SCRIPT: GuideScript = {
   HOLD: [
     [
       ['Just stay with it for a while.', 14000],
-      ["What's here now?", 0],
+      ['When you notice anything, say it.', 0],
     ],
     [
       ["Give it some time. You don't need to do anything with it.", 15000],
-      ['What do you notice now?', 0],
+      ['Has anything shifted?', 0],
+    ],
+    [
+      ['Keep resting your attention there.', 14000],
+      ['How is it now?', 0],
     ],
   ],
   OBSERVE_MOVEMENT_STATIC: ['Does it stay completely still?', 'Does it stay in exactly the same place?'],

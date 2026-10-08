@@ -6,6 +6,7 @@ import type { SessionType } from '../domain/types';
  */
 export type Phase =
   | 'ARRIVE'
+  | 'SCAN'
   | 'NOTICE'
   | 'LOCATE'
   | 'EXPLORE'
@@ -21,6 +22,7 @@ export type Phase =
 
 export const PHASE_GOALS: Record<Phase, string> = {
   ARRIVE: 'Help attention settle. Short sentences, silence, no questions about pain yet.',
+  SCAN: 'A guided body scan from the feet to the head: attention travels region by region, with silence. Nothing is asked.',
   NOTICE: 'Invite the person to notice what in the body is asking for attention, in their own words.',
   LOCATE: 'Understand where the sensation is most clearly felt. Only ask what is genuinely unclear.',
   EXPLORE: 'Explore the quality of the sensation with curiosity, using their words, without trying to fix it.',
@@ -45,14 +47,18 @@ export type SessionPlan = {
   exploreTurns: number;
   observeTurns: number;
   reappraiseTurns: number;
+  /** How much body scan follows arriving: one sweep, three steps, or seven. */
+  scan: ScanDepth;
 };
+
+export type ScanDepth = 'brief' | 'short' | 'full';
 
 /** Each type's shape at its natural length (BASE_MINUTES); planFor scales it to the length chosen on Home. */
 export const PLANS: Record<SessionType, SessionPlan> = {
-  notice: { targetMs: 7 * 60_000, pauseScale: 1, exploreTurns: 3, observeTurns: 3, reappraiseTurns: 1 },
-  flare: { targetMs: 6 * 60_000, pauseScale: 1.1, exploreTurns: 2, observeTurns: 2, reappraiseTurns: 2 },
-  sleep: { targetMs: 8 * 60_000, pauseScale: 1.4, exploreTurns: 2, observeTurns: 2, reappraiseTurns: 1 },
-  fear: { targetMs: 8 * 60_000, pauseScale: 1.15, exploreTurns: 3, observeTurns: 2, reappraiseTurns: 2 },
+  notice: { targetMs: 7 * 60_000, pauseScale: 1, exploreTurns: 3, observeTurns: 3, reappraiseTurns: 1, scan: 'short' },
+  flare: { targetMs: 6 * 60_000, pauseScale: 1.1, exploreTurns: 2, observeTurns: 2, reappraiseTurns: 2, scan: 'brief' },
+  sleep: { targetMs: 8 * 60_000, pauseScale: 1.4, exploreTurns: 2, observeTurns: 2, reappraiseTurns: 1, scan: 'full' },
+  fear: { targetMs: 8 * 60_000, pauseScale: 1.15, exploreTurns: 3, observeTurns: 2, reappraiseTurns: 2, scan: 'short' },
 };
 
 /** The lengths offered before a session, Headspace-style. Short by default: the app is used, then left. */
@@ -80,6 +86,8 @@ export function planFor(type: SessionType, minutes?: SessionLength): SessionPlan
     // Long sessions spend their extra time watching (holds and silence), not exploring.
     observeTurns: turns(base.observeTurns * (f > 1 ? 1.5 : 1)),
     reappraiseTurns: turns(base.reappraiseTurns),
+    // The scan is the guidance that opens every session; its depth follows the time there is.
+    scan: minutes <= 3 ? 'brief' : minutes >= 10 ? 'full' : 'short',
   };
 }
 

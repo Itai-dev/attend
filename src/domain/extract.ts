@@ -24,6 +24,8 @@ export type RegionMention = {
 
 export type IntensityShift = 'softer' | 'stronger' | 'same';
 export type Command = 'pause' | 'resume' | 'stop' | 'repeat';
+/** What a question the person asks the guide is about. 'cause' is anything medical: what it is, whether it is serious. */
+export type QuestionTopic = 'how' | 'cause' | 'breath' | 'move' | 'time' | 'other';
 
 export type Observation = {
   raw: string;
@@ -49,6 +51,8 @@ export type Observation = {
   answer?: 'yes' | 'no';
   familiarity?: 'familiar' | 'new';
   command?: Command;
+  /** The person asked the guide something rather than answering it. */
+  question?: QuestionTopic;
   acceptance: boolean;
   urgeToFix: boolean;
   fear: boolean;
@@ -280,6 +284,8 @@ export function extract(raw: string): Observation {
   if (/\b(stop the session|end (the )?session|i want to stop|i'?m done|that'?s enough for (now|today)|let'?s stop|i need to stop|stop now|end now)\b/.test(text))
     command = 'stop';
 
+  const question = command ? undefined : findQuestion(raw, text);
+
   const acceptance =
     /\b(let(ting)? it (be|happen|move|stay|do)|it'?s (okay|ok|fine|alright)|just (watching|noticing|observing|feeling) (it)?|allow(ing)? it|accept\w*|curious|interesting|i can (stay|be) with it|i can (watch|observe|notice|feel) it|not fighting|without (trying|needing) to|it can (stay|be there)|being with it)\b/.test(text) &&
     !/\bnot (okay|ok|fine)\b/.test(text);
@@ -304,11 +310,33 @@ export function extract(raw: string): Observation {
     answer,
     familiarity,
     command,
+    question,
     acceptance,
     urgeToFix,
     fear,
     wordCount,
   };
+}
+
+/**
+ * A question to the guide, and roughly what about. Recognisers rarely write a "?", so it is
+ * read from how the sentence opens. "What I feel is a pull" is an answer, not a question:
+ * "what" only counts when a verb follows it.
+ */
+function findQuestion(raw: string, text: string): QuestionTopic | undefined {
+  const asking =
+    /\?\s*$/.test(raw.trim()) ||
+    /^(why|how)\b/.test(text) ||
+    /^(what|where|when) (should|do|does|did|is|are|am|can|was|will|would)\b/.test(text) ||
+    /^(should|can|could|do|does|is|am|will|would|shall|may|are) (i|it|this|that|you|we|there)\b/.test(text) ||
+    /\b(i don'?t know what (to do|i'?m (supposed|meant) to)|what am i (supposed|meant) to|i don'?t understand)\b/.test(text);
+  if (!asking) return undefined;
+  if (/\b(how long|how much (longer|more|time)|time (is )?left|how many minutes|almost (done|over))\b/.test(text)) return 'time';
+  if (/\bbreath/.test(text)) return 'breath';
+  if (/\b(why|caus\w*|serious|dangerous|wrong with|worr\w*|normal|bad|damage\w*|injur\w*|doctor|what is (it|this|that)|what'?s (this|that|it))\b/.test(text)) return 'cause';
+  if (/\b(open my eyes|my eyes|move|stretch|sit up|lie down|position|change position)\b/.test(text)) return 'move';
+  if (/\b(how do i|what (should|do) i|doing (this|it) right|supposed to|meant to|understand|what do you mean|right way|wrong)\b/.test(text)) return 'how';
+  return 'other';
 }
 
 /** Did this answer carry anything the body map can use? */

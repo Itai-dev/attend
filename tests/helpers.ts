@@ -3,6 +3,7 @@ import { LocalGuideBrain } from '../src/engine/guide/LocalGuideBrain';
 import type { AskKind, GuideBrain } from '../src/engine/types';
 import type { SessionType } from '../src/domain/types';
 import type { SessionLength } from '../src/engine/phases';
+import type { SessionMemory } from '../src/domain/memory';
 
 export type Script = Partial<Record<AskKind | 'default', string | string[] | null>>;
 
@@ -13,18 +14,21 @@ export type Script = Partial<Record<AskKind | 'default', string | string[] | nul
  */
 export async function runSession(
   script: Script,
-  opts: { type?: SessionType; minutes?: SessionLength; brain?: GuideBrain; seed?: number; maxTurns?: number } = {},
+  opts: { type?: SessionType; minutes?: SessionLength; brain?: GuideBrain; seed?: number; maxTurns?: number; memory?: SessionMemory } = {},
 ) {
   let t = 1_000_000;
-  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', minutes: opts.minutes, now: () => t, seed: opts.seed ?? 3 });
+  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', minutes: opts.minutes, now: () => t, seed: opts.seed ?? 3, memory: opts.memory });
   const brain = opts.brain ?? new LocalGuideBrain();
   const spoken: string[] = [];
+  /** Each turn as heard, questions marked with their kind: for reading a session back. */
+  const transcript: string[] = [];
   const asks: Array<AskKind | undefined> = [];
   const used = new Map<string, number>();
   let turns = 0;
   while (!engine.done && turns++ < (opts.maxTurns ?? 80)) {
     const turn = await brain.next(engine.context());
     engine.recordGuideTurn(turn);
+    transcript.push(`GUIDE${turn.expectsResponse ? ` [${turn.ask}]` : ''}: ${turn.lines.map((l) => l.text).join(' / ')}`);
     for (const l of turn.lines) {
       spoken.push(l.text);
       t += l.text.length * 70 + l.pauseAfterMs;
@@ -37,6 +41,7 @@ export async function runSession(
     used.set(turn.ask ?? '', (used.get(turn.ask ?? '') ?? 0) + 1);
     t += 2000;
     if (answer === undefined) answer = null;
+    transcript.push(`  YOU: ${answer ?? '(silence)'}`);
     if (answer === null) {
       t += 12_000;
       engine.ingest({ kind: 'silence', waitedMs: 12_000 });
@@ -46,7 +51,7 @@ export async function runSession(
     }
   }
   const { session, moments } = engine.finalize();
-  return { session, moments, spoken, asks, durationMs: t - 1_000_000, engine };
+  return { session, moments, spoken, asks, transcript, durationMs: t - 1_000_000, engine };
 }
 
 export const NECK_SCRIPT: Script = {
