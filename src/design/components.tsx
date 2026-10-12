@@ -137,6 +137,7 @@ const GLYPHS: Record<string, string> = {
   'circle.dotted': '◌',
   'trash': '⌫',
   'ellipsis': '…',
+  'chart.xyaxis.line': '⌁',
 };
 
 export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: string; weight?: SymbolViewProps['weight'] }) {

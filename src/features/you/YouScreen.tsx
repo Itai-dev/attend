@@ -6,8 +6,8 @@ import { color, space } from '@/design/theme';
 
 /**
  * You: the places that are about the person rather than a session — the body map and the
- * journey built from their own words — plus the welcome (to change focus, length or voice)
- * and settings. Nothing here counts anything.
+ * journey built from their own words, the pain record and progress — plus the welcome (to change focus, length or voice)
+ * and settings. Progress shows the pain record and never concludes from it.
  */
 
 function Place({ title, detail, icon, onPress }: { title: string; detail: string; icon: string; onPress: () => void }) {
@@ -32,6 +32,7 @@ export function YouScreen() {
   return (
     <TitledScroll title="You">
       <View style={{ gap: space.m }}>
+        <Place title="Progress" detail="Your pain over the weeks, beside the days you practised" icon="chart.xyaxis.line" onPress={() => router.push('/progress')} />
         <Place title="Body" detail="A map of what you’ve described" icon="figure.stand" onPress={() => router.push('/body')} />
         <Place title="Journey" detail="How it has moved and changed, in your words" icon="point.topleft.down.curvedto.point.bottomright.up" onPress={() => router.push('/journey')} />
       </View>

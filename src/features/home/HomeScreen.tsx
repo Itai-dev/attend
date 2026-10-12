@@ -4,7 +4,10 @@ import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 're
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
+import { latestPlace } from '@/domain/checkin';
 import { analyzeJourney } from '@/domain/journey';
+import { buildMemory } from '@/domain/memory';
+import { speakPlace } from '@/domain/regions';
 import { PRESETS, recommendedPreset } from '@/domain/presets';
 import { Card, haptic, PrimaryButton, SectionLabel, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
@@ -24,7 +27,7 @@ import { PresetCard, startPreset } from '../shared/PresetCard';
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { sessions, prefs, setPrefs } = useData();
+  const { sessions, checkIns, prefs, setPrefs } = useData();
   const minutes: SessionLength = prefs.sessionMinutes ?? DEFAULT_LENGTH;
   const yours = useMemo(() => recommendedPreset({ focus: prefs.focus, minutes, voiceId: prefs.voiceId }), [prefs.focus, prefs.voiceId, minutes]);
   const more = useMemo(
@@ -34,6 +37,12 @@ export function HomeScreen() {
   const { warm } = useVoiceSession();
   // Ready the session while the person is still looking at Today, so Begin goes straight into the guide's first words.
   useEffect(() => warm(yours.type, yours.voiceId), [yours.type, yours.voiceId, warm]);
+  // Where the session will rest, said before the eyes close so nothing needs deciding after.
+  // The same choice the session makes at Begin: the latest check-in, else the usual place.
+  const restsOn = useMemo(() => {
+    const p = latestPlace(checkIns) ?? buildMemory(sessions).usual;
+    return p && p.region !== 'whole_body' ? speakPlace(p.region, p.side) : undefined;
+  }, [checkIns, sessions]);
   const lately = useMemo(() => analyzeJourney(sessions).insights[0]?.homeLine, [sessions]);
   const orb = Math.min(width - space.xl * 4, 220);
 
@@ -62,7 +71,10 @@ export function HomeScreen() {
           {yours.title}
         </Txt>
         <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.xs }}>
-          {yours.voiceName}’s voice · Eyes closed. Just talk.
+          {yours.voiceName}’s voice · Eyes closed. Just listen.
+        </Txt>
+        <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.xs }}>
+          {restsOn ? `Rests on ${restsOn}` : 'Rests with the body as a whole'}
         </Txt>
 
         <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Session length">
@@ -90,6 +102,13 @@ export function HomeScreen() {
         </View>
 
         <PrimaryButton label="Begin" detail={`${minutes} minutes`} onPress={() => startPreset(yours)} />
+      </Card>
+
+      <Card label="Check in. How much it hurts right now" onPress={() => router.push('/checkin')} style={styles.lately}>
+        <SectionLabel>Check in</SectionLabel>
+        <Txt variant="callout" tone="secondary">
+          How much it hurts right now, and where. Any time of day, apart from your sessions.
+        </Txt>
       </Card>
 
       {lately ? (
