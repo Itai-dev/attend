@@ -125,6 +125,16 @@ export type SensationChange = {
   at?: number;
 };
 
+/**
+ * How the session ran. 'guided' (the app's default since 12 Oct 2026): the guide speaks and
+ * holds silence, and never listens. 'conversation': the guide asks and adapts to the answers.
+ * Sessions saved before the field existed were conversations.
+ */
+export type SessionMode = 'conversation' | 'guided';
+
+/** A place to rest attention on: where a check-in said it hurt, or where sessions usually went. */
+export type Place = { region: BodyRegion; side?: Side };
+
 export type SessionOutcome = 'completed' | 'ended_early' | 'safety_pause' | 'crisis_pause';
 
 /**
@@ -162,6 +172,10 @@ export type Session = {
   outcome: SessionOutcome;
   signals: SessionSignals;
   createdAt: number;
+  /** Absent on sessions saved before guided sessions existed: those were conversations. */
+  mode?: SessionMode;
+  /** Guided sessions: where attention rested. Absent: the body as a whole. */
+  place?: Place;
   /** Seeded demo data. Shown with a label and removable in one tap. */
   isSample?: boolean;
 };

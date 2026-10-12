@@ -6,9 +6,10 @@ import { apiHeaders, config, GUIDE_VOICES, hasRemote } from '../config';
 import { repository } from '../data/repository';
 import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
+import { latestPlace } from '../domain/checkin';
 import { buildMemory } from '../domain/memory';
 import { REGIONS } from '../domain/regions';
-import type { SessionType } from '../domain/types';
+import type { Place, SessionMode, SessionType } from '../domain/types';
 import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
@@ -20,6 +21,7 @@ import type { GuideBrain } from '../engine/types';
 import { Ambience } from './ambience';
 import { endSessionAudio } from './audioSession';
 import { DevTextInput } from './input/DevTextInput';
+import { NoInput } from './input/NoInput';
 import { OnDeviceSpeechInput } from './input/OnDeviceSpeechInput';
 import { SimulatedParticipantInput } from './input/SimulatedParticipantInput';
 import { ElevenLabsSpeechOutput } from './output/ElevenLabsSpeechOutput';
@@ -222,9 +224,12 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         new Promise<AgentSettings | undefined>((r) => setTimeout(() => r(lastAgent[type]), 1500)),
       ]);
 
-      const input = await chooseInput(prefs.dev.inputMode);
+      // Guided is the session (12 Oct 2026): it never listens, so it asks for no microphone and
+      // needs no model to adapt to answers. The conversation stays reachable for comparison.
+      const mode: SessionMode = __DEV__ && prefs.dev.conversation ? 'conversation' : 'guided';
+      const input = mode === 'guided' ? new NoInput() : await chooseInput(prefs.dev.inputMode);
       const output = chooseOutput(chosenVoice, agent);
-      const brain = chooseBrain(prefs.dev.brain, agent);
+      const brain = mode === 'guided' ? new LocalGuideBrain() : chooseBrain(prefs.dev.brain, agent);
       setLabels({ input: input.label, output: output.label, brain: brain.id });
       setDevInput(input instanceof DevTextInput ? input : undefined);
 
@@ -241,7 +246,19 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
 
       // Earlier sessions shape this one (where to start, which words): read fresh from the device each time.
       const memory = buildMemory(dataRef.current.sessions);
-      const engine = new SessionEngine({ sessionType: type, minutes, memory, keepTranscript: __DEV__ && prefs.dev.keepTranscripts });
+      // Where a guided session rests: the latest check-in that named one place, else where
+      // earlier sessions usually went, else the body as a whole.
+      const usual = memory.usual;
+      const place: Place | undefined =
+        latestPlace(dataRef.current.checkIns) ?? (usual && usual.region !== 'whole_body' ? { region: usual.region, side: usual.side } : undefined);
+      const engine = new SessionEngine({
+        sessionType: type,
+        minutes,
+        memory,
+        mode,
+        place,
+        keepTranscript: __DEV__ && prefs.dev.keepTranscripts,
+      });
       const ambience = prefs.ambience === false ? undefined : new Ambience();
       const r = new SessionRunner({
         engine,

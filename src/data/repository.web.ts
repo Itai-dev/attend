@@ -1,4 +1,5 @@
 import type { EngineDraft } from '../engine/SessionEngine';
+import type { CheckIn } from '../domain/checkin';
 import type { Session, SessionMoment } from '../domain/types';
 import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from './types';
 
@@ -15,6 +16,7 @@ type Store = {
   moments: Record<string, SessionMoment[]>;
   prefs: Prefs;
   draft: EngineDraft | null;
+  checkIns?: CheckIn[];
 };
 
 function load(): Store {
@@ -67,6 +69,7 @@ class WebRepository implements SessionRepository {
     this.s.sessions = [];
     this.s.moments = {};
     this.s.draft = null;
+    this.s.checkIns = [];
     this.save();
   }
 
@@ -74,6 +77,21 @@ class WebRepository implements SessionRepository {
     const keep = this.s.sessions.filter((x) => !x.isSample);
     for (const x of this.s.sessions) if (x.isSample) delete this.s.moments[x.id];
     this.s.sessions = keep;
+    this.s.checkIns = (this.s.checkIns ?? []).filter((c) => !c.isSample);
+    this.save();
+  }
+
+  async listCheckIns() {
+    return [...(this.s.checkIns ?? [])].sort((a, b) => b.at - a.at);
+  }
+
+  async saveCheckIn(c: CheckIn) {
+    this.s.checkIns = [...(this.s.checkIns ?? []).filter((x) => x.id !== c.id), c];
+    this.save();
+  }
+
+  async deleteCheckIn(id: string) {
+    this.s.checkIns = (this.s.checkIns ?? []).filter((x) => x.id !== id);
     this.save();
   }
 

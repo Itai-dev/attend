@@ -1,4 +1,5 @@
 import type { EngineDraft } from '../engine/SessionEngine';
+import type { CheckIn } from '../domain/checkin';
 import type { Session, SessionMoment, SessionType } from '../domain/types';
 
 /**
@@ -15,6 +16,11 @@ export interface SessionRepository {
   deleteSession(id: string): Promise<void>;
   deleteAll(): Promise<void>;
   deleteSamples(): Promise<void>;
+
+  /** The pain record (from Pattern). Newest first. */
+  listCheckIns(): Promise<CheckIn[]>;
+  saveCheckIn(c: CheckIn): Promise<void>;
+  deleteCheckIn(id: string): Promise<void>;
 
   getPrefs(): Promise<Prefs>;
   setPrefs(patch: Partial<Prefs>): Promise<Prefs>;
@@ -47,6 +53,8 @@ export type Prefs = {
     brain: BrainPref;
     panel: boolean;
     keepTranscripts: boolean;
+    /** Run the old conversational session (the guide asks and listens) instead of guided. */
+    conversation?: boolean;
   };
 };
 

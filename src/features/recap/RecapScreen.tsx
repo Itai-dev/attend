@@ -5,7 +5,7 @@ import Animated, { Easing, FadeIn, FadeInDown, useSharedValue, withDelay, withTi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { consolidateChanges } from '@/domain/bodyMap';
-import type { Session } from '@/domain/types';
+import type { BodyMapState, Session } from '@/domain/types';
 import { Hairline, IconButton, PrimaryButton, QuietButton, SampleBadge, Segmented, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
 import { SESSION_TYPE_LABELS } from '@/engine/phases';
@@ -38,7 +38,18 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
   const session = sessions.find((s) => s.id === id);
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const [view, setView] = useState<FigureView>(() => (session ? preferredView(session.bodyMapEnd) : 'back'));
+  // A guided session heard nothing, so there is no map of what was described: the figure
+  // marks only where the practice rested attention (or the whole body).
+  const guided = session?.mode === 'guided';
+  const guidedMap = useMemo<BodyMapState>(
+    () => ({
+      sensations: [
+        { id: 'place', region: session?.place?.region ?? 'whole_body', side: session?.place?.side, descriptors: [], userLanguage: [], primary: true },
+      ],
+    }),
+    [session?.place],
+  );
+  const [view, setView] = useState<FigureView>(() => (session ? preferredView(guided ? guidedMap : session.bodyMapEnd) : 'back'));
   const [showStart, setShowStart] = useState(false);
   const reveal = useSharedValue(mode === 'reveal' ? 0 : 1);
 
@@ -86,7 +97,7 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
           {mode === 'reveal' ? (
             <Animated.View entering={FadeIn.duration(1400)}>
               <Txt variant="display" accessibilityRole="header">
-                Here’s what you noticed.
+                {guided ? 'Your practice.' : 'Here’s what you noticed.'}
               </Txt>
             </Animated.View>
           ) : (
@@ -102,7 +113,7 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
         {!special ? (
           <View style={{ alignItems: 'center', marginTop: space.l }}>
             <BodyField
-              map={showStart ? session.bodyMapStart : session.bodyMapEnd}
+              map={guided ? guidedMap : showStart ? session.bodyMapStart : session.bodyMapEnd}
               view={view}
               width={mapW}
               height={mapH}
@@ -151,7 +162,9 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
             </View>
           ) : (
             <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.xl }}>
-              The figure is a visual interpretation of what you described. It is not a scan or a measurement.
+              {guided
+                ? 'The glow marks where the practice rested your attention. It is not a scan or a measurement.'
+                : 'The figure is a visual interpretation of what you described. It is not a scan or a measurement.'}
             </Txt>
           )}
         </Animated.View>

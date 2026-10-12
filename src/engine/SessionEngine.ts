@@ -10,6 +10,8 @@ import {
   EMPTY_SIGNALS,
   type BodyRegion,
   type BodySensation,
+  type Place,
+  type SessionMode,
   type SensationChange,
   type Session,
   type SessionMoment,
@@ -42,6 +44,14 @@ export type EngineOptions = {
   keepTranscript?: boolean;
   /** Earlier sessions, so the guide starts where the person usually does and keeps their words. */
   memory?: SessionMemory;
+  /**
+   * 'guided' (what the app runs): the guide never asks, so nothing is ever ingested and the
+   * phases move on guidance and time alone. 'conversation' (the default here, so the
+   * conversational tests keep describing that engine): the guide asks and adapts.
+   */
+  mode?: SessionMode;
+  /** Guided: where attention rests after the scan. Absent: the body as a whole. */
+  place?: Place;
 };
 
 export type IngestOutcome = { command?: Command };
@@ -56,6 +66,8 @@ export type EngineDraft = {
   signals: SessionSignals;
   moments: SessionMoment[];
   outcome: SessionOutcome;
+  mode?: SessionMode;
+  place?: Place;
 };
 
 function mulberry32(seed: number) {
@@ -82,6 +94,8 @@ export class SessionEngine {
   readonly sessionType: SessionType;
   readonly plan: SessionPlan;
   readonly startedAt: number;
+  readonly mode: SessionMode;
+  readonly place?: Place;
 
   private readonly now: () => number;
   private readonly newId: (prefix?: string) => string;
@@ -126,6 +140,9 @@ export class SessionEngine {
     this.random = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
     this.keepTranscript = opts.keepTranscript ?? false;
     this.memory = opts.memory ?? { sessions: 0 };
+    this.mode = opts.mode ?? 'conversation';
+    // A place only means something to a guided session; a conversation finds its own.
+    this.place = this.mode === 'guided' ? opts.place : undefined;
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
   }
@@ -153,6 +170,8 @@ export class SessionEngine {
   context(): GuideContext {
     return {
       sessionType: this.sessionType,
+      mode: this.mode,
+      place: this.place,
       plan: this.plan,
       phase: this._phase,
       phaseTurn: this.phaseTurn,
@@ -375,6 +394,8 @@ export class SessionEngine {
         signals: { ...this.signals, observedSeconds: Math.round(this.observedMs / 1000) },
         moments: this.moments,
         outcome: this.outcome,
+        mode: this.mode,
+        place: this.place,
       },
       endedAt,
       this.keepTranscript,
@@ -393,6 +414,8 @@ export class SessionEngine {
       signals: { ...this.signals, observedSeconds: Math.round(this.observedMs / 1000) },
       moments: this.moments.map((m) => ({ ...m, internalTranscript: undefined })),
       outcome: this.outcome,
+      mode: this.mode,
+      place: this.place,
     };
   }
 
@@ -405,6 +428,8 @@ export class SessionEngine {
       bodyMapEnd: draft.map.current,
       changes,
       signals: draft.signals,
+      mode: draft.mode,
+      place: draft.place,
     });
     const session: Session = {
       id: draft.sessionId,
@@ -420,6 +445,8 @@ export class SessionEngine {
       outcome: draft.outcome,
       signals: draft.signals,
       createdAt: endedAt,
+      ...(draft.mode ? { mode: draft.mode } : {}),
+      ...(draft.place ? { place: draft.place } : {}),
     };
     const moments = draft.moments.map((m) => (keepTranscript ? m : { ...m, internalTranscript: undefined }));
     return { session, moments };
@@ -550,6 +577,7 @@ export class SessionEngine {
   }
 
   private nextPhaseAfter(p: Phase): Phase {
+    if (this.mode === 'guided') return this.nextGuidedPhase(p);
     switch (p) {
       case 'ARRIVE':
         return 'SCAN';
@@ -571,6 +599,26 @@ export class SessionEngine {
         return 'CLOSE';
       case 'SAFETY_CHECK':
         return this.phaseBeforeCheck ?? 'EXPLORE';
+      default:
+        return 'DONE';
+    }
+  }
+
+  /**
+   * A guided session has no answers to steer by: after the scan it rests on the place, or on
+   * the body as a whole, until time moves it to reappraise and close (timeGuard).
+   */
+  private nextGuidedPhase(p: Phase): Phase {
+    switch (p) {
+      case 'ARRIVE':
+        return 'SCAN';
+      case 'SCAN':
+        return this.place ? 'OBSERVE' : 'OPEN_AWARENESS';
+      case 'OBSERVE':
+        return 'REAPPRAISE';
+      case 'REAPPRAISE':
+      case 'OPEN_AWARENESS':
+        return 'CLOSE';
       default:
         return 'DONE';
     }
@@ -648,7 +696,7 @@ export class SessionEngine {
     const early: Phase[] = ['NOTICE', 'LOCATE', 'EXPLORE', 'OBSERVE'];
     // Closing takes about half a minute; start it early enough that a short session still ends on time.
     if (elapsed > Math.min(target * 0.95, target - CLOSE_RESERVE_MS)) this.setPhase('CLOSE');
-    else if (elapsed > target * 0.75 && early.includes(this._phase) && this.focus)
+    else if (elapsed > target * 0.75 && early.includes(this._phase) && (this.focus || this.place))
       this.setPhase(this.reappraiseAllowed() ? 'REAPPRAISE' : 'CLOSE');
     else if (elapsed > target * 0.5 && (this._phase === 'LOCATE' || this._phase === 'EXPLORE') && this.focus) this.setPhase('OBSERVE');
   }

@@ -80,8 +80,8 @@ export function SettingsScreen() {
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
-            Your sessions are stored only on this iPhone. There is no account. What you say is turned into words on the device and the audio is never saved. The guide remembers your earlier sessions from what is stored here, so it can start where you usually notice something.
-            {hasRemote ? ' To adapt the guide, the words of the session (never audio), and the place and words you usually use from earlier sessions, are sent through Attend’s guide service to Anthropic’s Claude, which phrases the guide’s next lines. Attend doesn’t store them.' : ''}
+            Your sessions and check-ins are stored only on this iPhone. There is no account. Sessions are guided: they never use the microphone, and nothing you say is heard. Where the guide rests your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
+            {hasRemote ? ' The guide’s lines are voiced through Attend’s voice service by ElevenLabs. Nothing about you is sent with them.' : ''}
           </Txt>
         </View>
         <Hairline />
@@ -165,6 +165,11 @@ function DeveloperSettings() {
             value={dev.brain}
             onChange={(v) => set({ brain: v })}
           />
+        </View>
+        <Hairline />
+        <View style={styles.row}>
+          <Txt variant="body">Conversational sessions</Txt>
+          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: '#8D99FF' }} />
         </View>
         <Hairline />
         <View style={styles.row}>

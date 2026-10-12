@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { SessionEngine } from '../engine/SessionEngine';
+import type { CheckIn } from '../domain/checkin';
 import type { Session, SessionMoment } from '../domain/types';
 import { repository } from './repository';
 import { buildSampleSessions } from './seed';
@@ -14,6 +15,8 @@ import { DEFAULT_PREFS, type Prefs } from './types';
 type DataStore = {
   ready: boolean;
   sessions: Session[];
+  /** The pain record, newest first. */
+  checkIns: CheckIn[];
   prefs: Prefs;
   hasSamples: boolean;
   refresh(): Promise<void>;
@@ -23,6 +26,8 @@ type DataStore = {
   deleteAll(): Promise<void>;
   deleteSamples(): Promise<void>;
   addSamples(): Promise<void>;
+  saveCheckIn(c: CheckIn): Promise<void>;
+  deleteCheckIn(id: string): Promise<void>;
 };
 
 const Ctx = createContext<DataStore | null>(null);
@@ -49,10 +54,12 @@ async function recoverDraft() {
 export function DataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [prefs, setPrefsState] = useState<Prefs>(DEFAULT_PREFS);
 
   const refresh = useCallback(async () => {
     setSessions(await repository.listSessions());
+    setCheckIns(await repository.listCheckIns());
   }, []);
 
   useEffect(() => {
@@ -75,6 +82,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setPrefsState(p);
       setSessions(list);
+      setCheckIns(await repository.listCheckIns());
       setReady(true);
     })().catch(() => setReady(true));
     return () => {
@@ -86,6 +94,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       sessions,
+      checkIns,
       prefs,
       hasSamples: sessions.some((s) => s.isSample),
       refresh,
@@ -113,8 +122,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
         for (const s of buildSampleSessions()) await repository.saveSession(s, []);
         await refresh();
       },
+      async saveCheckIn(c) {
+        await repository.saveCheckIn(c);
+        await refresh();
+      },
+      async deleteCheckIn(id) {
+        await repository.deleteCheckIn(id);
+        await refresh();
+      },
     }),
-    [ready, sessions, prefs, refresh],
+    [ready, sessions, checkIns, prefs, refresh],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import type { EngineDraft } from '../engine/SessionEngine';
+import { normalizePain, type CheckIn } from '../domain/checkin';
 import type { Session, SessionMoment } from '../domain/types';
 import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from './types';
 
@@ -9,7 +10,7 @@ import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from '.
  * queried into.
  */
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const MIGRATIONS: Record<number, string> = {
   1: `
@@ -42,6 +43,23 @@ const MIGRATIONS: Record<number, string> = {
     CREATE INDEX IF NOT EXISTS moments_session ON session_moments (session_id);
     CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
   `,
+  // 12 Oct 2026: guided sessions (mode, place) and Pattern's pain record. Both session columns
+  // are nullable: an older row has no mode because it was a conversation, and no place
+  // because a conversation found its own.
+  2: `
+    ALTER TABLE sessions ADD COLUMN mode TEXT;
+    ALTER TABLE sessions ADD COLUMN place TEXT;
+    CREATE TABLE IF NOT EXISTS check_ins (
+      id TEXT PRIMARY KEY NOT NULL,
+      at INTEGER NOT NULL,
+      tz INTEGER NOT NULL,
+      pain INTEGER NOT NULL,
+      places TEXT,
+      places_skipped INTEGER NOT NULL DEFAULT 0,
+      is_sample INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS check_ins_at ON check_ins (at);
+  `,
 };
 
 type SessionRow = {
@@ -59,7 +77,34 @@ type SessionRow = {
   signals: string;
   is_sample: number;
   created_at: number;
+  mode: string | null;
+  place: string | null;
 };
+
+type CheckInRow = {
+  id: string;
+  at: number;
+  tz: number;
+  pain: number;
+  places: string | null;
+  places_skipped: number;
+  is_sample: number;
+};
+
+function toCheckIn(r: CheckInRow): CheckIn | null {
+  const pain = normalizePain(r.pain);
+  if (pain === null) return null;
+  return {
+    id: r.id,
+    at: r.at,
+    tz: r.tz,
+    pain,
+    // NULL is "never asked"; '[]' is "asked, nothing chosen". The two must not collapse.
+    ...(r.places !== null ? { places: JSON.parse(r.places) } : {}),
+    ...(r.places_skipped ? { placesSkipped: true as const } : {}),
+    ...(r.is_sample ? { isSample: true } : {}),
+  };
+}
 
 type MomentRow = {
   id: string;
@@ -87,6 +132,8 @@ function toSession(r: SessionRow): Session {
     signals: JSON.parse(r.signals),
     isSample: r.is_sample === 1,
     createdAt: r.created_at,
+    ...(r.mode === 'guided' || r.mode === 'conversation' ? { mode: r.mode } : {}),
+    ...(r.place ? { place: JSON.parse(r.place) } : {}),
   };
 }
 
@@ -146,8 +193,8 @@ class SQLiteRepository implements SessionRepository {
     await db.withTransactionAsync(async () => {
       await db.runAsync(
         `INSERT OR REPLACE INTO sessions
-          (id, started_at, ended_at, session_type, title, summary, one_liner, body_map_start, body_map_end, changes, outcome, signals, is_sample, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, started_at, ended_at, session_type, title, summary, one_liner, body_map_start, body_map_end, changes, outcome, signals, is_sample, created_at, mode, place)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         s.id,
         s.startedAt,
         s.endedAt,
@@ -162,6 +209,8 @@ class SQLiteRepository implements SessionRepository {
         JSON.stringify(s.signals),
         s.isSample ? 1 : 0,
         s.createdAt,
+        s.mode ?? null,
+        s.place ? JSON.stringify(s.place) : null,
       );
       for (const m of moments) {
         await db.runAsync(
@@ -187,12 +236,37 @@ class SQLiteRepository implements SessionRepository {
 
   async deleteAll() {
     const db = await this.conn();
-    await db.execAsync("DELETE FROM session_moments; DELETE FROM sessions; DELETE FROM kv WHERE key = 'draft';");
+    await db.execAsync("DELETE FROM session_moments; DELETE FROM sessions; DELETE FROM check_ins; DELETE FROM kv WHERE key = 'draft';");
   }
 
   async deleteSamples() {
     const db = await this.conn();
-    await db.execAsync('DELETE FROM session_moments WHERE session_id IN (SELECT id FROM sessions WHERE is_sample = 1); DELETE FROM sessions WHERE is_sample = 1;');
+    await db.execAsync('DELETE FROM session_moments WHERE session_id IN (SELECT id FROM sessions WHERE is_sample = 1); DELETE FROM sessions WHERE is_sample = 1; DELETE FROM check_ins WHERE is_sample = 1;');
+  }
+
+  async listCheckIns(): Promise<CheckIn[]> {
+    const db = await this.conn();
+    const rows = await db.getAllAsync<CheckInRow>('SELECT * FROM check_ins ORDER BY at DESC');
+    return rows.map(toCheckIn).filter((c): c is CheckIn => c !== null);
+  }
+
+  async saveCheckIn(c: CheckIn): Promise<void> {
+    const db = await this.conn();
+    await db.runAsync(
+      'INSERT OR REPLACE INTO check_ins (id, at, tz, pain, places, places_skipped, is_sample) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      c.id,
+      c.at,
+      c.tz,
+      c.pain,
+      c.places ? JSON.stringify(c.places) : null,
+      c.placesSkipped ? 1 : 0,
+      c.isSample ? 1 : 0,
+    );
+  }
+
+  async deleteCheckIn(id: string): Promise<void> {
+    const db = await this.conn();
+    await db.runAsync('DELETE FROM check_ins WHERE id = ?', id);
   }
 
   private async getKV<T>(key: string): Promise<T | null> {
