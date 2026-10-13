@@ -1,6 +1,7 @@
 import type { Observation, QuestionTopic } from '../domain/extract';
 import type { SessionMemory } from '../domain/memory';
 import type { BodyMapState, BodySensation, Place, SensationChange, SessionMode, SessionSignals, SessionType } from '../domain/types';
+import type { PracticeTheme } from '../domain/program';
 import type { Phase, SessionPlan } from './phases';
 
 /** One thing the guide says, followed by the silence that belongs to it. */
@@ -84,6 +85,8 @@ export type GuideContext = {
   mode: SessionMode;
   /** Guided sessions: where attention rests after the scan. Absent: the body as a whole. */
   place?: Place;
+  /** Guided: the program day's theme, spoken before the general guidance. */
+  theme?: PracticeTheme;
   plan: SessionPlan;
   phase: Phase;
   /** Questions already asked in this phase. */

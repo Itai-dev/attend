@@ -365,18 +365,28 @@ export function guidedTurn(ctx: GuideContext): GuideTurn {
   const prefix: GuideLine[] = ctx.resumed ? [line(L.RESUME[0], L.RESUME[1], ctx)] : [];
   const guide = (ls: L.Line[]): GuideTurn => turn({ lines: [...prefix, ...lines(ls, ctx)], expectsResponse: false, stay: true });
 
+  // The day's theme leads: its lines come on alternate steps until each has been spoken,
+  // with the general guidance between them, so a theme shapes the session without
+  // repeating itself.
+  const themed = (general: L.Line[][]): L.Line[] => {
+    const bank = ctx.theme ? L.GUIDED_THEMES[ctx.theme] : [];
+    const fresh = bank.filter((v) => !ctx.usedLines.has(v[0][0]));
+    if (fresh.length && ctx.phaseStep % 2 === 1) return pickLines(fresh, ctx);
+    return pickLines([...general, ...bank], ctx);
+  };
+
   switch (ctx.phase) {
     case 'OBSERVE':
       if (ctx.phaseStep === 0) return guide(pickLines(L.GUIDED_SETTLE, ctx));
-      return guide(pickLines([...L.GUIDED_OBSERVE, ...L.GUIDE_OBSERVE], ctx));
+      return guide(themed([...L.GUIDED_OBSERVE, ...L.GUIDE_OBSERVE]));
 
     case 'REAPPRAISE':
       if (ctx.phaseStep === 0) return guide(ctx.sessionType === 'fear' ? L.REAPPRAISE_CORE[2] : L.REAPPRAISE_CORE[0]);
-      return guide(pickLines([...L.REAPPRAISE_CORE.slice(1), ...L.GUIDED_OBSERVE], ctx));
+      return guide(themed([...L.REAPPRAISE_CORE.slice(1), ...L.GUIDED_OBSERVE]));
 
     case 'OPEN_AWARENESS':
       if (ctx.phaseStep === 0) return guide(L.OPEN_AWARENESS);
-      return guide(pickLines(L.GUIDED_OPEN, ctx));
+      return guide(themed(L.GUIDED_OPEN));
 
     case 'CLOSE': {
       const prepare = lines(pickLines(L.CLOSE_PREPARE[ctx.sessionType], ctx), ctx);

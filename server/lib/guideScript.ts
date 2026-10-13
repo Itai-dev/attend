@@ -33,6 +33,23 @@
  */
 
 export type Line = [text: string, pauseMs: number];
+/** The program's practice themes (src/domain/program.ts). Each guided session leans on one. */
+export type GuidedTheme =
+  | 'settle'
+  | 'locate'
+  | 'breath'
+  | 'edges'
+  | 'moves'
+  | 'texture'
+  | 'curious'
+  | 'brace'
+  | 'fear'
+  | 'urge'
+  | 'kind'
+  | 'pleasant'
+  | 'activity'
+  | 'flare'
+  | 'open';
 type ByType<T> = { notice: T; flare: T; sleep: T; fear: T };
 
 export type GuideScript = {
@@ -49,6 +66,7 @@ export type GuideScript = {
   GUIDED_SETTLE: Line[][];
   GUIDED_OBSERVE: Line[][];
   GUIDED_OPEN: Line[][];
+  GUIDED_THEMES: Record<GuidedTheme, Line[][]>;
   ANSWER: { how: Line[]; breath: Line[]; move: Line[]; time: Line[]; other: Line[] };
   NOTICE_ASK: ByType<string[]>;
   NOTICE_RETRY: Line[];
@@ -318,6 +336,85 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Gently bring it back to the breath.', 12000],
     ],
   ],
+  // The program's themes (src/domain/program.ts). After settling on {place}, a guided session
+  // speaks its day's theme first, then the general banks above. No line may assume the person
+  // said anything, and none may claim the sensation is safe or harmless.
+  GUIDED_THEMES: {
+    settle: [
+      [['Let your attention rest there, the way a hand rests on a table.', 8000], ['No effort. Just resting.', 12000]],
+      [['Notice that you can be here with it, for this moment.', 12000]],
+    ],
+    locate: [
+      [['Find the place where it is clearest.', 8000], ['Not to judge it. Just to know where it is.', 12000]],
+      [['Is it near the surface, or deeper in?', 6000], ['You don’t need an answer. Just look.', 12000]],
+      [['Notice how big the area is. Smaller than a coin? Larger than a hand?', 12000]],
+    ],
+    breath: [
+      [['Let the breath come and go on its own.', 8000], ['Imagine it moving around {place}, and out again.', 12000]],
+      [['On the out-breath, let the shoulders drop a little.', 10000], ['And again.', 12000]],
+      [['Notice the pause at the end of each breath out.', 12000]],
+    ],
+    edges: [
+      [['Look for the edge of the sensation.', 6000], ['Where does it stop, and something easier begin?', 12000]],
+      [['Trace the outline slowly, as if with a fingertip.', 14000]],
+      [['Is the edge sharp, or does it fade gradually?', 6000], ['Either is fine. Just notice.', 12000]],
+      [['Rest your attention just outside the edge, in what feels neutral.', 12000]],
+    ],
+    moves: [
+      [['Watch whether the sensation stays in one place, or drifts.', 14000]],
+      [['Notice if it pulses, or comes and goes.', 12000]],
+      [['If it moves, let your attention follow, loosely.', 6000], ['If it stays still, watch the stillness.', 12000]],
+    ],
+    texture: [
+      [['Notice its texture.', 5000], ['Tight, warm, buzzing, dull, or something without a name.', 12000]],
+      [['If a word arrives, let it be a description, not a verdict.', 12000]],
+      [['Notice whether the texture is the same all the way through.', 12000]],
+    ],
+    curious: [
+      [['Look at it as if for the first time.', 6000], ['What is actually here, right now?', 12000]],
+      [['See if a little curiosity can sit beside it.', 6000], ['Even a small wondering is enough.', 12000]],
+      [['Watch it the way you might watch a cloud.', 14000]],
+    ],
+    brace: [
+      [['Notice if anything is bracing. The shoulders, the jaw, the hands, the belly.', 10000], ['Let one of them soften a little.', 12000]],
+      [['Bracing is a kind of protection.', 5000], ['See if it can rest, just for this breath.', 12000]],
+      [['Let the place around the sensation be a little looser.', 14000]],
+    ],
+    fear: [
+      [['If there is fear here, notice it too.', 6000], ['Where in the body is the fear?', 12000]],
+      [['Let the fear and the sensation sit side by side.', 6000], ['You don’t need to push either away.', 12000]],
+      [['Fear makes sense. Meet it the way you would meet a frightened friend.', 14000]],
+    ],
+    urge: [
+      [['Notice any urge to move, rub, or check it.', 8000], ['See if you can let the urge be there, and not act on it, just for now.', 14000]],
+      [['Urges rise, and pass, like waves.', 6000], ['Watch one pass.', 12000]],
+      [['Nothing needs fixing in this moment.', 12000]],
+    ],
+    kind: [
+      [['Imagine the sensation belongs to someone you care about.', 6000], ['How would you speak to them?', 12000]],
+      [['Offer yourself the same tone.', 5000], ['This is hard. And you are here.', 12000]],
+      [['Let a little warmth be there, beside it.', 14000]],
+    ],
+    pleasant: [
+      [['Now find a place in the body that feels easy, or neutral.', 8000], ['The hands, the feet, the face.', 12000]],
+      [['Notice anything pleasant, however small. Warmth, support, the breath.', 14000]],
+      [['Let attention rest there for a while. That is part of the practice too.', 14000]],
+    ],
+    activity: [
+      [['Bring to mind the small step you plan to take today.', 8000], ['Picture yourself starting it, slowly.', 12000]],
+      [['Notice what the body does as you picture it.', 8000], ['Meet whatever arises with the same curiosity.', 12000]],
+      [['When you take the step, you can come back to this: notice, breathe, carry on gently.', 12000]],
+    ],
+    flare: [
+      [['Let the breath be slow.', 6000], ['There is nothing you have to do right now.', 10000]],
+      [['Find the edges, even roughly.', 6000], ['Let your attention rest just outside them.', 10000]],
+      [['Soften what you can. Let the rest be as it is.', 12000]],
+    ],
+    open: [
+      [['Let attention widen, until it holds the whole body.', 12000]],
+      [['Notice the places that feel ordinary, or easy.', 12000]],
+    ],
+  },
   OPEN_AWARENESS: [
     ["Then let's simply be with the body as a whole.", 5000],
     ['Feel where it is supported.', 9000],
