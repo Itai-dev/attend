@@ -3,6 +3,7 @@ import { extract, hasBodyContent, type Command, type Observation, type QuestionT
 import { newId as defaultNewId } from '../domain/ids';
 import { DESCRIPTORS } from '../domain/lexicon';
 import type { SessionMemory } from '../domain/memory';
+import type { PracticeTheme } from '../domain/program';
 import { buildRecap } from '../domain/recap';
 import { REGIONS, speakPlace } from '../domain/regions';
 import { screen } from '../domain/safety';
@@ -52,6 +53,10 @@ export type EngineOptions = {
   mode?: SessionMode;
   /** Guided: where attention rests after the scan. Absent: the body as a whole. */
   place?: Place;
+  /** Guided: the program day's theme. 'open' rests on the whole body even when a place is known. */
+  theme?: PracticeTheme;
+  /** The program day this session is. Recorded, never read by the guide. */
+  programDay?: number;
 };
 
 export type IngestOutcome = { command?: Command };
@@ -68,6 +73,7 @@ export type EngineDraft = {
   outcome: SessionOutcome;
   mode?: SessionMode;
   place?: Place;
+  programDay?: number;
 };
 
 function mulberry32(seed: number) {
@@ -96,6 +102,8 @@ export class SessionEngine {
   readonly startedAt: number;
   readonly mode: SessionMode;
   readonly place?: Place;
+  readonly theme?: PracticeTheme;
+  readonly programDay?: number;
 
   private readonly now: () => number;
   private readonly newId: (prefix?: string) => string;
@@ -143,6 +151,8 @@ export class SessionEngine {
     this.mode = opts.mode ?? 'conversation';
     // A place only means something to a guided session; a conversation finds its own.
     this.place = this.mode === 'guided' ? opts.place : undefined;
+    this.theme = this.mode === 'guided' ? opts.theme : undefined;
+    this.programDay = opts.programDay;
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
   }
@@ -172,6 +182,7 @@ export class SessionEngine {
       sessionType: this.sessionType,
       mode: this.mode,
       place: this.place,
+      theme: this.theme,
       plan: this.plan,
       phase: this._phase,
       phaseTurn: this.phaseTurn,
@@ -396,6 +407,7 @@ export class SessionEngine {
         outcome: this.outcome,
         mode: this.mode,
         place: this.place,
+        programDay: this.programDay,
       },
       endedAt,
       this.keepTranscript,
@@ -416,6 +428,7 @@ export class SessionEngine {
       outcome: this.outcome,
       mode: this.mode,
       place: this.place,
+      programDay: this.programDay,
     };
   }
 
@@ -447,6 +460,7 @@ export class SessionEngine {
       createdAt: endedAt,
       ...(draft.mode ? { mode: draft.mode } : {}),
       ...(draft.place ? { place: draft.place } : {}),
+      ...(draft.programDay ? { programDay: draft.programDay } : {}),
     };
     const moments = draft.moments.map((m) => (keepTranscript ? m : { ...m, internalTranscript: undefined }));
     return { session, moments };
@@ -613,7 +627,7 @@ export class SessionEngine {
       case 'ARRIVE':
         return 'SCAN';
       case 'SCAN':
-        return this.place ? 'OBSERVE' : 'OPEN_AWARENESS';
+        return this.place && this.theme !== 'open' ? 'OBSERVE' : 'OPEN_AWARENESS';
       case 'OBSERVE':
         return 'REAPPRAISE';
       case 'REAPPRAISE':
@@ -696,7 +710,7 @@ export class SessionEngine {
     const early: Phase[] = ['NOTICE', 'LOCATE', 'EXPLORE', 'OBSERVE'];
     // Closing takes about half a minute; start it early enough that a short session still ends on time.
     if (elapsed > Math.min(target * 0.95, target - CLOSE_RESERVE_MS)) this.setPhase('CLOSE');
-    else if (elapsed > target * 0.75 && early.includes(this._phase) && (this.focus || this.place))
+    else if (elapsed > target * 0.75 && early.includes(this._phase) && (this.focus || (this.place && this.theme !== 'open')))
       this.setPhase(this.reappraiseAllowed() ? 'REAPPRAISE' : 'CLOSE');
     else if (elapsed > target * 0.5 && (this._phase === 'LOCATE' || this._phase === 'EXPLORE') && this.focus) this.setPhase('OBSERVE');
   }

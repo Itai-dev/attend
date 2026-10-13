@@ -8,6 +8,7 @@ import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
 import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
+import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { speechModule } from '@/voice/speechModule';
 
 /**
@@ -64,7 +65,52 @@ export function SettingsScreen() {
         <QuietButton label="Done" tone="primary" onPress={() => router.back()} />
       </View>
 
-      <SectionLabel>Background</SectionLabel>
+      <SectionLabel>Daily reminder</SectionLabel>
+      <Group>
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Txt variant="body">A gentle reminder</Txt>
+            <Txt variant="footnote" tone="tertiary">
+              {remindersAvailable() ? 'One a day. Never about missed days.' : 'Needs the next app update.'}
+            </Txt>
+          </View>
+          <Switch
+            value={!!prefs.reminder?.enabled}
+            disabled={!remindersAvailable()}
+            trackColor={{ true: color.practice }}
+            accessibilityLabel="A gentle reminder"
+            onValueChange={async (on) => {
+              const base = prefs.reminder ?? { enabled: false, hour: 20, minute: 30 };
+              const reminder = { ...base, enabled: on && (await requestReminderPermission()) };
+              await setPrefs({ reminder });
+              await scheduleReminders(reminder, undefined);
+            }}
+          />
+        </View>
+        {prefs.reminder?.enabled ? (
+          <>
+            <Hairline />
+            <View style={styles.textBlock}>
+              <Segmented<string>
+                options={[
+                  { value: '8:0', label: 'Morning' },
+                  { value: '13:0', label: 'Midday' },
+                  { value: '20:30', label: 'Evening' },
+                ]}
+                value={`${prefs.reminder.hour}:${prefs.reminder.minute}`}
+                onChange={async (v) => {
+                  const [hour, minute] = v.split(':').map(Number);
+                  const reminder = { enabled: true, hour, minute };
+                  await setPrefs({ reminder });
+                  await scheduleReminders(reminder, undefined);
+                }}
+              />
+            </View>
+          </>
+        ) : null}
+      </Group>
+
+      <SectionLabel style={styles.section}>Background</SectionLabel>
       <Group>
         <Choice
           label="Soft tone"

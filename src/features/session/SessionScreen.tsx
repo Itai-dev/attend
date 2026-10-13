@@ -5,7 +5,8 @@ import { Linking, Platform, StyleSheet, useWindowDimensions, View } from 'react-
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import type { SessionType } from '@/domain/types';
+import type { PracticeTheme } from '@/domain/program';
+import type { Place, SessionType } from '@/domain/types';
 import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
 import { SESSION_LENGTHS } from '@/engine/phases';
@@ -36,7 +37,7 @@ export function breathMode(s: SessionStatus): BreathMode {
 }
 
 export function SessionScreen() {
-  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string }>();
+  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string }>();
   const type = (['notice', 'flare', 'sleep', 'fear'].includes(params.type ?? '') ? params.type : 'notice') as SessionType;
   const minutes = SESSION_LENGTHS.find((m) => String(m) === params.minutes);
   const vs = useVoiceSession();
@@ -54,7 +55,19 @@ export function SessionScreen() {
     if (started.current) return;
     started.current = true;
     vs.reset();
-    vs.start(type, minutes, params.voice);
+    // From the Before screen: the day's theme, the program day, and where attention rests
+    // ('none' = the whole body). Anything malformed falls back to the session's own choice.
+    let place: Place | null | undefined;
+    try {
+      place = params.place === 'none' ? null : params.place ? (JSON.parse(params.place) as Place) : undefined;
+    } catch {
+      place = undefined;
+    }
+    vs.start(type, minutes, params.voice, {
+      theme: params.theme as PracticeTheme | undefined,
+      programDay: params.day ? Number(params.day) || undefined : undefined,
+      place,
+    });
     const t = setTimeout(() => setHint(false), 6000);
     return () => {
       clearTimeout(t);

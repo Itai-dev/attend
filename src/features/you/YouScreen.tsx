@@ -5,9 +5,8 @@ import { Card, Icon, TitledScroll, Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
 
 /**
- * You: the places that are about the person rather than a session — the body map and the
- * journey built from their own words, the pain record and progress — plus the welcome (to change focus, length or voice)
- * and settings. Progress shows the pain record and never concludes from it.
+ * You: the body map and journey (from conversational sessions), the welcome again (to change
+ * the place, goal or practice time), and settings.
  */
 
 function Place({ title, detail, icon, onPress }: { title: string; detail: string; icon: string; onPress: () => void }) {
@@ -32,13 +31,12 @@ export function YouScreen() {
   return (
     <TitledScroll title="You">
       <View style={{ gap: space.m }}>
-        <Place title="Progress" detail="Your pain over the weeks, beside the days you practised" icon="chart.xyaxis.line" onPress={() => router.push('/progress')} />
         <Place title="Body" detail="A map of what you’ve described" icon="figure.stand" onPress={() => router.push('/body')} />
         <Place title="Journey" detail="How it has moved and changed, in your words" icon="point.topleft.down.curvedto.point.bottomright.up" onPress={() => router.push('/journey')} />
       </View>
       <View style={{ gap: space.m, marginTop: space.xxl }}>
-        <Place title="Your session" detail="Change what it’s for, its length and voice" icon="waveform" onPress={() => setPrefs({ onboarded: false })} />
-        <Place title="Settings" detail="Background sound, privacy, about" icon="gearshape" onPress={() => router.push('/settings')} />
+        <Place title="Your plan" detail="Where it hurts, your goal, your practice time" icon="waveform" onPress={() => setPrefs({ onboarded: false })} />
+        <Place title="Settings" detail="Reminder, background sound, privacy" icon="gearshape" onPress={() => router.push('/settings')} />
       </View>
     </TitledScroll>
   );

@@ -1,165 +1,159 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import { latestPlace } from '@/domain/checkin';
-import { analyzeJourney } from '@/domain/journey';
-import { buildMemory } from '@/domain/memory';
+import { currentTz, dayKey, latestPlace } from '@/domain/checkin';
+import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
+import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { speakPlace } from '@/domain/regions';
-import { PRESETS, recommendedPreset } from '@/domain/presets';
-import { Card, haptic, PrimaryButton, SectionLabel, Txt } from '@/design/components';
+import { Card, haptic, Icon, PrimaryButton, SectionLabel, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
-import { DEFAULT_LENGTH, SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
+import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { BreathingField } from '@/viz/BreathingField';
 import { greeting } from '../shared/format';
-import { PresetCard, startPreset } from '../shared/PresetCard';
+import { WeekStrip } from '../shared/WeekStrip';
 
 /**
- * Today. One clear thing to do: begin the session set up in the welcome. Its length can
- * change here; everything else was decided with the eyes open, so nothing needs deciding
- * once they close. Below it, a few other ready sessions and — if Journey has found
- * something — one sentence about lately. No numbers, no streaks.
+ * Today: one next step. The day's lesson and practice, this week's practice days, a way in
+ * for a flare, a check-in, and the person's goal. The pain record isn't here — Today is
+ * about doing, Progress is for looking back (docs/RESEARCH.md §5).
  */
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const { sessions, checkIns, prefs, setPrefs } = useData();
-  const minutes: SessionLength = prefs.sessionMinutes ?? DEFAULT_LENGTH;
-  const yours = useMemo(() => recommendedPreset({ focus: prefs.focus, minutes, voiceId: prefs.voiceId }), [prefs.focus, prefs.voiceId, minutes]);
-  const more = useMemo(
-    () => [...PRESETS.filter((p) => p.type === yours.type && p.id !== yours.id), ...PRESETS.filter((p) => p.type !== yours.type)].slice(0, 3),
-    [yours],
-  );
+  const { sessions, checkIns, prefs } = useData();
+  const tz = currentTz();
+  const now = Date.now();
+  const program = prefs.program ?? EMPTY_PROGRAM;
+  const { day, doneToday, finished } = currentDay(program, dayKey(now, tz));
+  const today = programDay(day);
+  const read = program.read.includes(day);
+  const strip = useMemo(() => weekStrip(sessions, now, tz), [sessions, now, tz]);
+  const stats = useMemo(() => practiceStats(sessions, now, tz), [sessions, now, tz]);
+  const place = latestPlace(checkIns) ?? prefs.place;
+  const restsOn = today.practice.theme === 'open' || !place ? 'the body as a whole' : speakPlace(place.region, place.side);
+  const lastMoment = prefs.moments?.[0];
+
+  // Keep the reminder in step with the latest practice: daily while practising, weekly after
+  // four quiet days (voice/reminders.ts). Rescheduling is idempotent.
+  useEffect(() => {
+    scheduleReminders(prefs.reminder, stats.lastPractice);
+  }, [prefs.reminder, stats.lastPractice]);
+
   const { warm } = useVoiceSession();
-  // Ready the session while the person is still looking at Today, so Begin goes straight into the guide's first words.
-  useEffect(() => warm(yours.type, yours.voiceId), [yours.type, yours.voiceId, warm]);
-  // Where the session will rest, said before the eyes close so nothing needs deciding after.
-  // The same choice the session makes at Begin: the latest check-in, else the usual place.
-  const restsOn = useMemo(() => {
-    const p = latestPlace(checkIns) ?? buildMemory(sessions).usual;
-    return p && p.region !== 'whole_body' ? speakPlace(p.region, p.side) : undefined;
-  }, [checkIns, sessions]);
-  const lately = useMemo(() => analyzeJourney(sessions).insights[0]?.homeLine, [sessions]);
-  const orb = Math.min(width - space.xl * 4, 220);
+  // Ready the practice while the person reads Today, so Begin goes straight to the guide's first words.
+  useEffect(() => warm(today.practice.sessionType, prefs.voiceId), [today.practice.sessionType, prefs.voiceId, warm]);
+
+  const go = () => {
+    haptic('soft');
+    if (!read && !doneToday) router.push({ pathname: '/lesson/[day]', params: { day: String(day) } });
+    else router.push({ pathname: '/before', params: { day: String(day) } });
+  };
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.bg }}
       contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
     >
-      <Txt variant="caption" tone="tertiary" style={styles.wordmark} accessibilityRole="header">
-        ATTEND
-      </Txt>
-      <Txt variant="display" style={{ marginTop: space.s }}>
-        {greeting()}
-      </Txt>
+      <View style={styles.head}>
+        <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
+          {greeting()}
+        </Txt>
+        <Txt variant="footnote" tone="tertiary">
+          {finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`}
+        </Txt>
+      </View>
 
-      {/* The orb sits on the page, not in the card: the field paints its own background. */}
-      <Animated.View entering={FadeIn.duration(1200)} style={{ alignItems: 'center', marginTop: space.l }}>
-        <BreathingField width={orb} height={orb} mode="idle" dim={0.85} />
+      <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xl }}>
+        <WeekStrip days={strip} />
+        <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
+          {weekLine(stats, now)}
+        </Txt>
       </Animated.View>
 
-      <Card style={styles.hero}>
-        <Txt variant="caption" tone="tertiary" align="center" style={styles.kicker}>
-          YOUR SESSION
+      <Card style={styles.today}>
+        <Txt variant="caption" style={styles.kicker}>
+          {finished ? 'ANY TIME' : `TODAY · WEEK ${today.week} · ${WEEKS[today.week].name.toUpperCase()}`}
         </Txt>
-        <Txt variant="title2" align="center">
-          {yours.title}
-        </Txt>
-        <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.xs }}>
-          {yours.voiceName}’s voice · Eyes closed. Just listen.
-        </Txt>
-        <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.xs }}>
-          {restsOn ? `Rests on ${restsOn}` : 'Rests with the body as a whole'}
-        </Txt>
-
-        <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Session length">
-          {SESSION_LENGTHS.map((m) => {
-            const selected = m === minutes;
-            return (
-              <Pressable
-                key={m}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                accessibilityLabel={`${m} minutes`}
-                onPress={() => {
-                  if (selected) return;
-                  haptic('select');
-                  setPrefs({ sessionMinutes: m });
-                }}
-                style={({ pressed }) => [styles.length, selected && styles.lengthOn, { opacity: pressed ? 0.6 : 1 }]}
-              >
-                <Txt variant="callout" tone={selected ? 'inverse' : 'secondary'}>
-                  {m} min
-                </Txt>
-              </Pressable>
-            );
-          })}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Lesson: ${today.lesson.title}. ${read ? 'Read.' : '2 minutes.'}`}
+          onPress={() => router.push({ pathname: '/lesson/[day]', params: { day: String(day) } })}
+          style={({ pressed }) => [styles.step, { opacity: pressed ? 0.6 : read ? 0.72 : 1 }]}
+        >
+          <View style={[styles.mark, read && styles.markDone]}>
+            {read ? <Icon name="checkmark" size={13} tint={color.practice} weight="bold" /> : <Txt variant="footnote" style={{ fontWeight: '700' }}>1</Txt>}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Txt variant="body">{today.lesson.title}</Txt>
+            <Txt variant="footnote" tone="secondary">
+              Lesson · 2 min
+            </Txt>
+          </View>
+        </Pressable>
+        <View style={[styles.step, { opacity: doneToday ? 0.72 : 1 }]}>
+          <View style={[styles.mark, doneToday && styles.markDone]}>
+            {doneToday ? <Icon name="checkmark" size={13} tint={color.practice} weight="bold" /> : <Txt variant="footnote" style={{ fontWeight: '700' }}>2</Txt>}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Txt variant="body" style={{ fontWeight: '600' }}>
+              {today.practice.title}
+            </Txt>
+            <Txt variant="footnote" tone="secondary">
+              Practice · {today.practice.minutes} min · rests on {restsOn}
+            </Txt>
+          </View>
         </View>
-
-        <PrimaryButton label="Begin" detail={`${minutes} minutes`} onPress={() => startPreset(yours)} />
-      </Card>
-
-      <Card label="Check in. How much it hurts right now" onPress={() => router.push('/checkin')} style={styles.lately}>
-        <SectionLabel>Check in</SectionLabel>
-        <Txt variant="callout" tone="secondary">
-          How much it hurts right now, and where. Any time of day, apart from your sessions.
-        </Txt>
-      </Card>
-
-      {lately ? (
-        <Card label="Lately. Opens Journey" onPress={() => router.push('/journey')} style={styles.lately}>
-          <SectionLabel>Lately</SectionLabel>
-          <Txt variant="title2" style={{ fontWeight: '300' }}>
-            {lately}
+        {doneToday ? (
+          <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
+            {finished ? 'All 28 days done. Every practice stays here.' : `Day ${day} is done. Day ${day + 1} opens tomorrow.`}
           </Txt>
+        ) : (
+          <PrimaryButton label={read ? `Begin Day ${day}` : `Continue Day ${day}`} onPress={go} style={{ marginTop: space.s }} />
+        )}
+      </Card>
+
+      <View style={styles.quick}>
+        <Card label="Flare. A 3-minute session for right now" onPress={() => router.push({ pathname: '/before', params: { preset: 'flare-3' } })} style={styles.quickCard}>
+          <SectionLabel style={{ marginBottom: space.xs }}>Flare?</SectionLabel>
+          <Txt variant="callout">A 3-minute session for right now</Txt>
+        </Card>
+        <Card label="Check in. How it is today, and where" onPress={() => router.push('/checkin')} style={styles.quickCard}>
+          <SectionLabel style={{ marginBottom: space.xs }}>Check in</SectionLabel>
+          <Txt variant="callout">How it is today, and where</Txt>
+        </Card>
+      </View>
+
+      {prefs.goal ? (
+        <Card style={styles.goal}>
+          <Txt variant="caption" style={{ color: color.milestone, letterSpacing: 1.2 }}>
+            TOWARD · {prefs.goal.toUpperCase()}
+          </Txt>
+          <Txt variant="callout" style={{ marginTop: space.xs }}>
+            {lastMoment ? `Last moment you saved: “${lastMoment.text}”` : 'Did something toward it today, however small? Save it as a moment.'}
+          </Txt>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={styles.goalLink} hitSlop={8}>
+            <Txt variant="callout" style={{ color: color.milestone }}>
+              Save a moment
+            </Txt>
+          </Pressable>
         </Card>
       ) : null}
-
-      <SectionLabel style={{ marginTop: space.xxl }}>Also here</SectionLabel>
-      <View style={{ gap: space.m }}>
-        {more.map((p) => (
-          <PresetCard key={p.id} preset={p} />
-        ))}
-      </View>
-      <Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={({ pressed }) => [styles.all, { opacity: pressed ? 0.6 : 1 }]}>
-        <Txt variant="callout" tone="secondary">
-          All sessions in Explore
-        </Txt>
-      </Pressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  wordmark: { letterSpacing: 3.2, fontSize: 12 },
-  hero: { marginTop: space.l, padding: space.xl },
-  kicker: { letterSpacing: 1.6, marginBottom: space.xs },
-  lengths: {
-    flexDirection: 'row',
-    alignSelf: 'center',
-    gap: space.xs,
-    padding: space.xs,
-    marginTop: space.xl,
-    marginBottom: space.l,
-    borderRadius: radius.pill,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
-  },
-  length: {
-    minWidth: 76,
-    minHeight: HIT - 4,
-    paddingHorizontal: space.l,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-  },
-  lengthOn: { backgroundColor: color.text },
-  lately: { marginTop: space.l, padding: space.xl },
-  all: { minHeight: HIT, alignItems: 'center', justifyContent: 'center', marginTop: space.m },
+  head: { flexDirection: 'row', alignItems: 'baseline', gap: space.m },
+  today: { marginTop: space.xl, padding: space.l, gap: space.m, borderRadius: radius.l },
+  kicker: { color: color.practice, letterSpacing: 1.4 },
+  step: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: HIT },
+  mark: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: color.text, alignItems: 'center', justifyContent: 'center' },
+  markDone: { borderWidth: 0, backgroundColor: color.practiceSoft },
+  quick: { flexDirection: 'row', gap: space.m, marginTop: space.m },
+  quickCard: { flex: 1, padding: space.l, minHeight: 96 },
+  goal: { marginTop: space.m, padding: space.l, backgroundColor: color.milestoneSoft, borderColor: 'rgba(242,196,141,0.24)' },
+  goalLink: { minHeight: 36, justifyContent: 'center', marginTop: space.xs, alignSelf: 'flex-start' },
 });

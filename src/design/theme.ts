@@ -22,6 +22,12 @@ export const color = {
   accent: '#F2F0EB',
   onAccent: '#0B0B0D',
   focusRing: '#CFC6FF',
+  /** The program's colour: days done, the week strip, the path. Practice, never pain. */
+  practice: '#CFC6FF',
+  practiceSoft: 'rgba(207,198,255,0.14)',
+  /** Milestones and the person's goal: warm, and only ever about what they did. */
+  milestone: '#F2C48D',
+  milestoneSoft: 'rgba(242,196,141,0.10)',
 } as const;
 
 export { fieldColor, familyColor } from './palette';

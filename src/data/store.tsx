@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { SessionEngine } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
-import type { Session, SessionMoment } from '../domain/types';
+import type { Session, SessionFeeling, SessionMoment } from '../domain/types';
 import { repository } from './repository';
 import { buildSampleSessions } from './seed';
 import { DEFAULT_PREFS, type Prefs } from './types';
@@ -27,6 +27,7 @@ type DataStore = {
   deleteSamples(): Promise<void>;
   addSamples(): Promise<void>;
   saveCheckIn(c: CheckIn): Promise<void>;
+  setFeeling(sessionId: string, feeling: SessionFeeling | null): Promise<void>;
   deleteCheckIn(id: string): Promise<void>;
 };
 
@@ -124,6 +125,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       async saveCheckIn(c) {
         await repository.saveCheckIn(c);
+        await refresh();
+      },
+      async setFeeling(sessionId, feeling) {
+        await repository.setFeeling(sessionId, feeling);
         await refresh();
       },
       async deleteCheckIn(id) {

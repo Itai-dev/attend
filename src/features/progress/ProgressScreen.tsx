@@ -3,14 +3,18 @@ import { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useData } from '@/data/store';
 import { currentTz, formatPain, MIN_DAYS_FOR_PICTURE, PAIN_MAX, type CheckIn } from '@/domain/checkin';
+import { milestones, practiceStats } from '@/domain/engagement';
+import { EMPTY_PROGRAM } from '@/domain/program';
 import { buildProgress, PROGRESS_MEANING, type ProgressDay } from '@/domain/progress';
 import { REGIONS } from '@/domain/regions';
-import { Card, Hairline, PrimaryButton, SectionLabel, TitledScroll, Txt } from '@/design/components';
+import { Card, Hairline, Icon, PrimaryButton, SectionLabel, TitledScroll, Txt } from '@/design/components';
 import { color, HIT, space } from '@/design/theme';
 import { sessionDate } from '../shared/format';
 
 /**
- * Progress: pain over weeks, beside the days practised. The picture is the person's to read;
+ * Progress, in two halves that never mix. What you did — practice days, minutes, lessons,
+ * milestones, the moments you saved — is celebrated. The pain record is shown, not judged:
+ * pain over weeks, beside the days practised. The picture is the person's to read;
  * the screen draws it and says what it does not mean, and never says which way it went.
  * Colour stays neutral: no hue here carries a verdict.
  */
@@ -67,8 +71,13 @@ function placesText(c: CheckIn): string | undefined {
 }
 
 export function ProgressScreen() {
-  const { checkIns, sessions, deleteCheckIn } = useData();
-  const progress = useMemo(() => buildProgress(checkIns, sessions, { tz: currentTz() }), [checkIns, sessions]);
+  const { checkIns, sessions, prefs, deleteCheckIn } = useData();
+  const tz = currentTz();
+  const progress = useMemo(() => buildProgress(checkIns, sessions, { tz }), [checkIns, sessions, tz]);
+  const program = prefs.program ?? EMPTY_PROGRAM;
+  const stats = useMemo(() => practiceStats(sessions, Date.now(), tz), [sessions, tz]);
+  const marks = useMemo(() => milestones({ sessions, program, moments: prefs.moments?.length ?? 0, tz }), [sessions, program, prefs.moments, tz]);
+  const moments = (prefs.moments ?? []).slice(0, 5);
   const recent = checkIns.filter((c) => !c.isSample).slice(0, 12);
 
   const remove = (c: CheckIn) => {
@@ -81,7 +90,63 @@ export function ProgressScreen() {
   };
 
   return (
-    <TitledScroll title="Progress" onBack={() => router.back()}>
+    <TitledScroll title="Progress">
+      <SectionLabel>Your practice</SectionLabel>
+      <View style={styles.tiles}>
+        {[
+          [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
+          [stats.minutes, 'minutes'],
+          [program.read.length, program.read.length === 1 ? 'lesson' : 'lessons'],
+        ].map(([n, label]) => (
+          <View key={String(label)} style={styles.tile}>
+            <Txt variant="title">{String(n)}</Txt>
+            <Txt variant="caption" tone="tertiary">
+              {String(label)}
+            </Txt>
+          </View>
+        ))}
+      </View>
+      <View style={styles.marks} accessible accessibilityLabel={`Milestones: ${marks.filter((m) => m.earned).map((m) => m.label).join(', ') || 'none yet'}.`}>
+        {marks.map((m) => (
+          <View key={m.id} style={styles.mark}>
+            <View style={[styles.badge, m.earned ? styles.badgeOn : styles.badgeOff]}>
+              <Icon name="star.fill" size={16} tint={m.earned ? color.milestone : color.textTertiary} />
+            </View>
+            <Txt variant="caption" tone={m.earned ? 'secondary' : 'tertiary'} align="center" style={{ fontSize: 10, lineHeight: 12 }}>
+              {m.label}
+            </Txt>
+          </View>
+        ))}
+      </View>
+
+      {prefs.goal || moments.length ? (
+        <>
+          <SectionLabel style={{ marginTop: space.xxl }}>{prefs.goal ? `Toward ${prefs.goal.toLowerCase()}` : 'Moments'}</SectionLabel>
+          <Card style={{ padding: space.l, gap: space.m }}>
+            {moments.length ? (
+              moments.map((m) => (
+                <View key={m.id} style={{ gap: 2 }}>
+                  <Txt variant="callout">“{m.text}”</Txt>
+                  <Txt variant="caption" tone="tertiary">
+                    {sessionDate(m.at)}
+                  </Txt>
+                </View>
+              ))
+            ) : (
+              <Txt variant="callout" tone="secondary">
+                Steps you take and quieter moments you notice will gather here, in your words.
+              </Txt>
+            )}
+            <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={{ minHeight: 36, justifyContent: 'center' }}>
+              <Txt variant="callout" style={{ color: color.milestone }}>
+                Save a moment
+              </Txt>
+            </Pressable>
+          </Card>
+        </>
+      ) : null}
+
+      <SectionLabel style={{ marginTop: space.xxl }}>Your pain record</SectionLabel>
       <PrimaryButton label="Check in" detail="How much it hurts right now" onPress={() => router.push('/checkin')} />
 
       <Card style={styles.card}>
@@ -149,4 +214,11 @@ const styles = StyleSheet.create({
   legend: { flexDirection: 'row', gap: space.xl, marginTop: space.m, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.s },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, gap: space.m, paddingVertical: space.s },
+  tiles: { flexDirection: 'row', gap: space.s },
+  tile: { flex: 1, padding: space.m, gap: 2, borderRadius: 16, backgroundColor: color.surface },
+  marks: { flexDirection: 'row', gap: space.xs, marginTop: space.l },
+  mark: { flex: 1, alignItems: 'center', gap: space.xs },
+  badge: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  badgeOn: { backgroundColor: 'rgba(242,196,141,0.16)' },
+  badgeOff: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.hairline },
 });

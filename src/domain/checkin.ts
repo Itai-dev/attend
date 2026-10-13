@@ -1,4 +1,4 @@
-import type { Place, Session } from './types';
+import type { BodyRegion, Place, Session } from './types';
 
 /**
  * The pain record, ported from Pattern (pattern-native, src/painScale.ts and src/model.ts)
@@ -119,3 +119,23 @@ export function latestPlace(checkIns: CheckIn[], withinDays = 14, now = Date.now
 
 /** Fewer days than this is not a picture yet: the progress view says so instead of drawing one. */
 export const MIN_DAYS_FOR_PICTURE = 5;
+
+/** Where people with chronic pain most often point, in the order they'd look. Shared by onboarding, check-in and Before. */
+export const WHERE_REGIONS: BodyRegion[] = [
+  'lower_back',
+  'upper_back',
+  'neck',
+  'shoulder',
+  'head',
+  'jaw',
+  'chest',
+  'abdomen',
+  'pelvis',
+  'hip',
+  'arm',
+  'hand',
+  'leg',
+  'knee',
+  'foot',
+  'whole_body',
+];

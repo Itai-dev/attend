@@ -12,6 +12,7 @@ import { SESSION_TYPE_LABELS } from '@/engine/phases';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { BodyField } from '@/viz/BodyField';
 import { preferredView, type View as FigureView } from '@/viz/bodyUniforms';
+import { AfterScreen } from '../after/AfterScreen';
 import { sessionDate } from '../shared/format';
 
 /**
@@ -24,6 +25,10 @@ import { sessionDate } from '../shared/format';
 
 export function RecapRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { sessions } = useData();
+  const session = sessions.find((s) => s.id === id);
+  // A guided session heard nothing, so there is nothing to recap: it ends on the completion moment.
+  if (session?.mode === 'guided') return <AfterScreen session={session} />;
   return <Recap id={id} mode="reveal" />;
 }
 
