@@ -10,7 +10,7 @@ import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from '.
  * queried into.
  */
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const MIGRATIONS: Record<number, string> = {
   1: `
@@ -60,6 +60,11 @@ const MIGRATIONS: Record<number, string> = {
     );
     CREATE INDEX IF NOT EXISTS check_ins_at ON check_ins (at);
   `,
+  // 13 Oct 2026: the program. Which day a session was, and how it felt (one tap, optional).
+  3: `
+    ALTER TABLE sessions ADD COLUMN program_day INTEGER;
+    ALTER TABLE sessions ADD COLUMN feeling TEXT;
+  `,
 };
 
 type SessionRow = {
@@ -79,6 +84,8 @@ type SessionRow = {
   created_at: number;
   mode: string | null;
   place: string | null;
+  program_day: number | null;
+  feeling: string | null;
 };
 
 type CheckInRow = {
@@ -134,6 +141,8 @@ function toSession(r: SessionRow): Session {
     createdAt: r.created_at,
     ...(r.mode === 'guided' || r.mode === 'conversation' ? { mode: r.mode } : {}),
     ...(r.place ? { place: JSON.parse(r.place) } : {}),
+    ...(r.program_day ? { programDay: r.program_day } : {}),
+    ...(r.feeling ? { feeling: r.feeling as Session['feeling'] } : {}),
   };
 }
 
@@ -193,8 +202,8 @@ class SQLiteRepository implements SessionRepository {
     await db.withTransactionAsync(async () => {
       await db.runAsync(
         `INSERT OR REPLACE INTO sessions
-          (id, started_at, ended_at, session_type, title, summary, one_liner, body_map_start, body_map_end, changes, outcome, signals, is_sample, created_at, mode, place)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, started_at, ended_at, session_type, title, summary, one_liner, body_map_start, body_map_end, changes, outcome, signals, is_sample, created_at, mode, place, program_day, feeling)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         s.id,
         s.startedAt,
         s.endedAt,
@@ -211,6 +220,8 @@ class SQLiteRepository implements SessionRepository {
         s.createdAt,
         s.mode ?? null,
         s.place ? JSON.stringify(s.place) : null,
+        s.programDay ?? null,
+        s.feeling ?? null,
       );
       for (const m of moments) {
         await db.runAsync(
@@ -242,6 +253,11 @@ class SQLiteRepository implements SessionRepository {
   async deleteSamples() {
     const db = await this.conn();
     await db.execAsync('DELETE FROM session_moments WHERE session_id IN (SELECT id FROM sessions WHERE is_sample = 1); DELETE FROM sessions WHERE is_sample = 1; DELETE FROM check_ins WHERE is_sample = 1;');
+  }
+
+  async setFeeling(sessionId: string, feeling: Session['feeling'] | null): Promise<void> {
+    const db = await this.conn();
+    await db.runAsync('UPDATE sessions SET feeling = ? WHERE id = ?', feeling ?? null, sessionId);
   }
 
   async listCheckIns(): Promise<CheckIn[]> {

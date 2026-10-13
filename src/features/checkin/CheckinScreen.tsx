@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import { currentTz, PAIN_END_HIGH, PAIN_END_LOW, PAIN_MAX, painLabel } from '@/domain/checkin';
+import { currentTz, PAIN_END_HIGH, PAIN_END_LOW, PAIN_MAX, painLabel, WHERE_REGIONS as WHERE } from '@/domain/checkin';
 import { newId } from '@/domain/ids';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion, Place } from '@/domain/types';
@@ -22,25 +22,6 @@ import { color, HIT, radius, space } from '@/design/theme';
  * session rests on, in the same words.
  */
 
-/** Where people with chronic pain most often point, in the order they'd look for them. */
-const WHERE: BodyRegion[] = [
-  'lower_back',
-  'upper_back',
-  'neck',
-  'shoulder',
-  'head',
-  'jaw',
-  'chest',
-  'abdomen',
-  'pelvis',
-  'hip',
-  'arm',
-  'hand',
-  'leg',
-  'knee',
-  'foot',
-  'whole_body',
-];
 
 function cap(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);

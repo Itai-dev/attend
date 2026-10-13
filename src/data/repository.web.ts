@@ -81,6 +81,11 @@ class WebRepository implements SessionRepository {
     this.save();
   }
 
+  async setFeeling(sessionId: string, feeling: Session['feeling'] | null) {
+    this.s.sessions = this.s.sessions.map((x) => (x.id === sessionId ? { ...x, feeling: feeling ?? undefined } : x));
+    this.save();
+  }
+
   async listCheckIns() {
     return [...(this.s.checkIns ?? [])].sort((a, b) => b.at - a.at);
   }

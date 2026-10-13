@@ -62,7 +62,7 @@ export const PLANS: Record<SessionType, SessionPlan> = {
 };
 
 /** The lengths offered before a session, Headspace-style. Short by default: the app is used, then left. */
-export const SESSION_LENGTHS = [3, 5, 10] as const;
+export const SESSION_LENGTHS = [3, 5, 7, 10] as const;
 export type SessionLength = (typeof SESSION_LENGTHS)[number];
 export const DEFAULT_LENGTH: SessionLength = 5;
 

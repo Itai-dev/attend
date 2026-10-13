@@ -138,6 +138,9 @@ const GLYPHS: Record<string, string> = {
   'trash': '⌫',
   'ellipsis': '…',
   'chart.xyaxis.line': '⌁',
+  checkmark: '✓',
+  'lock.fill': '⌂',
+  'star.fill': '✦',
 };
 
 export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: string; weight?: SymbolViewProps['weight'] }) {

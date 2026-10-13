@@ -2,8 +2,9 @@
 
 A voice-guided, eyes-closed somatic practice for chronic pain, with a simple pain record
 to show whether it helps. Expo SDK 57 / React Native / TypeScript, iOS first, one founder.
-Read `README.md` for the architecture and `docs/MERGE.md` for why Pattern's pain record
-moved in (12 Oct 2026).
+Read `README.md` for the architecture, `docs/MERGE.md` for why Pattern's pain record
+moved in (12 Oct 2026), and `docs/RESEARCH.md` for the evidence the 28-day program and its
+engagement rules rest on (13 Oct 2026).
 
 **Expo has changed.** Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/
 before touching an Expo API, and use `npx expo install` for packages.
@@ -19,10 +20,11 @@ driven in `tests/helpers.ts`; add a scripted session for any change to the guide
 
 ## The one thesis
 
-The MVP exists to test one question: does a guided Somatic Tracking practice, done
-regularly, change a person's pain over weeks — and can they see that it does? The
-practice is the product; the pain record is how it shows whether it works. Everything
-serves that. A feature health apps "normally have" is not a reason.
+The MVP exists to test one question: does a 28-day program — a short lesson and a guided
+Somatic Tracking practice a day — change a person's pain over weeks, and can they see
+that it does? The practice is the product; the pain record is how it shows whether it
+works; engagement exists because more practice means more benefit (RESEARCH.md §3).
+Everything serves that. A feature health apps "normally have" is not a reason.
 
 ## What this app refuses to do
 
@@ -43,22 +45,30 @@ it: no composite score, no "ease", no readiness. A day's pain is the peak of its
 check-ins. Optional answers are three-state — never asked, asked and skipped,
 answered — and a skip is never read as a negative.
 
-**Nothing rewards looking at your pain (from Pattern).** No check-in before or after a
-session, no per-session before/after, no week-over-week deltas, arrows, streaks, rings,
-completion percentages, or verdict on today. Progress is pain over weeks beside the
-days practised, and every chart carries the sentence about what it does not mean,
-inside the card it qualifies. Journey's language statements still carry their evidence
-sentence, and with too little data any progress view says so.
+**Reward practice, never pain (13 Oct 2026; replaces "nothing rewards looking at your
+pain").** Engagement is allowed when it counts showing up: practice days per week, minutes,
+lessons, the program path, milestones (`domain/engagement.ts`), moments saved toward the
+person's goal. Practice is counted per week, not as consecutive days: nothing resets, a
+missed day is just a day without a dot, a return is "welcome back", and no copy anywhere
+guilts, counts missed days, or says a streak was lost. Reminders: one a day at a time the
+person chose, weekly after four quiet days. What stays out: anything that grades the
+pain — no check-in before or after a session, no per-session before/after, no
+week-over-week deltas or arrows on pain, no milestone for pain going down, no verdict on
+today. Progress shows practice and the pain record side by side, never mixed; the pain
+chart carries the sentence about what it does not mean, inside its card.
 
 **Nothing is manufactured.** A recap says "it softened" only if the person said so; a
-guided session, where nothing is said, says only where attention rested and for how
-long. No change is a complete, valid session and is described plainly, never as failure.
+guided session, where nothing is said, ends on a completion moment that says what was
+done (minutes, days, the program) and never how the sensation was. Its one optional tap
+("how did that feel?") is about the practice, never the pain. No change is a complete, valid session and is described plainly, never as failure.
 
 **The guide never decides a symptom is benign.** No diagnosis, no "nothing is wrong",
 no "you're safe", no "it's your brain". In conversation mode, possibly-new
 symptoms get one neutral familiarity question and, if new, a gentle end with a suggestion
 to see a professional; safety is screened locally on every utterance and a remote model
-can only raise the level, never lower it. The welcome's safety note covers guided mode.
+can only raise the level, never lower it. The welcome's safety note covers guided mode. Lessons explain the alarm model and invite
+the person to weigh their own signs; they never conclude for them that their pain is safe
+(tests/program.test.ts guards the wording).
 `FORBIDDEN_GUIDE_LANGUAGE` guards every line, local or remote.
 
 **The guide's voice.** Calm, sparse, confident. Short sentences, silence as part of every
@@ -82,8 +92,9 @@ is labelled as an interpretation of what was said, never a scan or a measurement
 
 - `domain/` and `engine/` stay free of React and Expo, so they run in Node tests.
 - Vendors live behind `voice/types.ts`. The UI only uses `useVoiceSession()`.
-- Native modules that Expo Go lacks (`expo-speech-recognition`) are required inside
-  try/catch (`voice/speechModule.ts`). An unguarded import crashes Expo Go at launch.
+- Native modules that Expo Go or older builds lack (`expo-speech-recognition`,
+  `expo-notifications`) are required inside try/catch (`voice/speechModule.ts`,
+  `voice/reminders.ts`). An unguarded import crashes those builds at launch.
 - Developer tools (simulated participant, typed answers, debug panel) render only under
   `__DEV__`.
 - Comments explain why — the decision and the failure it prevents.

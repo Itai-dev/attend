@@ -55,6 +55,8 @@ export type EngineOptions = {
   place?: Place;
   /** Guided: the program day's theme. 'open' rests on the whole body even when a place is known. */
   theme?: PracticeTheme;
+  /** The program day this session is. Recorded, never read by the guide. */
+  programDay?: number;
 };
 
 export type IngestOutcome = { command?: Command };
@@ -71,6 +73,7 @@ export type EngineDraft = {
   outcome: SessionOutcome;
   mode?: SessionMode;
   place?: Place;
+  programDay?: number;
 };
 
 function mulberry32(seed: number) {
@@ -100,6 +103,7 @@ export class SessionEngine {
   readonly mode: SessionMode;
   readonly place?: Place;
   readonly theme?: PracticeTheme;
+  readonly programDay?: number;
 
   private readonly now: () => number;
   private readonly newId: (prefix?: string) => string;
@@ -148,6 +152,7 @@ export class SessionEngine {
     // A place only means something to a guided session; a conversation finds its own.
     this.place = this.mode === 'guided' ? opts.place : undefined;
     this.theme = this.mode === 'guided' ? opts.theme : undefined;
+    this.programDay = opts.programDay;
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
   }
@@ -402,6 +407,7 @@ export class SessionEngine {
         outcome: this.outcome,
         mode: this.mode,
         place: this.place,
+        programDay: this.programDay,
       },
       endedAt,
       this.keepTranscript,
@@ -422,6 +428,7 @@ export class SessionEngine {
       outcome: this.outcome,
       mode: this.mode,
       place: this.place,
+      programDay: this.programDay,
     };
   }
 
@@ -453,6 +460,7 @@ export class SessionEngine {
       createdAt: endedAt,
       ...(draft.mode ? { mode: draft.mode } : {}),
       ...(draft.place ? { place: draft.place } : {}),
+      ...(draft.programDay ? { programDay: draft.programDay } : {}),
     };
     const moments = draft.moments.map((m) => (keepTranscript ? m : { ...m, internalTranscript: undefined }));
     return { session, moments };

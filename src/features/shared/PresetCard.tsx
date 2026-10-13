@@ -12,8 +12,9 @@ export const CATEGORY_COLOR: Record<PresetCategory, string> = {
   worry: fieldColor.seaglass,
 };
 
-export function startPreset(p: Pick<Preset, 'type' | 'minutes' | 'voiceId'>) {
-  router.push({ pathname: '/session', params: { type: p.type, minutes: String(p.minutes), voice: p.voiceId } });
+/** Any-time sessions go through Before too, so where attention rests is chosen with the eyes open. */
+export function startPreset(p: Pick<Preset, 'id'>) {
+  router.push({ pathname: '/before', params: { preset: p.id } });
 }
 
 /** A soft orb on a tinted square: the category, at a glance. */

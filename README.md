@@ -3,16 +3,14 @@
 A voice-guided, eyes-closed somatic practice for people with chronic pain, with a simple
 pain record (ported from Pattern) to show whether practice is helping. See `docs/MERGE.md`.
 
-> **12 Oct 2026:** sessions are now guided only — the guide speaks and holds silence, and
-> never asks or listens. The conversational loop described below is kept behind
-> `mode: 'conversation'` (Settings → Developer). Progress is the pain record over weeks
-> beside the days practised.
-
-You tap one button, put the phone down, close your eyes, and talk. The guide listens
-and adapts each prompt to what you said. Underneath, the app quietly builds a map of
-the sensations you described. When you open your eyes, you see how your experience
-moved or changed. Over weeks, Journey shows — in words and maps, never numbers —
-whether the way you meet those sensations is shifting.
+> **13 Oct 2026:** Attend is a 28-day program — a 2-minute lesson and a guided practice a
+> day, in four weeks (Understand, Notice, Soften, Live), following Pain Reprocessing
+> Therapy's order. Sessions are guided only: the guide speaks and holds silence, and never
+> asks or listens. Engagement rewards practice, never pain: practice days per week (no
+> streak to lose), milestones, a program path, moments toward the person's own goal, one
+> gentle reminder. The pain record (from Pattern) sits beside it on Progress. See
+> `docs/RESEARCH.md` and `docs/MERGE.md`. The conversational loop described below is kept
+> behind `mode: 'conversation'` (Settings → Developer).
 
 Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · Skia · local-first SQLite · iOS-first.
 

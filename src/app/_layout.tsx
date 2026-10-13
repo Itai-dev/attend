@@ -33,7 +33,9 @@ function RootStack() {
       <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
       <Stack.Screen name="checkin" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="progress" options={{ presentation: 'card', animation: 'default' }} />
+      <Stack.Screen name="lesson/[day]" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+      <Stack.Screen name="before" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="moment" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

@@ -1,5 +1,8 @@
 import type { EngineDraft } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
+import type { Moment } from '../domain/engagement';
+import type { ProgramState } from '../domain/program';
+import type { Place, SessionFeeling } from '../domain/types';
 import type { Session, SessionMoment, SessionType } from '../domain/types';
 
 /**
@@ -21,6 +24,9 @@ export interface SessionRepository {
   listCheckIns(): Promise<CheckIn[]>;
   saveCheckIn(c: CheckIn): Promise<void>;
   deleteCheckIn(id: string): Promise<void>;
+
+  /** How a session felt, tapped after it. Never a pain value. */
+  setFeeling(sessionId: string, feeling: SessionFeeling | null): Promise<void>;
 
   getPrefs(): Promise<Prefs>;
   setPrefs(patch: Partial<Prefs>): Promise<Prefs>;
@@ -44,7 +50,19 @@ export type Prefs = {
   /** What the person said brings them here, in the welcome. Shapes the session Today offers. */
   focus?: SessionType;
   /** Last length picked on Home, offered again next time. */
-  sessionMinutes?: 3 | 5 | 10;
+  sessionMinutes?: 3 | 5 | 7 | 10;
+  /** The 28-day program: which days are done, which lessons read. */
+  program?: ProgramState;
+  /** What the person wants to get back to, from onboarding, in their words or a chip's. */
+  goal?: string;
+  /** Where it hurts most, from onboarding: where sessions rest until a check-in names a place. */
+  place?: Place;
+  /** How long the pain has been there, from onboarding. Context only; nothing is derived from it. */
+  painFor?: 'months' | '1-3y' | '3-10y' | '10y+';
+  /** The daily reminder, at a time the person chose. */
+  reminder?: { enabled: boolean; hour: number; minute: number };
+  /** Steps toward the goal, saved by the person. Newest first. Small, so kept with the prefs. */
+  moments?: Moment[];
   /** The soft tone under the session. On unless turned off in Settings. */
   ambience?: boolean;
   /** Developer settings. Ignored outside development builds. */

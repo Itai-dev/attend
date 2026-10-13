@@ -135,6 +135,9 @@ export type SessionMode = 'conversation' | 'guided';
 /** A place to rest attention on: where a check-in said it hurt, or where sessions usually went. */
 export type Place = { region: BodyRegion; side?: Side };
 
+/** How the practice felt, one tap after a session. About the practice, never the pain. */
+export type SessionFeeling = 'settled' | 'curious' | 'restless' | 'hard';
+
 export type SessionOutcome = 'completed' | 'ended_early' | 'safety_pause' | 'crisis_pause';
 
 /**
@@ -176,6 +179,10 @@ export type Session = {
   mode?: SessionMode;
   /** Guided sessions: where attention rested. Absent: the body as a whole. */
   place?: Place;
+  /** The program day this session was, if it was one. */
+  programDay?: number;
+  /** Tapped after the session, optional. */
+  feeling?: SessionFeeling;
   /** Seeded demo data. Shown with a label and removable in one tap. */
   isSample?: boolean;
 };

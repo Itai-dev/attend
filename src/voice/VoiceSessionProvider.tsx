@@ -6,7 +6,8 @@ import { apiHeaders, config, GUIDE_VOICES, hasRemote } from '../config';
 import { repository } from '../data/repository';
 import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
-import { latestPlace } from '../domain/checkin';
+import { currentTz, dayKey, latestPlace } from '../domain/checkin';
+import { completeDay, EMPTY_PROGRAM, type PracticeTheme } from '../domain/program';
 import { buildMemory } from '../domain/memory';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
@@ -59,7 +60,7 @@ type VoiceSessionValue = {
   debug: DebugEntry[];
   devInput?: DevTextInput;
   /** `voiceId` is the preset's voice; without one, the person's own choice, then the session type's agent. */
-  start(type: SessionType, minutes?: SessionLength, voiceId?: string): Promise<void>;
+  start(type: SessionType, minutes?: SessionLength, voiceId?: string, opts?: StartOptions): Promise<void>;
   /** Prepare a session of this type in the background (script, agent, opening audio). */
   warm(type: SessionType, voiceId?: string): void;
   /**
@@ -190,6 +191,9 @@ function chooseBrain(pref: string, agent?: AgentSettings): GuideBrain {
   return hasRemote ? remote() : new LocalGuideBrain();
 }
 
+/** What a program day (or the Before screen) adds to a session. */
+export type StartOptions = { theme?: PracticeTheme; place?: Place | null; programDay?: number };
+
 export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const data = useData();
   const [status, setStatus] = useState<SessionStatus>('idle');
@@ -208,7 +212,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   dataRef.current = data;
 
   const start = useCallback(
-    async (type: SessionType, minutes?: SessionLength, voiceId?: string) => {
+    async (type: SessionType, minutes?: SessionLength, voiceId?: string, opts: StartOptions = {}) => {
       if (runner.current) return;
       const prefs = dataRef.current.prefs;
       setError(undefined);
@@ -249,14 +253,22 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       // Where a guided session rests: the latest check-in that named one place, else where
       // earlier sessions usually went, else the body as a whole.
       const usual = memory.usual;
+      // A place chosen on the Before screen wins; null there means "the whole body".
       const place: Place | undefined =
-        latestPlace(dataRef.current.checkIns) ?? (usual && usual.region !== 'whole_body' ? { region: usual.region, side: usual.side } : undefined);
+        opts.place === null
+          ? undefined
+          : (opts.place ??
+            latestPlace(dataRef.current.checkIns) ??
+            prefs.place ??
+            (usual && usual.region !== 'whole_body' ? { region: usual.region, side: usual.side } : undefined));
       const engine = new SessionEngine({
         sessionType: type,
         minutes,
         memory,
         mode,
         place,
+        theme: opts.theme,
+        programDay: opts.programDay,
         keepTranscript: __DEV__ && prefs.dev.keepTranscripts,
       });
       const ambience = prefs.ambience === false ? undefined : new Ambience();
@@ -294,6 +306,13 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         if (draftTimer.current) clearTimeout(draftTimer.current);
         if (meaningful) {
           await dataRef.current.saveSession(session, moments);
+          // A program day is done when its practice ran its course or the person ended it after
+          // a real stretch; a safety pause never completes a day.
+          const counts = session.outcome === 'completed' || (session.outcome === 'ended_early' && session.endedAt - session.startedAt > 90_000);
+          if (opts.programDay && counts) {
+            const program = dataRef.current.prefs.program ?? EMPTY_PROGRAM;
+            await dataRef.current.setPrefs({ program: completeDay(program, opts.programDay, dayKey(Date.now(), currentTz())) });
+          }
           setCompleted(session.id);
         } else {
           await repository.clearDraft();
