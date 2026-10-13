@@ -32,6 +32,8 @@ function RootStack() {
       <Stack.Screen name="journey/[id]" options={{ presentation: 'card', animation: 'default' }} />
       <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="checkin" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="progress" options={{ presentation: 'card', animation: 'default' }} />
     </Stack>
   );
 }

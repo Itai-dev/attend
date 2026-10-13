@@ -46,6 +46,9 @@ export type GuideScript = {
   LOCATE_USUAL: string[];
   EXPLORE_USUAL_WORD: string[];
   GUIDE_OBSERVE: Line[][];
+  GUIDED_SETTLE: Line[][];
+  GUIDED_OBSERVE: Line[][];
+  GUIDED_OPEN: Line[][];
   ANSWER: { how: Line[]; breath: Line[]; move: Line[]; time: Line[]; other: Line[] };
   NOTICE_ASK: ByType<string[]>;
   NOTICE_RETRY: Line[];
@@ -121,7 +124,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let your eyes close.', 4000],
-        ["We'll go slowly. You can stop at any time, just by saying so.", 5500],
+        ["We'll go slowly. You can stop at any time.", 5500],
       ],
     ],
   },
@@ -250,6 +253,69 @@ export const GUIDE_SCRIPT: GuideScript = {
     [
       ["There's no hurry.", 6000],
       ["When something stands out, just say it out loud.", 0],
+    ],
+  ],
+  // Guided sessions (the default since 12 Oct 2026): nothing is asked. After the scan,
+  // attention rests on one place ({place}: from the latest check-in, or where earlier sessions
+  // usually went) and the guide gives it something to do, with long silences, until it is
+  // time to close. GUIDE_OBSERVE above is used here too. With no place, GUIDED_OPEN fills the
+  // time after OPEN_AWARENESS. Lines here may not assume the person said anything.
+  GUIDED_SETTLE: [
+    [
+      ['Now let your attention come to {place}.', 6000],
+      ['Whatever is there, let it be there.', 10000],
+    ],
+    [
+      ['Let your attention rest on {place}.', 6000],
+      ["You don't need to name what you find. Just notice it.", 10000],
+    ],
+  ],
+  GUIDED_OBSERVE: [
+    [
+      ['If there is a sensation there, notice its edges.', 8000],
+      ['Where it starts, and where it fades.', 12000],
+    ],
+    [
+      ['Notice its texture. Dull, or sharp, or something without a name.', 12000],
+    ],
+    [
+      ['Notice whether it pulses, or stays steady.', 12000],
+    ],
+    [
+      ['Notice whether it stays the same, moment to moment, or shifts a little.', 14000],
+    ],
+    [
+      ['If your attention wanders, that is fine.', 5000],
+      ['Gently bring it back to {place}.', 12000],
+    ],
+    [
+      ['Let your breath be easy.', 6000],
+      ['Let the sensation be there, with the breath moving around it.', 12000],
+    ],
+    [
+      ['Nothing here needs an answer.', 6000],
+      ['Just stay with it, a little longer.', 14000],
+    ],
+  ],
+  GUIDED_OPEN: [
+    [
+      ['Feel the weight of your body, resting.', 10000],
+      ['Let it be held.', 12000],
+    ],
+    [
+      ['Notice the breath at the belly.', 8000],
+      ['Rising, and falling.', 12000],
+    ],
+    [
+      ['If any part of the body asks for attention, let it.', 8000],
+      ['Then let attention widen again.', 12000],
+    ],
+    [
+      ['Notice the air on your skin. Its temperature. Its stillness.', 12000],
+    ],
+    [
+      ['If your attention wanders, that is fine.', 5000],
+      ['Gently bring it back to the breath.', 12000],
     ],
   ],
   OPEN_AWARENESS: [

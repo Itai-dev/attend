@@ -30,7 +30,11 @@ const QUESTION_WINDOW_MS = 14_000;
 
 function fill(text: string, ctx: GuideContext, focus?: BodySensation): string {
   const word = focus?.descriptors[0] ?? ctx.unplacedDescriptors[0];
-  const place = focus ? speakPlace(focus.region, focus.side) : 'your body';
+  const place = focus
+    ? speakPlace(focus.region, focus.side)
+    : ctx.place
+      ? speakPlace(ctx.place.region, ctx.place.side)
+      : 'your body';
   const dest = focus?.movement?.destinationRegion
     ? speakPlace(focus.movement.destinationRegion, focus.movement.destinationSide)
     : '';
@@ -185,6 +189,7 @@ function usualRefines(ctx: GuideContext, focus: BodySensation): boolean {
 }
 
 export function localTurn(ctx: GuideContext): GuideTurn {
+  if (ctx.mode === 'guided') return guidedTurn(ctx);
   const t = phaseTurn(ctx);
   const answer = answerLines(ctx);
   return answer.length ? { ...t, lines: [...answer, ...t.lines] } : t;
@@ -347,5 +352,39 @@ function phaseTurn(ctx: GuideContext): GuideTurn {
       return turn({ lines: lines(L.EARLY_CLOSE, ctx), expectsResponse: false, end: true });
     case 'DONE':
       return turn({ lines: [], expectsResponse: false, end: true });
+  }
+}
+
+/**
+ * A guided session: every turn is guidance and silence, nothing is asked, and nothing is
+ * reacted to because nothing was said. Turns `stay` in their phase, one at a time, so a pause
+ * cuts in between them and the engine's clock — not the brain — decides when to move on.
+ * Arrival, scan, close and the fixed endings are the conversation's own.
+ */
+export function guidedTurn(ctx: GuideContext): GuideTurn {
+  const prefix: GuideLine[] = ctx.resumed ? [line(L.RESUME[0], L.RESUME[1], ctx)] : [];
+  const guide = (ls: L.Line[]): GuideTurn => turn({ lines: [...prefix, ...lines(ls, ctx)], expectsResponse: false, stay: true });
+
+  switch (ctx.phase) {
+    case 'OBSERVE':
+      if (ctx.phaseStep === 0) return guide(pickLines(L.GUIDED_SETTLE, ctx));
+      return guide(pickLines([...L.GUIDED_OBSERVE, ...L.GUIDE_OBSERVE], ctx));
+
+    case 'REAPPRAISE':
+      if (ctx.phaseStep === 0) return guide(ctx.sessionType === 'fear' ? L.REAPPRAISE_CORE[2] : L.REAPPRAISE_CORE[0]);
+      return guide(pickLines([...L.REAPPRAISE_CORE.slice(1), ...L.GUIDED_OBSERVE], ctx));
+
+    case 'OPEN_AWARENESS':
+      if (ctx.phaseStep === 0) return guide(L.OPEN_AWARENESS);
+      return guide(pickLines(L.GUIDED_OPEN, ctx));
+
+    case 'CLOSE': {
+      const prepare = lines(pickLines(L.CLOSE_PREPARE[ctx.sessionType], ctx), ctx);
+      return turn({ lines: [...prepare, ...lines(L.CLOSE[ctx.sessionType], ctx)], expectsResponse: false, end: true });
+    }
+
+    // Arrive, scan and the fixed endings are the same words as a conversation.
+    default:
+      return phaseTurn(ctx);
   }
 }

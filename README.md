@@ -1,7 +1,12 @@
 # Attend
 
-A voice-first, eyes-closed, adaptive somatic practice for people with chronic pain.
-Headspace, but it listens back — built around Somatic Tracking.
+A voice-guided, eyes-closed somatic practice for people with chronic pain, with a simple
+pain record (ported from Pattern) to show whether practice is helping. See `docs/MERGE.md`.
+
+> **12 Oct 2026:** sessions are now guided only — the guide speaks and holds silence, and
+> never asks or listens. The conversational loop described below is kept behind
+> `mode: 'conversation'` (Settings → Developer). Progress is the pain record over weeks
+> beside the days practised.
 
 You tap one button, put the phone down, close your eyes, and talk. The guide listens
 and adapts each prompt to what you said. Underneath, the app quietly builds a map of
@@ -141,14 +146,15 @@ local or from the model — that claims safety, diagnoses, or turns into cheerle
 
 ### Privacy
 
-- Local-first: SQLite on the device, no account.
-- Speech is recognised **on the device** (`requiresOnDeviceRecognition`); audio is never saved.
+- Local-first: SQLite on the device, no account. Sessions and check-ins live there.
+- Guided sessions (the default) never use the microphone: nothing said is heard or sent.
+- The welcome's speech is recognised **on the device** (`requiresOnDeviceRecognition`); audio is never saved.
 - Transcripts are not persisted (a developer toggle can keep them for debugging).
-- The guide remembers earlier sessions (`domain/memory.ts`): built on the device from the
-  saved sessions at the start of each one — the usual place and the words used for it.
-- With the proxy configured, the *words* of the session, plus that usual place and words,
-  go to Claude to adapt the guide, and the guide's own lines go to ElevenLabs. Nothing is
-  stored there.
+- The place a guided session rests on comes from the latest check-in, or the usual place in
+  earlier sessions (`domain/memory.ts`) — both read on the device.
+- With the voice server configured, the guide's own lines go to ElevenLabs to be voiced.
+  In the developer-only conversational mode, the words of the session also go to Claude.
+  Nothing is stored there.
 - No analytics.
 - Settings → Delete all sessions.
 

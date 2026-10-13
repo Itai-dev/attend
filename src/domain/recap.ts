@@ -2,6 +2,8 @@ import { consolidateChanges, primarySensation } from './bodyMap';
 import { descriptorInfo } from './lexicon';
 import { REGIONS, speakPlace } from './regions';
 import type {
+  Place,
+  SessionMode,
   BodyMapState,
   BodySensation,
   SensationChange,
@@ -29,6 +31,8 @@ export type RecapInput = {
   bodyMapEnd: BodyMapState;
   changes: SensationChange[];
   signals: SessionSignals;
+  mode?: SessionMode;
+  place?: Place;
 };
 
 export type Recap = {
@@ -193,6 +197,8 @@ export function buildRecap(input: RecapInput): Recap {
     };
   }
 
+  if (input.mode === 'guided') return guidedRecap(input);
+
   const start = primarySensation(input.bodyMapStart);
   const end = start ? input.bodyMapEnd.sensations.find((s) => s.id === start.id) : primarySensation(input.bodyMapEnd);
   const primary = start ?? end;
@@ -249,4 +255,34 @@ export function buildRecap(input: RecapInput): Recap {
   if (outcome === 'ended_early') summary += ' The session ended early.';
 
   return { title, summary, oneLiner, changeLines };
+}
+
+/**
+ * A guided session hears nothing, so its recap can say only what the practice did: where
+ * attention rested, and for how long. Never how the sensation was, or whether it changed —
+ * that would be manufactured.
+ */
+function guidedRecap(input: RecapInput): Recap {
+  const place = input.place ? speakPlace(input.place.region, input.place.side) : undefined;
+  const secs = input.signals.observedSeconds;
+  const time = secs >= 90 ? `for about ${Math.round(secs / 60)} minutes` : secs >= 45 ? 'for about a minute' : 'for a short while';
+  const early = input.outcome === 'ended_early';
+  if (!place) {
+    return {
+      title: 'You rested with the body as a whole.',
+      summary: early
+        ? 'The session ended early, after the practice had begun to settle.'
+        : 'The practice stayed with the body as a whole: where it was supported, and how the breath was moving.',
+      oneLiner: 'Rested with the whole body.',
+      changeLines: [],
+    };
+  }
+  return {
+    title: `You spent time with ${place}.`,
+    summary: early
+      ? `The session ended early. Attention rested on ${place} ${time}.`
+      : `Attention rested on ${place} ${time}, with nothing to answer and nothing to fix.`,
+    oneLiner: `Attention rested on ${place}.`,
+    changeLines: [],
+  };
 }
