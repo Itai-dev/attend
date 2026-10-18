@@ -28,7 +28,7 @@ Somatic tracking, eyes closed
   treatment, and Medical brings more review scrutiny.
 - **Secondary:** Lifestyle (or none). Not Medical.
 
-## Promotional text (170) — 163 characters
+## Promotional text (170) — 150 characters
 
 Can be changed any time without a new build. Use it for the founding price and, later, the New
 Year push.
@@ -37,13 +37,13 @@ Year push.
 A two-minute lesson and an eyes-closed somatic tracking practice, every day for 28 days. Week 1 is free. No account. Your record stays on your iPhone.
 ```
 
-New Year swap (26 Dec → 10 Jan), 152 characters:
+New Year swap (26 Dec → 10 Jan), 127 characters:
 
 ```
 Start 2027 with 28 days: a short lesson and an eyes-closed practice each day. Week 1 is free. Founding prices until 10 January.
 ```
 
-## Keywords (100) — 99 characters
+## Keywords (100) — 97 characters
 
 No spaces after commas. Nothing already in the name or subtitle (attend, chronic, pain,
 practice, somatic, tracking, eyes, closed): Apple combines words across the three fields, so
@@ -57,12 +57,12 @@ Words left out on purpose: "relief", "cure", "anxiety" (outcome or clinical clai
 (mostly searched for the brain-stimulation treatment), "sarno", "curable" (names). After the first
 month, swap the weakest words using App Store Connect's search-term data.
 
-## Description — about 1,950 characters (limit 4,000)
+## Description — 1,840 characters with the legal lines (limit 4,000)
 
 ```
 Attend is a quiet daily practice for people living with chronic pain.
 
-Each day there's a two-minute lesson, then a few minutes with your eyes closed while a calm voice guides you through somatic tracking: noticing a sensation with curiosity instead of alarm. Nothing to answer, nothing to get right.
+Each day: a two-minute lesson, then a few minutes with your eyes closed while a calm voice guides you through somatic tracking, noticing a sensation with curiosity instead of alarm. Nothing to answer, nothing to get right.
 
 THE 28 DAYS
 Four weeks, in the order Pain Reprocessing Therapy follows:
@@ -70,35 +70,28 @@ Four weeks, in the order Pain Reprocessing Therapy follows:
 • Notice: watching a sensation with curiosity
 • Soften: fear, bracing, and the urge to fix
 • Live: taking the practice into your day
-You always know the next step, and the path keeps your place.
 
 EYES CLOSED, VOICE ONLY
-Once a practice starts there's nothing to read and nothing to tap. The screen dims to a slow breathing shape. Pause and end are always one tap away.
-
-FOR THE MOMENTS IN BETWEEN
-One tap starts a practice for a flare, a night you can't sleep, a body scan, or a worried moment.
+Once a practice starts there's nothing to read or tap. Pause and end are always one tap away. One tap also starts a practice for a flare, a night you can't sleep, a body scan, or a worried moment.
 
 SOUNDS
-Rain, forest, stream, waterfall, ocean, night and fireside. Play one under a practice, or on its own with a sleep timer. Every sound is free.
+Rain, forest, stream, ocean, fireside and more, under a practice or on their own with a sleep timer.
 
 YOUR OWN RECORD
-A simple 0–10 check-in, kept apart from practice. Progress shows your practice days and your pain record side by side. No scores, no grades, nothing worked out from your numbers.
+A simple 0–10 check-in, kept apart from practice. Your practice and your pain record sit side by side. No scores, no grades.
 
-PRIVATE BY DESIGN
-No account and no analytics. Your sessions and check-ins are stored only on your iPhone. Guided practices never use the microphone.
+PRIVATE
+No account, no analytics. Sessions and check-ins are stored only on your iPhone. Guided practices never use the microphone.
 
 FREE, AND ATTEND PLUS
-Week 1, the flare practice, your check-ins and every sound are free for good. Attend Plus continues the program from Day 8 to Day 28 and opens can't sleep, body scan and worried any time. Founding prices: $39.99 a year with 7 days free, $7.99 a month, or $99 once.
+Week 1, the flare practice, check-ins and every sound are free for good. Attend Plus continues Days 8–28 and opens every practice any time: $39.99 a year with 7 days free, $7.99 a month, or $99 once.
 
-PLEASE NOTE
-Attend is not a medical device and doesn't diagnose or treat any condition. It's a practice to use alongside the care you already have, not instead of it. If a pain is new, different from your usual, getting worse quickly, or feels like an emergency, contact a medical professional.
+Attend is not a medical device and doesn't diagnose or treat any condition. Use it alongside the care you have, not instead of it. If a pain is new, different from your usual, getting worse quickly, or feels like an emergency, contact a medical professional.
 
-Payment is charged to your Apple ID when you confirm, or when a free trial ends. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID settings.
-Terms of Use: https://[domain]/terms
-Privacy Policy: https://[domain]/privacy
+Subscriptions renew automatically unless cancelled at least 24 hours before the period ends. Manage them in your Apple ID settings.
+Terms: https://[domain]/terms
+Privacy: https://[domain]/privacy
 ```
-
-The em-free "Understand:" style is deliberate: it scans in the store's plain-text rendering.
 
 ## What's New — v1.0
 

@@ -57,7 +57,7 @@ export const WEEKS: Record<1 | 2 | 3 | 4, { name: string; about: string }> = {
 };
 
 // Not a gate before the first practice: it reads as a check that sits beside care (research round 1, 18 Oct 2026).
-const DOCTOR = 'If a pain is new, or different from your usual, have it checked by a doctor. Keep any treatment you have; this practice sits beside it.';
+const DOCTOR = 'If a pain is new, or different from your usual, have it checked by a doctor. Keep any treatment you have. This practice sits beside it.';
 
 type Def = [title: string, cards: LessonCard[], practice: string, theme: PracticeTheme, minutes: 3 | 5 | 7 | 10];
 
@@ -66,8 +66,8 @@ const DAYS: Def[] = [
   [
     'Pain is real',
     [
-      { text: ['Every pain you feel is real.', 'All pain, from a broken bone to a migraine, is made by the nervous system. That is how pain works, for everyone. It makes pain no less real.'] },
-      { text: ['Pain is a protector. It is an alarm that says: something might be wrong, take care.'] },
+      { text: ['Every pain you feel is real.', 'All pain, from a broken bone to a migraine, is made by the nervous system. That is how pain works, for everyone, and it makes pain no less real.'] },
+      { text: ['Pain is a protector. It is an alarm. It says something might be wrong, and to take care.'] },
       {
         text: ['For many people whose pain lasts, the alarm becomes more sensitive over time, and goes off more easily and more loudly.', DOCTOR],
         notice: 'Over the next days, notice when the alarm is louder, and when it is quieter.',
@@ -80,8 +80,8 @@ const DAYS: Def[] = [
   [
     'An alarm that learns',
     [
-      { text: ['Nervous systems learn. Whatever happens often gets easier to do again — a skill, a habit, and pain too.'] },
-      { text: ['After months or years, the pathways that make pain can become well worn, sometimes long after an injury has healed, sometimes with no injury at all.'] },
+      { text: ['Nervous systems learn. What a nervous system does often, it gets better at. A skill, a habit. Pain too.'] },
+      { text: ['After months or years, the pathways that make pain can become well worn. Sometimes long after an injury has healed. Sometimes with no injury at all.'] },
       { text: ['What was learned can be relearned. That is the idea this program is built on.'] },
     ],
     'Finding the place',
@@ -91,7 +91,7 @@ const DAYS: Def[] = [
   [
     'The worry loop',
     [
-      { text: ['Pain brings worry. What is this? Will it get worse? What if I make it worse?'] },
+      { text: ['Pain brings worry. About what this is, whether it will get worse, whether you might make it worse.'] },
       { text: ['Worry tells the alarm there may be danger, and the alarm turns the volume up. More pain, more worry.'] },
       { text: ['Meeting a sensation with less alarm is one way to loosen the loop. That is what the practice trains.'] },
     ],
@@ -103,9 +103,9 @@ const DAYS: Def[] = [
     'Signs from your own pain',
     [
       { text: ['Clinicians look for signs that pain is coming from a sensitive alarm rather than from ongoing damage.'] },
-      { text: ['Some of those signs: it began in a stressful time. It moves, or spreads. It changes with mood or setting. It fades when you are absorbed in something.'] },
+      { text: ['Here are some of those signs. It began during a stressful time. It moves, or spreads. It changes with mood or setting. It fades when you are absorbed in something.'] },
       {
-        text: ['Only you — ideally with your doctor — can weigh your own signs. The app can’t.'],
+        text: ['Only you can weigh your own signs, ideally with your doctor. The app can’t.'],
         notice: 'Today, just notice which of these sound familiar. No conclusions needed.',
       },
     ],
@@ -116,9 +116,9 @@ const DAYS: Def[] = [
   [
     'When it fades',
     [
-      { text: ['Has your pain ever faded while you were laughing, absorbed in something, or far from your usual day?'] },
+      { text: ['Sometimes pain fades for a while. While laughing, or absorbed in something, or far from your usual day.'] },
       { text: ['Moments like that are worth noticing. They show the volume can change.'] },
-      { text: ['If one happens this week, save it as a moment. They add up.'], notice: 'Watch for a moment when the pain is quieter than you expected.' },
+      { text: ['If one happens this week, just notice it. Nothing to record, nothing to prove.'], notice: 'Watch for a moment when the pain is quieter than you expected.' },
     ],
     'Arriving, again',
     'settle',
@@ -128,7 +128,7 @@ const DAYS: Def[] = [
     'Why stress turns the volume up',
     [
       { text: ['Your nervous system sets how loud a signal feels.'] },
-      { text: ['When it senses threat — a deadline, a worry, a short night — it can turn the volume up.'] },
+      { text: ['When it senses threat, like a deadline, a worry, or a short night, it can turn the volume up.'] },
       { text: ['Calm attention is one way to let it turn back down. That is today’s practice.'] },
     ],
     'Breath around it',
@@ -138,8 +138,8 @@ const DAYS: Def[] = [
   [
     'One week in',
     [
-      { text: ['This week was about the alarm: what it is for, how it learns, and how fear feeds it.'] },
-      { text: ['Next week the practice gets more detailed: the edges of a sensation, its texture, whether it moves.'] },
+      { text: ['This week was about the alarm. What it is for, how it learns, and how fear feeds it.'] },
+      { text: ['Next week, the practice looks more closely at a sensation. Its edges, its texture, whether it moves.'] },
       { text: ['Showing up is the work. Whatever the pain did this week, you practiced.'] },
     ],
     'The body as a whole',

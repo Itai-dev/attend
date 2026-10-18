@@ -120,14 +120,22 @@ export function SessionScreen() {
   // Listening copy belongs to a conversation; a guided session never listens.
   const listeningProblem = vs.sessionMode === 'conversation' || vs.error?.code === 'permission';
 
+  // VoiceOver hears the line too; a live region alone is Android-only.
+  useEffect(() => {
+    if (voiceFailed) AccessibilityInfo.announceForAccessibility(VOICE_FAILED_LINE);
+  }, [voiceFailed]);
+
   // ——— controls that fade away ———
   const [shown, setShown] = useState(true);
   const [screenReader, setScreenReader] = useState(false);
   const controlsOpacity = useSharedValue(1);
   const controlsStyle = useAnimatedStyle(() => ({ opacity: controlsOpacity.value }));
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // While paused the controls are what the person needs (resume), so they stay.
-  const keepControls = paused || blocked || confirmEnd;
+  const sawShow = useRef(false);
+  // While paused the controls are what the person needs (resume), so they stay. With VoiceOver
+  // on they never fade: iOS drops a view at opacity 0 from VoiceOver and from touch, and a
+  // VoiceOver user must be able to find pause and end at any moment.
+  const keepControls = paused || blocked || confirmEnd || screenReader;
 
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled()
@@ -158,7 +166,6 @@ export function SessionScreen() {
     } else showControls(sawShow.current ? CONTROLS_AGAIN_MS : CONTROLS_FIRST_MS);
     sawShow.current = true;
   }, [keepControls, showControls, controlsOpacity]);
-  const sawShow = useRef(false);
 
   useEffect(
     () => () => {
@@ -189,7 +196,10 @@ export function SessionScreen() {
       {/* Anywhere on the screen: bring the controls back. Hidden from VoiceOver, which reaches the controls directly. */}
       <Pressable
         style={StyleSheet.absoluteFill}
-        onPress={() => showControls(CONTROLS_AGAIN_MS)}
+        onPress={() => {
+          // While paused they are already held on screen; a tap must not start them fading.
+          if (!keepControls) showControls(CONTROLS_AGAIN_MS);
+        }}
         accessible={false}
         importantForAccessibility="no"
         accessibilityElementsHidden
@@ -209,7 +219,7 @@ export function SessionScreen() {
         </Animated.View>
       ) : null}
 
-      {hint && !blocked ? (
+      {hint && !blocked && !voiceFailed ? (
         <Animated.View entering={FadeIn.duration(1200).delay(400)} exiting={FadeOut.duration(1600)} style={styles.hint} pointerEvents="none">
           <Txt variant="title2" align="center" style={{ fontWeight: '300' }}>
             Put the phone down.
@@ -234,7 +244,7 @@ export function SessionScreen() {
               ? 'Allow the microphone and speech recognition in Settings. What you say is turned into words on this iPhone and never saved as audio.'
               : listeningProblem
                 ? 'This build has no on-device speech recognition. A development build adds it.'
-                : 'Something on this iPhone interrupted it. Close, and begin again when you’re ready.'}
+                : 'Something went wrong and it couldn’t go on. Close, and begin again when you’re ready.'}
           </Txt>
           {vs.error?.code === 'permission' && Platform.OS !== 'web' ? (
             <PrimaryButton label="Open Settings" onPress={() => Linking.openSettings()} />
