@@ -37,8 +37,8 @@ Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · Skia · local-f
 
 ```bash
 npm install
-npm run verify          # typecheck + 30 engine/domain tests
-npm start               # Expo Go: full loop with a simulated participant and the phone's voice
+npm run verify          # typecheck + the node:test suite
+npm start               # Expo Go: the full app; the guide's voice needs the voice server
 ```
 
 **Expo Go** has no speech recognition module, so in development the app answers the guide
@@ -55,39 +55,46 @@ npm run start:dev-client
 
 The development build installs as **Attend Dev** beside the real app (same pattern as Pattern).
 
-**Natural voice + Claude guide**: deploy the proxy (`supabase/README.md`), then copy
-`.env.example` to `.env.local` and fill in the URL and anon key. Without it, sessions use the
-on-device voice and the local adaptive guide — fully offline.
+**The guide's voice** comes from the voice server (`server/`, ElevenLabs). There is no
+on-device voice fallback. Lines are cached on the phone by voice and words, and the server's
+script and voice settings are saved on the device (`voice/savedGuide.ts`), so a practice that
+has played once plays again offline. If a line can't load, the session pauses and says why;
+resume tries once, quickly.
 
 **Web preview** (design review only): `npm run web:setup && npm run web`.
 
 ---
 
-## The loop
+## The flow
 
 ```
-Welcome (a short chat) ──▶ Today / Explore ──tap──▶ Session (eyes closed, voice only) ──▶ Recap ──▶ Journey
+Welcome (7 short screens) ──▶ Day 1 lesson (read or listen) ──▶ Practice (eyes closed) ──▶ After ──▶ Today
 ```
 
-Three tabs: **Today** (the session set up in the welcome, its length, a few others),
-**Explore** (every ready-made session, by what it's for) and **You** (Body, Journey, the
-welcome again, Settings). Each ready-made session (`src/domain/presets.ts`) carries its own
-type, length and voice, so one tap begins it. The welcome (`src/domain/welcome.ts`) asks what
-brings the person here, how much time they have and which voice feels right — never how bad
-anything is — and ends on the safety note. It is spoken (`engine/WelcomeRunner.ts`): the same
-screen and loop as a session, answers understood on the device, voices auditioned by ear. A
-tap-through version is the fallback when listening isn't available or the person prefers it.
+Three tabs (18 Oct 2026, `docs/STUDIO.md`):
 
-1. **Session** — the guide speaks, holds silence, listens, adapts. No tapping, no transcript.
-   Pause / end are there for the eyes-open moments; "pause", "continue", "stop" and "sorry?"
-   also work by voice.
-2. **Recap** — the body map fades in as the eyes open. A short qualitative reflection built
-   only from what was said. "At first / By the end" shows the change on the figure.
-3. **Journey** — earliest map beside the latest, then evidence-backed statements
-   ("Fixed in 4 of your first 4 sessions. Moving or changing in 3 of your last 3."), then
-   every session on a timeline.
-4. **Body** — everything attended to, recent places brighter, and the places returned to in
-   your own words.
+- **Today** has one button for the day: the lesson, then straight into the guided practice.
+  Below it:
+  - a 3-minute short version that also completes the day
+  - four one-tap practices (in a flare, can't sleep, body scan, feeling worried)
+  - the week's practice dots
+  - a quiet row to log pain
+- **Sounds:** tap one and it plays, with a sleep timer.
+- **Progress:** the 28-day path, then practice and milestones, then the pain record. The two
+  halves are never mixed.
+
+Settings is the gear on Today.
+
+1. **Practice.** The guide speaks and holds silence. It never asks and never listens
+   (`mode: 'guided'`). The screen shows a dim breathing form. Pause and end fade after a few
+   seconds and come back on a tap. It keeps playing with the phone locked.
+2. **After.** One moment: what was done, the week's dots, and one optional question about
+   the practice, never the pain. A sleep practice skips it: the screen stays dark and the
+   sound carries on, then fades.
+3. **Progress.** Practice and the pain record side by side, never mixed, never graded.
+
+The conversation mode (the guide listens and adapts, with a recap, Journey and Body) is kept
+behind Settings → Developer.
 
 ---
 

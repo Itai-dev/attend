@@ -28,7 +28,13 @@ tests and in the web build, but none of it has run on an iPhone yet. In rough or
 ## 3. Natural voice (with the proxy)
 
 - [ ] First line starts within ~1 s; later lines start on time (prefetch of the next two lines).
-- [ ] Airplane mode mid-session: lines fall back to the on-device voice without a gap or error.
+- [ ] Airplane mode mid-session, on a practice that has played before: lines come from the cache, no gap.
+- [ ] Airplane mode on a new practice: the session pauses with "The guide’s voice couldn’t load…"; the sound keeps playing; Resume fails in ~6 s, not ~30.
+- [ ] Cold relaunch in airplane mode (after one online session): a cached practice plays.
+- [ ] Lock the phone mid-practice, with and without a background sound: the guide keeps going through the silences.
+- [ ] Pause for several minutes, resume: the practice continues for its full length; After shows only active minutes.
+- [ ] Controls fade after ~8 s; the first tap only reveals them; VoiceOver can always reach pause/end.
+- [ ] Can't sleep: the screen stays dark after the voice ends, the sound carries on ~30 min then fades, no After screen.
 
 ## 4. Visuals
 
