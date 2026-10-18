@@ -64,6 +64,21 @@ export const LISTEN_TIMERS = [10, 20, 30, 60, 0] as const;
 export type ListenTimer = (typeof LISTEN_TIMERS)[number];
 export const DEFAULT_LISTEN_TIMER: ListenTimer = 20;
 
+/** After a sleep practice the sound plays on as a listen this long, then fades (studio round 2). */
+export const SLEEP_TAIL_MINUTES = 30 as const satisfies ListenTimer;
+
+/**
+ * What follows a practice's last word. Before sleep, a practice that ran to its end goes to rest:
+ * the screen stays dark and the sound under it carries on as a listen on a timer, so nobody
+ * drifting off is woken by it stopping. Ended by the person, they are awake: the usual After.
+ * The tail is a listen like any other, so it is never practice: the session it follows is
+ * already recorded, with its guided minutes only.
+ */
+export function afterPractice(type: string, outcome: string, background: BackgroundPref): { rest: boolean; sound?: SoundscapeId } {
+  if (type !== 'sleep' || outcome !== 'completed') return { rest: false };
+  return background === 'none' ? { rest: true } : { rest: true, sound: background };
+}
+
 /** How long the sound takes to fade in, and to fade out at the end of a timer. */
 export const LISTEN_FADE_IN_MS = 4000;
 export const LISTEN_FADE_OUT_MS = 45_000;

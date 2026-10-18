@@ -199,11 +199,8 @@ export function HomeScreen() {
                 hitSlop={4}
                 style={({ pressed }) => [styles.shortRow, { opacity: pressed ? 0.55 : 1 }]}
               >
-                <Txt variant="callout" tone="secondary" style={{ flex: 1 }}>
-                  short on energy? 3 minutes completes the day.
-                </Txt>
-                <Txt variant="callout" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
-                  →
+                <Txt variant="callout" tone="secondary">
+                  short on energy? 3 minutes completes the day. <Txt variant="callout" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>→</Txt>
                 </Txt>
               </Pressable>
             ) : null}
@@ -327,7 +324,7 @@ const makeStyles = (color: Palette) =>
       borderColor: color.hairline,
     },
     needLast: { borderBottomWidth: StyleSheet.hairlineWidth },
-    shortRow: { flexDirection: 'row', alignItems: 'center', gap: space.s, minHeight: HIT, marginTop: space.xs },
+    shortRow: { justifyContent: 'center', minHeight: HIT, marginTop: space.xs },
     playing: { flexDirection: 'row', alignItems: 'center', gap: space.m, padding: space.s, paddingRight: space.l },
     playBtn: { width: 40, height: 40, borderRadius: 3, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   });

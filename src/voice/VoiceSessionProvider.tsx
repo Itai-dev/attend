@@ -10,7 +10,7 @@ import { currentTz, dayKey, latestPlace } from '../domain/checkin';
 import { completePractice, EMPTY_PROGRAM, type PracticeTheme } from '../domain/program';
 import type { SpokenLine } from '../domain/lessonVoice';
 import { buildMemory } from '../domain/memory';
-import { backgroundFor, type BackgroundPref } from '../domain/soundscapes';
+import { afterPractice, backgroundFor, SLEEP_TAIL_MINUTES, type BackgroundPref } from '../domain/soundscapes';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
 import { applyOpening, applyScript, ARRIVE, SCAN_BODY, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
@@ -102,8 +102,6 @@ export type SpeakLinesOptions = {
 };
 export type SpeakLinesResult = 'done' | 'stopped' | 'failed';
 
-/** After a sleep practice the sound plays on as a listen this long, then fades (r2-copy §6). */
-const SLEEP_TAIL_MIN = 30;
 /** The session's sound and the listen's cross over this slowly, so the room never drops out. */
 const SLEEP_HANDOVER_FADE_MS = 4000;
 
@@ -405,11 +403,11 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         // A sleep practice that ran to its end (not one the person ended: they are awake, and
         // After is where they asked to go). Only guided minutes are recorded: the session is
         // already final, the sound's tail is not part of it.
-        if (sleepy && session.outcome === 'completed') {
+        const after = afterPractice(type, session.outcome, opts.background ?? backgroundFor(prefs));
+        if (after.rest) {
           setResting(true);
-          const bg = opts.background ?? backgroundFor(prefs);
-          if (bg !== 'none') {
-            await startListening(bg, SLEEP_TAIL_MIN).catch(() => {});
+          if (after.sound) {
+            await startListening(after.sound, SLEEP_TAIL_MINUTES).catch(() => {});
             handedOver = true;
           }
         }
