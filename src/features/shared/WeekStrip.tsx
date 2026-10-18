@@ -5,9 +5,10 @@ import { space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 
 /**
- * This week, Monday to Sunday: a filled dot for each practice day. A day without practice
- * is an empty dot, never a mark of failure; the future is fainter still. Nothing here
- * resets, so there is no streak to lose.
+ * This week, Monday to Sunday: a filled dot for each practice day, a ring around today. Every
+ * other day — past or still to come — is the same plain faint dot, so a day without practice
+ * looks exactly like a day that hasn't happened yet: nothing marks it as missed (no dash, no
+ * outline). Nothing here resets, so there is no streak to lose.
  */
 export function WeekStrip({ days }: { days: WeekStripDay[] }) {
   const styles = useStyles(makeStyles);
@@ -19,7 +20,7 @@ export function WeekStrip({ days }: { days: WeekStripDay[] }) {
           <Txt variant="caption" tone={d.today ? 'primary' : 'tertiary'} style={d.today ? { fontWeight: '700' } : undefined}>
             {d.label}
           </Txt>
-          <View style={[styles.dot, d.practised ? styles.on : d.today ? styles.today : d.future ? styles.future : styles.off]} />
+          <View style={[styles.dot, d.practised ? styles.on : d.today ? styles.today : styles.off]} />
         </View>
       ))}
     </View>
@@ -35,6 +36,5 @@ const makeStyles = (color: Palette) =>
   dot: { width: SIZE, height: SIZE, borderRadius: SIZE / 2 },
   on: { backgroundColor: color.practice },
   today: { borderWidth: 1.5, borderColor: color.text },
-  off: { borderWidth: 1.5, borderColor: color.hairline, borderStyle: 'dashed' },
-  future: { backgroundColor: color.surface },
+  off: { backgroundColor: color.surfaceStrong },
 });

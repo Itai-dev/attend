@@ -84,6 +84,10 @@ export function ProgressScreen() {
   const program = prefs.program ?? EMPTY_PROGRAM;
   const stats = useMemo(() => practiceStats(sessions, Date.now(), tz), [sessions, tz]);
   const marks = useMemo(() => milestones({ sessions, program, moments: prefs.moments?.length ?? 0, tz }), [sessions, program, prefs.moments, tz]);
+  // What's been earned, and the one that comes next. A full row of greyed-out stars read as a
+  // list of things not yet done; one next star is something to walk toward.
+  const nextMark = marks.find((m) => !m.earned);
+  const shownMarks = [...marks.filter((m) => m.earned), ...(nextMark ? [nextMark] : [])];
   const moments = (prefs.moments ?? []).slice(0, 5);
   const recent = checkIns.filter((c) => !c.isSample).slice(0, 12);
 
@@ -102,27 +106,34 @@ export function ProgressScreen() {
       <ProgramPath program={program} todayKey={dayKey(Date.now(), tz)} />
 
       <SectionLabel style={{ marginTop: space.xxl }}>your practice</SectionLabel>
-      <View style={styles.tiles}>
-        {[
-          [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
-          [stats.minutes, 'minutes'],
-          [program.read.length, program.read.length === 1 ? 'lesson' : 'lessons'],
-        ].map(([n, label]) => (
-          <View key={String(label)} style={styles.tile}>
-            <Txt variant="title">{String(n)}</Txt>
-            <Txt variant="caption" tone="tertiary">
-              {String(label)}
-            </Txt>
-          </View>
-        ))}
-      </View>
-      <View style={styles.marks} accessible accessibilityLabel={`Milestones: ${marks.filter((m) => m.earned).map((m) => m.label).join(', ') || 'none yet'}.`}>
-        {marks.map((m) => (
+      {/* Three zeros before anything has happened say nothing; the numbers start with the first session. */}
+      {stats.sessions > 0 ? (
+        <View style={[styles.tiles, { marginBottom: space.xl }]}>
+          {[
+            [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
+            [stats.minutes, 'minutes'],
+            [program.read.length, program.read.length === 1 ? 'lesson' : 'lessons'],
+          ].map(([n, label]) => (
+            <View key={String(label)} style={styles.tile}>
+              <Txt variant="display">{String(n)}</Txt>
+              <Txt variant="footnote" tone="secondary">
+                {String(label)}
+              </Txt>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <View
+        style={styles.marks}
+        accessible
+        accessibilityLabel={`Milestones: ${marks.filter((m) => m.earned).map((m) => m.label).join(', ') || 'none yet'}.${nextMark ? ` Next: ${nextMark.label}.` : ''}`}
+      >
+        {shownMarks.map((m) => (
           <View key={m.id} style={styles.mark}>
             <View style={[styles.badge, m.earned ? styles.badgeOn : styles.badgeOff]}>
               <Icon name="star.fill" size={16} tint={m.earned ? color.milestone : color.textTertiary} />
             </View>
-            <Txt variant="caption" tone={m.earned ? 'secondary' : 'tertiary'} align="center" style={{ fontSize: 10, lineHeight: 12 }}>
+            <Txt variant="footnote" tone={m.earned ? 'secondary' : 'tertiary'} align="center">
               {m.label}
             </Txt>
           </View>
@@ -147,7 +158,7 @@ export function ProgressScreen() {
                 Steps you take and quieter moments you notice will gather here, in your words.
               </Txt>
             )}
-            <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={{ minHeight: 36, justifyContent: 'center' }}>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={{ minHeight: HIT, justifyContent: 'center', alignSelf: 'flex-start' }}>
               <Txt variant="callout" style={{ color: color.milestone }}>
                 Save a moment
               </Txt>
@@ -226,10 +237,11 @@ const makeStyles = (color: Palette) =>
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.s },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, gap: space.m, paddingVertical: space.s },
   tiles: { flexDirection: 'row', gap: space.s },
-  tile: { flex: 1, padding: space.m, gap: 2, borderRadius: 16, backgroundColor: color.surface },
-  marks: { flexDirection: 'row', gap: space.xs, marginTop: space.l },
-  mark: { flex: 1, alignItems: 'center', gap: space.xs },
-  badge: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  tile: { flex: 1, paddingTop: space.m, gap: space.xxs, borderTopWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
+  marks: { flexDirection: 'row', flexWrap: 'wrap', gap: space.m },
+  mark: { width: 76, alignItems: 'center', gap: space.xs },
+  badge: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badgeOn: { backgroundColor: color.milestoneSoft },
-  badgeOff: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.hairline },
+  // The next milestone: a plain faint disc. No dashed outline — nothing here is "missing".
+  badgeOff: { backgroundColor: color.surfaceStrong },
 });

@@ -8,7 +8,6 @@ import { EMPTY_PROGRAM, markRead, programDay, WEEKS } from '@/domain/program';
 import { haptic, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
-import { Photo } from '@/design/Photo';
 import { dayPlan, startPractice } from '../shared/start';
 
 /**
@@ -45,15 +44,12 @@ export function LessonScreen() {
       </View>
       <View style={styles.top}>
         <Txt variant="footnote" tone="tertiary">
-          Day {day.day} · Week {day.week} · {WEEKS[day.week].name}
+          day {day.day} · week {day.week} · {WEEKS[day.week].name.toLowerCase()}
         </Txt>
         <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {i === 0 ? (
-          <Photo scene="dawn" height={200} radius={radius.s} style={{ marginBottom: space.xl }} />
-        ) : null}
         {i === 0 ? (
           <Txt variant="title" accessibilityRole="header">
             {day.lesson.title}
@@ -67,8 +63,8 @@ export function LessonScreen() {
           ))}
           {card.notice ? (
             <View style={styles.notice}>
-              <Txt variant="caption" style={{ color: color.practice, letterSpacing: 1.2 }}>
-                NOTICE
+              <Txt variant="caption" style={{ color: color.practice }}>
+                notice
               </Txt>
               <Txt variant="callout" style={{ marginTop: space.xs }}>
                 {card.notice}

@@ -10,14 +10,13 @@ import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { NEED_IT, presetById } from '@/domain/presets';
 import { soundscape, timerLabel } from '@/domain/soundscapes';
-import { Card, haptic, Icon, IconButton, PrimaryButton, QuietButton, SectionLabel, Txt, Wordmark } from '@/design/components';
-import { Photo, sceneForHour, type SceneId } from '@/design/Photo';
+import { Card, haptic, Icon, IconButton, OutlineButton, PrimaryButton, QuietButton, SectionLabel, Txt, Wordmark } from '@/design/components';
+import { Photo, sceneForHour } from '@/design/Photo';
 import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { pauseListening, resumeListening, useListen } from '@/voice/listen';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { greeting } from '../shared/format';
 import { dayPlan, presetPlan, startPractice } from '../shared/start';
 import { WeekStrip } from '../shared/WeekStrip';
 
@@ -32,8 +31,6 @@ import { WeekStrip } from '../shared/WeekStrip';
  * (docs/RESEARCH.md §5). Only a quiet nudge to log today, until it's done.
  */
 
-/** A place for each moment, from the same photographs as the sounds. */
-const NEED_SCENE: Record<string, SceneId> = { 'flare-3': 'ocean', 'sleep-10': 'evening', 'scan-10': 'forest', 'worry-5': 'stream' };
 /** What brought the person here (the welcome) puts its moment first. */
 const FOCUS_NEED: Record<SessionType, string> = { flare: 'flare-3', sleep: 'sleep-10', notice: 'scan-10', fear: 'worry-5' };
 
@@ -73,92 +70,44 @@ export function HomeScreen() {
 
   const lead = prefs.focus ? FOCUS_NEED[prefs.focus] : undefined;
   const needs = lead ? [...NEED_IT.filter((n) => n.id === lead), ...NEED_IT.filter((n) => n.id !== lead)] : NEED_IT;
-  const tile = (width - space.xl * 2 - space.m) / 2;
+  const tomorrow = !finished && day < PROGRAM_DAYS ? programDay(day + 1) : undefined;
+  // The week strip appears once there is something on it. Before the first practice it was
+  // seven empty circles under a button — a row of absences on the first screen anyone sees.
+  const showWeek = stats.sessions > 0;
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: color.bg }}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
+  const week = showWeek ? (
+    <View style={{ marginTop: space.xxl }}>
+      <WeekStrip days={strip} />
+      <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
+        {weekLine(stats, now)}
+      </Txt>
+    </View>
+  ) : null;
+
+  const logPain = !checkedInToday ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Log today’s pain. Ten seconds."
+      onPress={() => router.push('/checkin')}
+      style={({ pressed }) => [styles.logRow, { opacity: pressed ? 0.6 : 1 }]}
     >
-      {/* Daisy's opening: the hour's sky, full-bleed, the wordmark over it. */}
-      <Photo scene={sceneForHour(new Date(now).getHours())} width={width} height={Math.round(height * 0.42)} drift style={{ marginHorizontal: -space.xl }}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: color.scrim }]} />
-        <View style={[styles.heroTop, { paddingTop: insets.top + space.xs }]}>
-          <View style={{ width: HIT }} />
-          <Wordmark tone="onImage" />
-          <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={color.onImage} />
-        </View>
-        <View style={styles.heroBottom}>
-          <Txt variant="display" accessibilityRole="header" style={[styles.onImage, styles.shadow]}>
-            {greeting()}
-          </Txt>
-          <Txt variant="callout" style={[styles.onImage, styles.shadow, { opacity: 0.9, marginTop: space.xs }]}>
-            {finished ? 'all 28 days done' : `day ${day} of ${PROGRAM_DAYS} · ${WEEKS[today.week].name.toLowerCase()}`}
-          </Txt>
-        </View>
-      </Photo>
-
-      {/* The one thing to do today. */}
-      <Animated.View entering={FadeIn.duration(600)}>
-        <Card style={styles.today}>
-          <Txt variant="footnote" style={styles.kicker}>
-            {doneToday ? 'done for today' : finished ? 'any day' : 'today'}
-          </Txt>
-          <Txt variant="title" style={{ marginTop: space.xs }}>
-            {today.lesson.title}
-          </Txt>
-          <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
-            {doneToday
-              ? finished
-                ? 'Every practice stays here, whenever you want it.'
-                : `Day ${day + 1} opens tomorrow. Nothing else to do.`
-              : read
-                ? `${today.practice.minutes} min practice · eyes closed`
-                : `2 min read, then ${today.practice.minutes} min practice · eyes closed`}
-          </Txt>
-          {doneToday ? (
-            <QuietButton label="Practise again" tone="primary" onPress={() => startPractice(dayPlan(day, known))} style={{ alignSelf: 'flex-start', marginTop: space.s, paddingHorizontal: 0 }} />
-          ) : (
-            <>
-              <PrimaryButton label={read ? 'begin practice' : `begin day ${day}`} onPress={begin} style={{ marginTop: space.l }} />
-              <QuietButton
-                label="Adjust length, voice or sound"
-                onPress={() => router.push({ pathname: '/before', params: { day: String(day) } })}
-                style={{ alignSelf: 'center', marginTop: space.xs }}
-              />
-            </>
-          )}
-        </Card>
-      </Animated.View>
-
-      <View style={{ marginTop: space.xl }}>
-        <WeekStrip days={strip} />
-        <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
-          {weekLine(stats, now)}
+      <View style={{ flex: 1 }}>
+        <Txt variant="headline">Log today’s pain</Txt>
+        <Txt variant="footnote" tone="secondary">
+          10 seconds. Over weeks, it shows you what’s changing.
         </Txt>
       </View>
+      <Icon name="chevron.right" size={14} tint={color.textTertiary} />
+    </Pressable>
+  ) : null;
 
-      {!checkedInToday ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Log today’s pain. Ten seconds."
-          onPress={() => router.push('/checkin')}
-          style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
-        >
-          <View style={{ flex: 1 }}>
-            <Txt variant="headline">Log today’s pain</Txt>
-            <Txt variant="footnote" tone="secondary">
-              10 seconds. Over weeks, it shows you what’s changing.
-            </Txt>
-          </View>
-          <Icon name="chevron.right" size={14} tint={color.textTertiary} />
-        </Pressable>
-      ) : null}
-
-      {/* Outside the program: the moments people open the app for anyway. */}
-      <SectionLabel style={{ marginTop: space.xxl }}>when you need it</SectionLabel>
-      <View style={styles.grid}>
-        {needs.map((n) => {
+  // Practices are text rows; photographs belong to sounds. Two kinds of thing, two looks, so
+  // nobody taps a forest expecting rain and gets a voice.
+  const needIt = (
+    <View style={{ marginTop: space.xxl }}>
+      <SectionLabel>when you need it</SectionLabel>
+      <View>
+        {needs.map((n, i) => {
           const p = presetById(n.id)!;
           return (
             <Pressable
@@ -169,23 +118,92 @@ export function HomeScreen() {
                 haptic('soft');
                 startPractice(presetPlan(p, known));
               }}
-              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+              style={({ pressed }) => [styles.needRow, i === needs.length - 1 && styles.needLast, { opacity: pressed ? 0.55 : 1 }]}
             >
-              <Photo scene={NEED_SCENE[n.id] ?? 'tone'} width={tile} height={Math.round(tile * 0.78)} radius={radius.s}>
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: color.scrim }]} />
-                <View style={styles.tileText}>
-                  <Txt variant="headline" style={[styles.onImage, styles.shadow]}>
-                    {n.label}
-                  </Txt>
-                  <Txt variant="footnote" style={[styles.onImage, styles.shadow, { opacity: 0.9 }]}>
-                    {n.detail}
-                  </Txt>
-                </View>
-              </Photo>
+              <Txt variant="title2" style={{ flex: 1, textTransform: 'lowercase' }}>
+                {n.label}
+              </Txt>
+              <Txt variant="footnote" tone="tertiary">
+                {n.detail}
+              </Txt>
+              <Txt variant="callout" importantForAccessibility="no" accessibilityElementsHidden>
+                →
+              </Txt>
             </Pressable>
           );
         })}
       </View>
+    </View>
+  );
+
+  const dayLine = finished ? 'all 28 days done' : `day ${day} of ${PROGRAM_DAYS} · ${WEEKS[today.week].name.toLowerCase()}`;
+  const meta = doneToday
+    ? tomorrow
+      ? `tomorrow · day ${tomorrow.day} · ${tomorrow.lesson.title.toLowerCase()}`
+      : 'every practice stays here, whenever you want it'
+    : read
+      ? `${today.practice.minutes} min practice`
+      : `2 min lesson · ${today.practice.minutes} min practice`;
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: color.bg }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
+    >
+      {/* Daisy's opening: the hour's sky, full-bleed, the wordmark over it, today's day on it. */}
+      <Photo scene={sceneForHour(new Date(now).getHours())} width={width} height={Math.round(height * 0.36)} drift style={{ marginHorizontal: -space.xl }}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: color.scrim }]} />
+        <View style={[styles.heroTop, { paddingTop: insets.top + space.xs }]}>
+          <View style={{ width: HIT }} />
+          <Wordmark tone="onImage" />
+          <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={color.onImage} />
+        </View>
+        <View style={styles.heroBottom}>
+          <Txt variant="callout" style={[styles.onImage, styles.shadow, { opacity: 0.9, marginBottom: space.xs }]}>
+            {dayLine}
+          </Txt>
+          <Txt variant="display" accessibilityRole="header" style={[styles.onImage, styles.shadow]}>
+            {doneToday ? 'done for today.' : today.lesson.title}
+          </Txt>
+        </View>
+      </Photo>
+
+      {/* The one thing to do today, flat on the page: what it takes, then the button. */}
+      <Animated.View entering={FadeIn.duration(600)} style={{ marginTop: space.xl }}>
+        <Txt variant="callout" tone="secondary">
+          {meta}
+        </Txt>
+        {doneToday ? (
+          <OutlineButton label="practice again" onPress={() => startPractice(dayPlan(day, known))} style={{ marginTop: space.l }} />
+        ) : (
+          <>
+            <PrimaryButton label={read ? 'begin practice' : `begin day ${day}`} onPress={begin} style={{ marginTop: space.l }} />
+            {/* Day 1 has nothing to adjust yet: the welcome just chose length and voice. */}
+            {day > 1 ? (
+              <QuietButton
+                label="adjust length, voice or sound"
+                onPress={() => router.push({ pathname: '/before', params: { day: String(day) } })}
+                style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginTop: space.xs }}
+              />
+            ) : null}
+          </>
+        )}
+      </Animated.View>
+
+      {/* Once today's practice is done, the next thing someone might want is a practice for a moment. */}
+      {doneToday ? (
+        <>
+          {needIt}
+          {week}
+          {logPain}
+        </>
+      ) : (
+        <>
+          {week}
+          {logPain}
+          {needIt}
+        </>
+      )}
 
       {/* Sounds have their own tab; while one plays, it can be paused from here. */}
       {listen.id ? (
@@ -232,24 +250,30 @@ function NowPlaying({ listen }: { listen: ReturnType<typeof useListen> }) {
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
     heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.s },
-    heroBottom: { position: 'absolute', left: space.xl, right: space.xl, bottom: space.xl + space.l },
+    heroBottom: { position: 'absolute', left: space.xl, right: space.xl, bottom: space.xl },
     onImage: { color: color.onImage },
     shadow: { textShadowColor: 'rgba(5,8,9,0.3)', textShadowRadius: 14, textShadowOffset: { width: 0, height: 1 } },
-    today: { marginTop: -space.l, padding: space.xl },
-    kicker: { color: color.practice, fontWeight: '600' },
-    row: {
+    logRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.m,
       minHeight: 64,
-      marginTop: space.xl,
+      marginTop: space.xxl,
       paddingVertical: space.m,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderColor: color.hairline,
     },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.m },
-    tileText: { position: 'absolute', left: space.m, right: space.m, bottom: space.m },
+    needRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.m,
+      minHeight: 60,
+      paddingVertical: space.m,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderColor: color.hairline,
+    },
+    needLast: { borderBottomWidth: StyleSheet.hairlineWidth },
     playing: { flexDirection: 'row', alignItems: 'center', gap: space.m, padding: space.s, paddingRight: space.l },
     playBtn: { width: 40, height: 40, borderRadius: 3, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   });

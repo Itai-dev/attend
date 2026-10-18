@@ -66,10 +66,10 @@ export function presetTheme(p: Preset): PracticeTheme {
  * practice. One tap each, nothing to choose.
  */
 export const NEED_IT: Array<{ id: string; label: string; detail: string }> = [
-  { id: 'flare-3', label: 'A flare', detail: '3 min' },
-  { id: 'sleep-10', label: 'Can’t sleep', detail: '10 min' },
-  { id: 'scan-10', label: 'Body scan', detail: '10 min' },
-  { id: 'worry-5', label: 'Worried', detail: '5 min' },
+  { id: 'flare-3', label: 'in a flare', detail: '3 min' },
+  { id: 'sleep-10', label: 'can’t sleep', detail: '10 min' },
+  { id: 'scan-10', label: 'body scan', detail: '10 min' },
+  { id: 'worry-5', label: 'feeling worried', detail: '5 min' },
 ];
 
 export function presetById(id: string | undefined): Preset | undefined {

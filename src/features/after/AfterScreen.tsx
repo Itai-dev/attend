@@ -5,19 +5,21 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { currentTz } from '@/domain/checkin';
-import { milestones, newlyEarned, practiceStats } from '@/domain/engagement';
+import { milestones, newlyEarned, practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { EMPTY_PROGRAM, PROGRAM_DAYS, programDay, type ProgramState } from '@/domain/program';
 import type { Session, SessionFeeling } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, Txt } from '@/design/components';
-import { radius, space, type Palette } from '@/design/theme';
+import { space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { BreathingField } from '@/viz/BreathingField';
+import { WeekStrip } from '../shared/WeekStrip';
 
 /**
- * After a guided session: a soft completion moment. What was done (minutes, days this
- * week, the program), how it felt (one optional tap, about the practice, never the pain),
- * any milestone this session earned, and tomorrow. Then Done, and the app is left.
+ * After a guided session: one soft completion moment, not a dashboard. What was done (the
+ * minutes, this week's dots), how it felt (one optional tap, about the practice, never the
+ * pain), any milestone this session earned, and tomorrow. Then Done, and the app is left.
+ * Totals live in Progress; three number tiles here turned a quiet moment into a report.
  */
 
 const FEELINGS: Array<{ value: SessionFeeling; label: string }> = [
@@ -26,6 +28,9 @@ const FEELINGS: Array<{ value: SessionFeeling; label: string }> = [
   { value: 'restless', label: 'Restless' },
   { value: 'hard', label: 'Hard today' },
 ];
+
+/** Said under the chips when the person picks "Hard today": a hard session is never a failed one. */
+const HARD_LINE = 'Hard sessions count the same. Showing up was the practice.';
 
 const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
 
@@ -47,6 +52,9 @@ export function AfterScreen({ session }: { session: Session }) {
   const program = prefs.program ?? EMPTY_PROGRAM;
   const minutes = Math.max(1, Math.round((session.endedAt - session.startedAt) / 60_000));
   const stats = useMemo(() => practiceStats(sessions, now, tz), [sessions, now, tz]);
+  const strip = useMemo(() => weekStrip(sessions, now, tz), [sessions, now, tz]);
+  const said = WORDS[minutes] ?? String(minutes);
+  const quiet = `${said} quiet ${minutes === 1 ? 'minute' : 'minutes'}`;
   const earned = useMemo(() => {
     const moments = prefs.moments?.length ?? 0;
     const before = milestones({ sessions: sessions.filter((s) => s.id !== session.id), program: withoutDay(program, session.programDay), moments, tz });
@@ -72,29 +80,16 @@ export function AfterScreen({ session }: { session: Session }) {
             {dayDone ? `day ${session.programDay} complete` : 'practice complete'}
           </Txt>
           <Txt variant="title" align="center" style={{ marginTop: space.s }}>
-            {early ? `You stopped after ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}. That still counts.` : `${WORDS[minutes] ?? minutes} quiet minutes, done.`}
+            {/* Ending early was the person's choice, said as one: no "still counts", which concedes it might not. */}
+            {early ? `${quiet}. You chose when to stop.` : `${quiet}, done.`}
           </Txt>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(900).duration(900)} style={styles.tiles}>
-          <View style={styles.tile}>
-            <Txt variant="title">{String(stats.daysThisWeek)}</Txt>
-            <Txt variant="caption" tone="tertiary" align="center">
-              {stats.daysThisWeek === 1 ? 'day this week' : 'days this week'}
-            </Txt>
-          </View>
-          <View style={styles.tile}>
-            <Txt variant="title">{String(stats.minutes)}</Txt>
-            <Txt variant="caption" tone="tertiary" align="center">
-              minutes, all time
-            </Txt>
-          </View>
-          <View style={styles.tile}>
-            <Txt variant="title">{`${Object.keys(program.done).length}/${PROGRAM_DAYS}`}</Txt>
-            <Txt variant="caption" tone="tertiary" align="center">
-              days of the program
-            </Txt>
-          </View>
+        <Animated.View entering={FadeInDown.delay(900).duration(900)} style={{ marginTop: space.xxl }}>
+          <WeekStrip days={strip} />
+          <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
+            {weekLine(stats, now)}
+          </Txt>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(1300).duration(900)}>
@@ -107,24 +102,28 @@ export function AfterScreen({ session }: { session: Session }) {
                 key={f.value}
                 label={f.label}
                 selected={session.feeling === f.value}
-                style={{ flexGrow: 1 }}
+                style={styles.feeling}
                 onPress={() => setFeeling(session.id, session.feeling === f.value ? null : f.value)}
               />
             ))}
           </View>
+          {session.feeling === 'hard' ? (
+            <Animated.View entering={FadeIn.duration(500)}>
+              <Txt variant="callout" style={{ marginTop: space.m }}>
+                {HARD_LINE}
+              </Txt>
+            </Animated.View>
+          ) : null}
           <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s }}>
             Optional. About the practice, not the pain.
           </Txt>
 
           {earned.map((m) => (
-            <View key={m.id} style={styles.milestone} accessible accessibilityLabel={`New milestone: ${m.label}. ${m.detail}`}>
-              <Icon name="star.fill" size={22} tint={color.milestone} />
-              <View style={{ flex: 1 }}>
-                <Txt variant="headline">New milestone: {m.label.charAt(0).toLowerCase() + m.label.slice(1)}</Txt>
-                <Txt variant="footnote" tone="secondary">
-                  {m.detail}
-                </Txt>
-              </View>
+            <View key={m.id} style={styles.milestone} accessible accessibilityLabel={`Milestone: ${m.label}.`}>
+              <Icon name="star.fill" size={18} tint={color.milestone} />
+              <Txt variant="headline" style={{ textTransform: 'lowercase' }}>
+                {m.label}
+              </Txt>
             </View>
           ))}
         </Animated.View>
@@ -133,7 +132,7 @@ export function AfterScreen({ session }: { session: Session }) {
       <View style={{ paddingHorizontal: space.xl, paddingBottom: insets.bottom + space.l, gap: space.m }}>
         {next ? (
           <Txt variant="footnote" tone="tertiary" align="center">
-            Tomorrow · Day {next.day} · {next.lesson.title}
+            tomorrow · day {next.day} · {next.lesson.title.toLowerCase()}
           </Txt>
         ) : null}
         <PrimaryButton label="Done" onPress={done} />
@@ -145,18 +144,8 @@ export function AfterScreen({ session }: { session: Session }) {
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  tiles: { flexDirection: 'row', gap: space.s, marginTop: space.xl },
-  tile: { flex: 1, alignItems: 'center', gap: 2, padding: space.m, borderRadius: radius.m, backgroundColor: color.surface },
+  // Two by two: four equal answers, none sitting apart as the odd one out.
   feelings: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, marginTop: space.m },
-  milestone: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.m,
-    marginTop: space.l,
-    padding: space.l,
-    borderRadius: radius.m,
-    backgroundColor: color.milestoneSoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.milestone,
-  },
+  feeling: { flexBasis: '45%', flexGrow: 1, alignSelf: 'auto', justifyContent: 'space-between' },
+  milestone: { flexDirection: 'row', alignItems: 'center', gap: space.s, marginTop: space.xl },
 });

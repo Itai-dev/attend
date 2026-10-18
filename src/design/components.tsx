@@ -146,7 +146,7 @@ export function OutlineButton({ label, style, onPress, tone, ...rest }: ButtonPr
   );
 }
 
-/** A quiet text button. */
+/** A quiet text button. Lowercase, like every other control: one case rule across the app. */
 export function QuietButton({ label, style, onPress, tone = 'secondary', ...rest }: ButtonProps & { tone?: 'primary' | 'secondary' }) {
   const styles = useStyles(makeStyles);
   return (
@@ -161,7 +161,7 @@ export function QuietButton({ label, style, onPress, tone = 'secondary', ...rest
       }}
       style={({ pressed }) => [styles.quiet, { opacity: pressed ? 0.5 : 1 }, style]}
     >
-      <Txt variant="callout" tone={tone}>
+      <Txt variant="callout" tone={tone} style={{ textTransform: 'lowercase' }}>
         {label}
       </Txt>
     </Pressable>

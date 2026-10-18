@@ -1,21 +1,27 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { currentDay, PROGRAM, programDay, WEEKS, type ProgramState } from '@/domain/program';
+import { currentDay, PROGRAM, WEEKS, type ProgramState } from '@/domain/program';
 import { Txt } from '@/design/components';
-import { radius, space, type Palette } from '@/design/theme';
+import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useStyles } from '@/design/ThemeProvider';
 
 /**
- * The 28 days as four rows of seven, filled in as practice is done. A done day or today
- * opens its lesson again; later days wait. It counts showing up and nothing else: an empty
- * square is just a day not reached, never a day missed.
+ * The 28 days as rows of seven, filled in as practice is done. A done day or today opens its
+ * lesson again; later days wait. It counts showing up and nothing else: an empty square is
+ * just a day not reached, never a day missed.
+ *
+ * In the first week only week 1 is drawn, and the rest is one line naming what comes next.
+ * Twenty-one grey squares on day 1 read as a debt to work off, not a path.
  */
 export function ProgramPath({ program, todayKey }: { program: ProgramState; todayKey: string }) {
   const styles = useStyles(makeStyles);
-  const { day: today, finished } = currentDay(program, todayKey);
+  const { day: today } = currentDay(program, todayKey);
+  const anyDone = Object.keys(program.done).length > 0;
+  const early = today <= 7;
+  const weeks: Array<1 | 2 | 3 | 4> = early ? [1] : [1, 2, 3, 4];
   return (
     <View style={{ gap: space.l }}>
-      {([1, 2, 3, 4] as const).map((w) => {
+      {weeks.map((w) => {
         const days = PROGRAM.filter((d) => d.week === w);
         const open = days[0].day <= today;
         return (
@@ -48,9 +54,14 @@ export function ProgramPath({ program, todayKey }: { program: ProgramState; toda
           </View>
         );
       })}
-      {!finished ? (
+      {early ? (
+        <Txt variant="footnote" tone="tertiary" style={{ textTransform: 'lowercase' }}>
+          then: {([2, 3, 4] as const).map((w) => WEEKS[w].name).join(' · ')}
+        </Txt>
+      ) : null}
+      {anyDone ? (
         <Txt variant="footnote" tone="tertiary">
-          {program.done[today] ? 'Done today.' : `Next: day ${today}, ${programDay(today).lesson.title.toLowerCase()}.`} Tap a day to read its lesson again.
+          Tap a finished day to read its lesson again.
         </Txt>
       ) : null}
     </View>
@@ -60,7 +71,7 @@ export function ProgramPath({ program, todayKey }: { program: ProgramState; toda
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
     days: { flexDirection: 'row', gap: space.s },
-    day: { flex: 1, height: 36, borderRadius: radius.s, alignItems: 'center', justifyContent: 'center' },
+    day: { flex: 1, height: HIT, borderRadius: radius.s, alignItems: 'center', justifyContent: 'center' },
     dayDone: { backgroundColor: color.practice },
     dayToday: { borderWidth: 1.5, borderColor: color.text },
     dayLater: { backgroundColor: color.surface },
