@@ -30,7 +30,7 @@ export const WELCOME: WelcomeStep[] = [
     id: 'intro',
     say: [
       'Attend is a voice practice for familiar, long-standing pain.',
-      'In a session you close your eyes and talk. The guide listens and follows what you notice. No tapping, no reading.',
+      'In a session you close your eyes and listen. The guide speaks, then leaves long silences. No tapping, no reading.',
     ],
     choices: [{ value: 'go', label: 'Set up my first session' }],
   },
@@ -86,7 +86,7 @@ export function nextStep(a: WelcomeAnswers, started: boolean): WelcomeStep | und
 export const SPOKEN = {
   intro: [
     'Welcome to Attend.',
-    'This is a voice practice for familiar, long-standing pain. In a session you close your eyes and talk, and I follow what you notice.',
+    'This is a voice practice for familiar, long-standing pain. In a session you close your eyes and listen, and I guide your attention.',
     'Let’s set up your first one. You can answer out loud.',
   ],
   focus: 'What brings you here? A familiar ache you live with, flares that come and go, pain around sleep, or worry about a sensation.',

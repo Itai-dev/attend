@@ -73,14 +73,14 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Attend listens while you speak during a session, so the guide can respond. Audio is processed on this iPhone and never saved.",
+          "microphonePermission": "Guided sessions never use the microphone. Attend asks only if you choose to answer the welcome by voice; your words are recognized on this iPhone and audio is never saved.",
           "enableBackgroundPlayback": true
         }
       ],
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Attend listens while you speak during a session, so the guide can respond. Audio is processed on this iPhone and never saved.",
+          "microphonePermission": "Guided sessions never use the microphone. Attend asks only if you choose to answer the welcome by voice; your words are recognized on this iPhone and audio is never saved.",
           "speechRecognitionPermission": "Attend turns what you say during a session into words, on this iPhone, so the guide can follow what you notice."
         }
       ]

@@ -72,3 +72,70 @@ real nature sounds. Screens: `docs/studio/r0-*.png`.
 5. Count showing up, plainly: no "still counts", no "new milestone!", never "missed".
 6. Use their words ("flare", "can't sleep", "worried"), not the clinic's.
 
+**Built in round 1** (all pushed, 85/85 tests):
+- **Copy:** safety and belonging; the guide never asks; a way to step back; worry and flare
+  arrivals with a fixed doctor line; place-free guide lines; one voice for all practices.
+- **Screens:**
+  - Today has the day on the photo and practices as rows.
+  - After is one moment instead of a dashboard.
+  - Progress shows only what exists.
+  - There are no dashed "missed" marks anywhere.
+- **Other fixes:**
+  - Sample sessions in development builds only.
+  - Honest privacy line.
+  - Moments are steps, not "quieter pain".
+  - American English.
+  - The launch plan has the new pricing and positioning.
+- **Session voice and screen** (by a separate builder): silent failures explained on screen,
+  the cache, locking the phone, active-time clock, a session screen that fades for eyes closed.
+
+## Round 2: concentrated work (21:12–21:20), meeting (21:21)
+
+**What each role brought**
+- **Copywriter:**
+  - A full 16-step body scan (`SCAN_BODY`), for the body scan only. Program days keep
+    `SCAN_FULL`.
+  - Spoken framing for listening to the lesson.
+  - Days 1–7 lessons rewritten for the ear: no dashes, no questions in the guide's voice.
+  - The Day 7 card, reminder copy, and the short-day line. All of it is in
+    `docs/studio/r2-copy.md`.
+- **Researcher:**
+  - **Short day:** 3 active minutes of the day's practice completes the day. Length matters
+    less than frequency (Strohmaier 2020), and the current rule is a looser 90 s.
+  - **Listening:** listening and reading are equal ways to take in a lesson (Rogowsky 2016).
+    Listen comes first after 21:00 or for Nights.
+  - **Sleep:** the sound carries on for 30 minutes after the voice ends, and the screen stays
+    dark.
+  - **Day 7 card:** one optional, three-state question about the person's own signs.
+  - **Reminders:** dated one-offs, so the step-down works without opening the app.
+  - **Who might be harmed:** trauma and health anxiety. Say plainly that stopping is part of
+    the practice.
+- **Go-to-market:** `docs/launch/` has the store listing, landing page, outreach (community
+  posts as Itai, a clinician one-pager, a 5-email sequence) and the paywall copy. It flagged
+  that the microphone permission text and the old spoken-welcome copy contradicted guided
+  sessions, and that "nothing leaves your phone" isn't true.
+
+**Decisions**
+1. **Build now:**
+   - the body scan
+   - the 3-active-minute short day, with a short-version row on Today
+   - listen to the lesson, then flow into the practice
+   - the sleep tail and dark screen
+   - dated reminders that skip a practiced day and step down on their own
+   - the Day 7 card with the optional signs question
+   - Today refreshes when the app comes back to the foreground
+   - the program day counts by the session's start date
+2. **Done in this meeting:**
+   - the microphone permission and welcome wording
+   - "who might be harmed" in the welcome and Settings
+   - Days 1–7 lessons for the ear
+3. **Next round:** the paywall, behind a flag (`src/domain/access.ts`, the paywall screen in
+   the Daisy look, the locked Day 8 state). No purchase SDK until Itai confirms prices.
+4. **Itai's call:**
+   - founding prices
+   - a beta thank-you (a free year?)
+   - how long a clinic code lasts (3 months?)
+   - the domain and support email
+   - whether to stop weekly reminders after 4 unanswered (researcher's proposal; this changes
+     AGENTS.md)
+
