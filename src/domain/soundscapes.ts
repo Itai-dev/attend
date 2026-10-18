@@ -27,16 +27,18 @@ export type Soundscape = {
   gain: number;
 };
 
+/** Every nature sound is mastered to this average level (tools/master-soundscapes.py). */
+const MASTERED_DB = -26;
 const toneMatch = (rmsDb: number) => Math.round(0.75 * 10 ** ((-14.7 - rmsDb) / 20) * 100) / 100;
 
 export const SOUNDSCAPES: readonly Soundscape[] = [
-  { id: 'rain', name: 'Soft rain', line: 'Steady rain on leaves and glass', gain: toneMatch(-21.1) },
-  { id: 'forest', name: 'Forest', line: 'Wind in the trees, birds far off', gain: toneMatch(-23.1) },
-  { id: 'stream', name: 'Stream', line: 'Shallow water over stones', gain: toneMatch(-22.1) },
-  { id: 'waterfall', name: 'Waterfall', line: 'A long fall of water, heard from the path', gain: toneMatch(-20.1) },
-  { id: 'ocean', name: 'Ocean', line: 'Slow waves on a wide shore', gain: toneMatch(-21.1) },
-  { id: 'night', name: 'Night', line: 'Crickets and a warm evening', gain: toneMatch(-25.0) },
-  { id: 'fire', name: 'Fireside', line: 'A small fire, settling', gain: toneMatch(-22.1) },
+  { id: 'rain', name: 'Soft rain', line: 'Steady rain on leaves', gain: toneMatch(MASTERED_DB) },
+  { id: 'forest', name: 'Forest', line: 'Wind in the trees, birds far off', gain: toneMatch(MASTERED_DB) },
+  { id: 'stream', name: 'Stream', line: 'Shallow water over stones', gain: toneMatch(MASTERED_DB) },
+  { id: 'waterfall', name: 'Waterfall', line: 'A long fall of water, heard from the path', gain: toneMatch(MASTERED_DB) },
+  { id: 'ocean', name: 'Ocean', line: 'Slow waves on a wide shore', gain: toneMatch(MASTERED_DB) },
+  { id: 'night', name: 'Night', line: 'Crickets and a warm evening', gain: toneMatch(MASTERED_DB) },
+  { id: 'fire', name: 'Fireside', line: 'A small fire, settling', gain: toneMatch(MASTERED_DB) },
   { id: 'tone', name: 'Soft tone', line: 'A low drone, tuned to 432 Hz', gain: 1 },
 ];
 
@@ -89,9 +91,12 @@ export function timerLabel(timerMin: ListenTimer, elapsedMs = 0): string {
   return left <= 1 ? 'Fading out' : `${left} min left`;
 }
 
-/** The level a sound plays at on its own: matched across sounds, never past full. */
+/**
+ * The level a sound plays at on its own: matched across sounds, and kept low — loud enough
+ * to fill the room at a normal phone volume, quiet enough to fall asleep to.
+ */
 export function listenLevel(s: Soundscape): number {
-  return Math.min(1, 0.5 * s.gain);
+  return Math.min(1, 0.3 * s.gain);
 }
 
 const ease = (t: number) => t * t * (3 - 2 * t);

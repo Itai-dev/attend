@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useData } from '@/data/store';
-import { currentTz, formatPain, MIN_DAYS_FOR_PICTURE, PAIN_MAX, type CheckIn } from '@/domain/checkin';
+import { currentTz, dayKey, formatPain, MIN_DAYS_FOR_PICTURE, PAIN_MAX, type CheckIn } from '@/domain/checkin';
 import { milestones, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM } from '@/domain/program';
 import { buildProgress, PROGRESS_MEANING, type ProgressDay } from '@/domain/progress';
@@ -11,12 +11,15 @@ import { Card, Hairline, Icon, PrimaryButton, SectionLabel, TitledScroll, Txt } 
 import { HIT, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { sessionDate } from '../shared/format';
+import { ProgramPath } from '../shared/ProgramPath';
 
 /**
- * Progress, in two halves that never mix. What you did — practice days, minutes, lessons,
- * milestones, the moments you saved — is celebrated. The pain record is shown, not judged:
- * pain over weeks, beside the days practised. The picture is the person's to read;
- * the screen draws it and says what it does not mean, and never says which way it went.
+ * Progress: the one place to look back. First the 28 days, filled in as they're done (this
+ * was its own tab; one place is simpler). Then what you did — practice days, minutes,
+ * lessons, milestones, the moments you saved — celebrated. Then the pain record, shown and
+ * never judged: pain over weeks, beside the days practised, never mixed with the practice.
+ * The picture is the person's to read; the screen says what it does not mean, and never
+ * which way it went.
  * Colour stays neutral: no hue here carries a verdict.
  */
 
@@ -94,8 +97,11 @@ export function ProgressScreen() {
   };
 
   return (
-    <TitledScroll title="Progress">
-      <SectionLabel>Your practice</SectionLabel>
+    <TitledScroll title="progress">
+      <SectionLabel>your 28 days</SectionLabel>
+      <ProgramPath program={program} todayKey={dayKey(Date.now(), tz)} />
+
+      <SectionLabel style={{ marginTop: space.xxl }}>your practice</SectionLabel>
       <View style={styles.tiles}>
         {[
           [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
@@ -150,11 +156,11 @@ export function ProgressScreen() {
         </>
       ) : null}
 
-      <SectionLabel style={{ marginTop: space.xxl }}>Your pain record</SectionLabel>
-      <PrimaryButton label="Check in" detail="How much it hurts right now" onPress={() => router.push('/checkin')} />
+      <SectionLabel style={{ marginTop: space.xxl }}>your pain record</SectionLabel>
+      <PrimaryButton label="log pain now" detail="10 seconds · separate from practice" onPress={() => router.push('/checkin')} />
 
       <Card style={styles.card}>
-        <SectionLabel>Last 8 weeks</SectionLabel>
+        <SectionLabel>last 8 weeks</SectionLabel>
         {progress.enough ? (
           <Chart days={progress.days} />
         ) : (
@@ -173,7 +179,7 @@ export function ProgressScreen() {
 
       {recent.length ? (
         <>
-          <SectionLabel style={{ marginTop: space.xxl }}>Check-ins</SectionLabel>
+          <SectionLabel style={{ marginTop: space.xxl }}>check-ins</SectionLabel>
           <View>
             {recent.map((c, i) => (
               <View key={c.id}>

@@ -16,9 +16,18 @@ pain record (ported from Pattern) to show whether practice is helping. See `docs
 > (follows the iPhone; the session is always dark), lowercase headings, square controls, and
 > misty film-style photographs for every sound and time of day (`design/Photo.tsx`,
 > `tools/grade-photos.py`) — and sound: seven
-> nature soundscapes generated as seamless loops (`tools/make-soundscapes.py`), chosen under
-> each session or played on their own in **Just listen** with a sleep timer
-> (`voice/listen.ts`). The plan to the App Store and paying users is `docs/LAUNCH.md`.
+> nature soundscapes (ElevenLabs sound generation, mastered quiet and seamless by
+> `tools/master-soundscapes.py`), chosen under each session or played on their own from the
+> **Sounds** tab with a sleep timer (`voice/listen.ts`). The plan to the App Store and paying
+> users is `docs/LAUNCH.md`.
+>
+> **The flow (18 Oct 2026):** three tabs — **Today** (one button for the day: lesson, then
+> straight into the practice; four one-tap moments: a flare, can't sleep, body scan, worried),
+> **Sounds** (tap one, it plays) and **Progress** (the 28-day path, practice, the pain record).
+> Settings is the gear on Today. The welcome is seven short screens, one question each, and ends
+> by starting Day 1. Practices start in one tap from what the app already knows
+> (`features/shared/start.ts`); "Adjust" on Today opens the Before screen for length, voice and
+> sound.
 
 Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · Skia · local-first SQLite · iOS-first.
 

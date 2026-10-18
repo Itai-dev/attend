@@ -81,10 +81,11 @@ Each item is a pull request. ✅ = done in this branch.
 5. **Device QA** — run `docs/ON-DEVICE.md`, plus: sounds loop without a click, Just listen
    keeps playing locked, timer fades out, a session started during Just listen takes over
    cleanly, VoiceOver on the new screens, largest text size on Today.
-6. **Sounds, by ear.** The seven sounds are generated (`tools/make-soundscapes.py`). Listen on
-   headphones; replace any that sound synthetic with a field recording (CC0, or a licensed
-   library, or ElevenLabs sound generation) under the same file name. Rain and ocean are the
-   ones people judge hardest.
+6. **Sounds, by ear.** The seven sounds are ElevenLabs Sound Effects v2 generations, the
+   calmer of two takes each, mastered by `tools/master-soundscapes.py` (quiet, soft peaks,
+   seamless loop). Listen on headphones, at bedtime volume; replace any that still sound
+   synthetic with a field recording under the same file name and re-run the mastering. Rain
+   and ocean are the ones people judge hardest.
 7. **Over-the-air updates** — EAS Update with `runtimeVersion` following `version`
    (AGENTS.md), so copy and content fixes don't wait for review.
 

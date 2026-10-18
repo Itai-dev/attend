@@ -245,6 +245,18 @@ function DeveloperSettings() {
           <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: color.practice }} />
         </View>
         <Hairline />
+        <Pressable accessibilityRole="button" onPress={() => router.push('/body')} style={styles.row}>
+          <Txt variant="body">Body map (conversation mode)</Txt>
+        </Pressable>
+        <Hairline />
+        <Pressable accessibilityRole="button" onPress={() => router.push('/journey')} style={styles.row}>
+          <Txt variant="body">Journey (conversation mode)</Txt>
+        </Pressable>
+        <Hairline />
+        <Pressable accessibilityRole="button" onPress={() => setPrefs({ onboarded: false }).then(() => router.replace('/onboarding'))} style={styles.row}>
+          <Txt variant="body">Replay the welcome</Txt>
+        </Pressable>
+        <Hairline />
         <View style={styles.textBlock}>
           <Txt variant="footnote" tone="tertiary">
             Speech module: {speech ? 'in this build' : 'not in this build (Expo Go / web)'}

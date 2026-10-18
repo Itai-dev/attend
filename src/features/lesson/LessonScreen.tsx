@@ -9,6 +9,7 @@ import { haptic, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/co
 import { radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { Photo } from '@/design/Photo';
+import { dayPlan, startPractice } from '../shared/start';
 
 /**
  * A lesson: a few short cards, one idea each, then straight into the day's practice.
@@ -21,15 +22,18 @@ export function LessonScreen() {
   const { day: dayParam } = useLocalSearchParams<{ day: string }>();
   const day = programDay(Number(dayParam) || 1);
   const insets = useSafeAreaInsets();
-  const { prefs, setPrefs } = useData();
+  const { prefs, setPrefs, checkIns } = useData();
   const [i, setI] = useState(0);
   const cards = day.lesson.cards;
   const card = cards[i];
   const last = i === cards.length - 1;
 
   const finish = async () => {
+    haptic('soft');
     await setPrefs({ program: markRead(prefs.program ?? EMPTY_PROGRAM, day.day) });
-    router.replace({ pathname: '/before', params: { day: String(day.day) } });
+    // Straight into the practice: the lesson's last line is the invitation, and a settings
+    // screen between them broke the thread (Before stays reachable from Today's "adjust").
+    startPractice(dayPlan(day.day, { prefs, checkIns }), 'replace');
   };
 
   return (
@@ -76,10 +80,10 @@ export function LessonScreen() {
 
       <View style={styles.footer}>
         {last ? (
-          <PrimaryButton label="Start the practice" detail={`${day.practice.title} · ${day.practice.minutes} min`} onPress={finish} />
+          <PrimaryButton label="begin the practice" detail={`${day.practice.minutes} min · find a comfortable place, then close your eyes`} onPress={finish} />
         ) : (
           <PrimaryButton
-            label="Next"
+            label="next"
             onPress={() => {
               haptic('select');
               setI(i + 1);

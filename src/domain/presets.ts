@@ -1,3 +1,4 @@
+import type { PracticeTheme } from './program';
 import type { SessionType } from './types';
 
 /**
@@ -21,6 +22,8 @@ export type Preset = {
   minutes: 3 | 5 | 10;
   voiceId: string;
   voiceName: string;
+  /** What the guide works with. Defaults from the type (presetTheme). */
+  theme?: PracticeTheme;
 };
 
 export const PRESET_CATEGORIES: Array<{ id: PresetCategory; title: string; detail: string }> = [
@@ -42,6 +45,7 @@ const DANIEL = { voiceId: 'onwK4e9ZLuTAKqWW03F9', voiceName: 'Daniel' };
 export const PRESETS: Preset[] = [
   { id: 'notice-5', title: 'Meet a familiar sensation', blurb: 'Find it, describe it, watch it for a while.', category: 'familiar', type: 'notice', minutes: 5, ...RIVER },
   { id: 'notice-3', title: 'A short check-in', blurb: 'A few minutes with whatever is asking for attention.', category: 'familiar', type: 'notice', minutes: 3, ...ALICE },
+  { id: 'scan-10', title: 'Body scan', blurb: 'A slow sweep from the feet up, resting on the body as a whole.', category: 'familiar', type: 'notice', minutes: 10, theme: 'open', ...RIVER },
   { id: 'notice-10', title: 'Stay with it longer', blurb: 'More time to watch how it moves and shifts.', category: 'familiar', type: 'notice', minutes: 10, ...GEORGE },
   { id: 'flare-5', title: 'During a flare', blurb: 'Slower lines and more room between them.', category: 'flare', type: 'flare', minutes: 5, ...MATILDA },
   { id: 'flare-3', title: 'A flare, briefly', blurb: 'Something short for when it’s loud.', category: 'flare', type: 'flare', minutes: 3, ...SARAH },
@@ -49,6 +53,23 @@ export const PRESETS: Preset[] = [
   { id: 'sleep-5', title: 'Lights out', blurb: 'A shorter way down into rest.', category: 'sleep', type: 'sleep', minutes: 5, ...DANIEL },
   { id: 'worry-5', title: 'When it feels worrying', blurb: 'Goes gently around fear about a familiar sensation.', category: 'worry', type: 'fear', minutes: 5, ...BRIAN },
   { id: 'worry-3', title: 'A worried moment', blurb: 'A few steady minutes when the worry is louder than the sensation.', category: 'worry', type: 'fear', minutes: 3, ...SARAH },
+];
+
+/** What a preset's guide works with: its own theme, or the one that suits its type. */
+export function presetTheme(p: Preset): PracticeTheme {
+  if (p.theme) return p.theme;
+  return p.type === 'flare' ? 'flare' : p.type === 'fear' ? 'fear' : p.type === 'sleep' ? 'open' : 'curious';
+}
+
+/**
+ * Today's "when you need it": the four moments people open the app for outside the daily
+ * practice. One tap each, nothing to choose.
+ */
+export const NEED_IT: Array<{ id: string; label: string; detail: string }> = [
+  { id: 'flare-3', label: 'A flare', detail: '3 min' },
+  { id: 'sleep-10', label: 'Can’t sleep', detail: '10 min' },
+  { id: 'scan-10', label: 'Body scan', detail: '10 min' },
+  { id: 'worry-5', label: 'Worried', detail: '5 min' },
 ];
 
 export function presetById(id: string | undefined): Preset | undefined {

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GUIDE_VOICES, hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import { latestPlace, WHERE_REGIONS } from '@/domain/checkin';
-import { presetById } from '@/domain/presets';
+import { presetById, presetTheme } from '@/domain/presets';
 import { programDay, type PracticeTheme } from '@/domain/program';
 import { REGIONS } from '@/domain/regions';
 import { backgroundFor, soundscape, SOUNDSCAPES, type BackgroundPref } from '@/domain/soundscapes';
@@ -13,6 +13,7 @@ import type { Place, SessionType } from '@/domain/types';
 import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
+import { startPractice } from '../shared/start';
 import { SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
 import { Photo } from '@/design/Photo';
@@ -56,7 +57,7 @@ export function BeforeScreen() {
   const plan = useMemo(() => {
     const preset = presetById(params.preset);
     if (preset) {
-      const theme: PracticeTheme = preset.type === 'flare' ? 'flare' : preset.type === 'fear' ? 'fear' : preset.type === 'sleep' ? 'open' : 'curious';
+      const theme: PracticeTheme = presetTheme(preset);
       return { title: preset.title, kicker: 'any time', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: preset.voiceId, day: undefined };
     }
     const d = programDay(Number(params.day) || 1);
@@ -86,18 +87,7 @@ export function BeforeScreen() {
     if (plan.day && voice !== prefs.voiceId) setPrefs({ voiceId: voice });
     // The sound is a standing choice, the same under every session until changed.
     if (background !== backgroundFor(prefs)) setPrefs({ background });
-    router.replace({
-      pathname: '/session',
-      params: {
-        type: plan.type,
-        minutes: String(minutes),
-        voice,
-        theme: plan.theme,
-        ...(plan.day ? { day: String(plan.day) } : {}),
-        place: place ? JSON.stringify(place) : 'none',
-        background,
-      },
-    });
+    startPractice({ type: plan.type, minutes, voice, theme: plan.theme, day: plan.day, place, background }, 'replace');
   };
 
   return (

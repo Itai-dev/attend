@@ -87,10 +87,18 @@ device and audio is never stored. No analytics. Changing what leaves the phone m
 updating the privacy copy in Settings and the README first.
 
 **Sounds are atmosphere, not treatment (18 Oct 2026).** Rain, forest, water and the tone
-(`domain/soundscapes.ts`) play under a session or on their own in Just listen. No copy says
+(`domain/soundscapes.ts`) play under a session or on their own from the Sounds tab. No copy says
 they heal, relax the nervous system or lower pain. Listening on its own is not practice: it
 never counts toward days, minutes or milestones, and nothing about it is recorded. Once a
 listen starts it needs nothing — it fades out on its own timer.
+
+**One obvious next step (18 Oct 2026).** People opened the app and didn't know what to do.
+Today answers that with one button for the day (lesson, then straight into the practice) and
+four one-tap moments for when it's needed. Three tabs — Today, Sounds, Progress; Settings
+behind the gear. Starting a practice asks nothing: it is planned from what the app knows
+(`features/shared/start.ts`), and "adjust" is the way to change it. The welcome is one
+question per screen, every one skippable, and ends by starting Day 1. Adding a tab, a screen
+between a tap and the practice, or a question before it needs a reason this thesis supports.
 
 **The look is Daisy's (18 Oct 2026; replaces "dark only").** Quiet and editorial, after
 daisysound.com: off-white and ink by day, black by night (the app follows the iPhone, or
