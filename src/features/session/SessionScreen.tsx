@@ -250,7 +250,9 @@ export function SessionScreen() {
       </View>
 
       {voiceFailed ? (
-        <Animated.View entering={FadeIn.duration(800)} exiting={FadeOut.duration(800)} style={styles.notice} pointerEvents="none">
+        // Waits for "Close your eyes" to finish fading when the voice fails early: they share a
+        // place on screen, and for a second and a half both were legible on top of each other.
+        <Animated.View entering={FadeIn.duration(800).delay(hint ? 1600 : 0)} exiting={FadeOut.duration(800)} style={styles.notice} pointerEvents="none">
           <Txt variant="callout" tone="secondary" align="center" accessibilityLiveRegion="polite">
             {VOICE_FAILED_LINE}
           </Txt>
