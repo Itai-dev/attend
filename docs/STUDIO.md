@@ -168,3 +168,66 @@ timeline with real dates, and a purchase stub where RevenueCat plugs in.
 Copywriter, researcher and go-to-market review everything built so far, focusing on safety,
 copy and readiness for App Review. UX screenshots the whole product as one and polishes it.
 
+**Meeting (21:45)**
+
+**What each role found**
+- **Researcher (safety review):**
+  - Guided sessions could still ask one question, and it implied "not a problem". The
+    question-mark test only checked the theme banks.
+  - The doctor lines lived in the remotely editable script, so a remote edit could delete them.
+  - Someone with new chest pain at 2am had no path to emergency care.
+  - "Worry: not knowing what the pain means" invites exactly that person.
+  - Stopping took three taps with the controls faded.
+  - The paywall could lock "can't sleep" and "worried".
+  - Lesson titles showed on the lock screen.
+  - The signs question leaned one way.
+  - People with health anxiety got no warning in the welcome.
+  - There was no crisis line.
+- **Copywriter:**
+  - The lock-screen titles (agreed).
+  - "Missed" in Settings.
+  - "Hard ones count the same" sounds like "still counts".
+  - 432 Hz is a "healing frequency" trope.
+  - One heading per paywall entry point.
+  - American spellings left over.
+  - Glanceable labels not yet lowercase: chips, milestones, status words, onboarding lists,
+    Settings rows.
+- **Go-to-market (beta readiness):**
+  - Two rejections waiting: microphone and speech strings for a feature guided mode never
+    uses, and no privacy policy anywhere.
+  - Two risks: the body area goes to a third-party voice service without consent, and the
+    backend must stay live during review.
+  - Drafted the App Privacy answers, the beta's What to Test, review notes, and a checklist
+    from tonight to an external TestFlight.
+
+**Decisions**
+1. **Safety comes before the beta, and is built now:**
+   - every line the guide can speak is checked for questions across 30 seeds
+   - safety lines are fixed in the app
+   - emergency wording in the welcome, the worry arrival and Settings
+   - a crisis line in Settings
+   - every arrival says "you can open your eyes, or stop, at any time"
+   - the first session ever speaks the doctor line
+   - "nothing to fix" is scoped to the practice
+   - the body scan is gentler for heart- and throat-focused worry
+   - distress practices are never paywalled
+   - reminder titles say only "day N"
+   - the signs question is balanced and says "not a diagnosis"
+2. **Copy** follows the copywriter's list, and lowercase applies to everything glanced at.
+3. **Ending a practice:** a tap on the faded end button reveals the controls and arms the
+   confirm in one go, the confirm window widens to 6 s, and ending while paused takes one tap.
+   Lock-screen and AirPods pause is next on the list. It needs the expo-audio now-playing API,
+   which is still to be checked against the v57 docs.
+4. **Review readiness, built now:**
+   - honest permission strings and Health in the privacy manifest (done)
+   - a privacy-policy draft (`docs/launch/privacy-policy.md`)
+   - Settings rows for privacy, terms and contact
+   - a voice-service disclosure on the welcome's "where" step
+
+**Itai's calls**
+- Host the privacy policy and give the URL and a support email.
+- Set the app token on Vercel and EAS, and check the ElevenLabs credits.
+- Start the Paid Applications Agreement.
+- Decide whether the body area may be sent at all. The real fix is a downloaded voice pack, so
+  nothing personal leaves the phone.
+
