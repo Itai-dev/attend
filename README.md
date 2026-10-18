@@ -12,6 +12,12 @@ pain record (ported from Pattern) to show whether practice is helping. See `docs
 > `docs/RESEARCH.md` and `docs/MERGE.md`. The conversational loop described below is kept
 > behind `mode: 'conversation'` (Settings → Developer).
 
+> **18 Oct 2026:** a calmer, friendlier look — the "evening pine" palette, SF Pro Rounded
+> headings, illustrated landscapes drawn in Skia (`viz/Landscape.tsx`) — and sound: seven
+> nature soundscapes generated as seamless loops (`tools/make-soundscapes.py`), chosen under
+> each session or played on their own in **Just listen** with a sleep timer
+> (`voice/listen.ts`). The plan to the App Store and paying users is `docs/LAUNCH.md`.
+
 Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · Skia · local-first SQLite · iOS-first.
 
 ---
@@ -89,7 +95,8 @@ src/
                ElevenLabsSpeechOutput (via proxy; the only voice),
                VoiceSessionProvider (the only thing the UI talks to).
   data/        SessionRepository: SQLite on device, localStorage on web; seed samples.
-  viz/         SkSL shaders (body field, breathing field), BodyMapState → uniforms.
+  viz/         SkSL shaders (body field, breathing field), BodyMapState → uniforms,
+               Landscape (illustrated scenes for sounds, presets and Today).
   design/      Tokens and a handful of components. System type, Dynamic Type.
   features/    Screens. app/ holds routes only.
 supabase/functions/attend   The proxy: POST /guide (Claude), GET /tts (ElevenLabs).

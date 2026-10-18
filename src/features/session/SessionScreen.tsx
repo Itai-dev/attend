@@ -6,6 +6,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import type { PracticeTheme } from '@/domain/program';
+import { soundscape, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
 import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
@@ -37,7 +38,7 @@ export function breathMode(s: SessionStatus): BreathMode {
 }
 
 export function SessionScreen() {
-  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string }>();
+  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string; background?: string }>();
   const type = (['notice', 'flare', 'sleep', 'fear'].includes(params.type ?? '') ? params.type : 'notice') as SessionType;
   const minutes = SESSION_LENGTHS.find((m) => String(m) === params.minutes);
   const vs = useVoiceSession();
@@ -67,6 +68,7 @@ export function SessionScreen() {
       theme: params.theme as PracticeTheme | undefined,
       programDay: params.day ? Number(params.day) || undefined : undefined,
       place,
+      background: params.background === 'none' || soundscape(params.background) ? (params.background as BackgroundPref) : undefined,
     });
     const t = setTimeout(() => setHint(false), 6000);
     return () => {

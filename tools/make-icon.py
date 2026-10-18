@@ -1,4 +1,4 @@
-"""Generates the app icon, splash and Android icons: the breathing form, still.
+"""Generates the app icon, splash and Android icons: the breathing form, still, in sage on evening pine.
 Run: python3 tools/make-icon.py  (needs numpy + Pillow)."""
 import numpy as np
 from PIL import Image
@@ -22,7 +22,7 @@ def fbm(w, h, base, seed):
         v += a * noise2d(w, h, max(s, 2), seed + i); a *= 0.5; s /= 2
     return v
 
-def orb(size, bg=(9, 9, 11), alpha=False, scale=1.0):
+def orb(size, bg=(13, 22, 21), alpha=False, scale=1.0):
     w = h = size
     y, x = np.mgrid[0:h, 0:w]
     px = (x - w / 2) / w; py = (y - h / 2) / h
@@ -38,12 +38,13 @@ def orb(size, bg=(9, 9, 11), alpha=False, scale=1.0):
     halo = np.exp(-np.maximum(d, 0) * 9 / scale)
     n1 = fbm(w, h, size / 3.0, 11)
     n2 = fbm(w, h, size / 6.0, 21)
-    lilac = np.array([0.70, 0.62, 1.0]); apricot = np.array([1.0, 0.74, 0.58]); sea = np.array([0.42, 0.86, 0.78])
+    # Evening pine: sage at rest, a warm sun edge, a little sky (src/design/theme.ts).
+    sage = np.array([0.60, 0.86, 0.76]); apricot = np.array([1.0, 0.80, 0.60]); sea = np.array([0.60, 0.78, 0.96])
     t = np.clip((n1 - 0.4) / 0.3, 0, 1)[..., None] * 0.5
-    inner = lilac * (1 - t) + apricot * t
+    inner = sage * (1 - t) + apricot * t
     t2 = np.clip((n2 - 0.48) / 0.28, 0, 1)[..., None] * 0.35
     inner = inner * (1 - t2) + sea * t2
-    col = inner * (core * (0.5 + 0.6 * n1) * body)[..., None] + lilac * (halo * 0.14)[..., None] + np.array([0.95, 0.93, 0.9]) * (rim * 0.2)[..., None]
+    col = inner * (core * (0.5 + 0.6 * n1) * body)[..., None] + sage * (halo * 0.14)[..., None] + np.array([0.95, 0.93, 0.9]) * (rim * 0.2)[..., None]
     col *= np.clip((0.5 - r) / 0.2, 0, 1)[..., None]
     col = 1 - np.exp(-col * 1.7)
     bgc = np.array(bg) / 255.0
@@ -58,7 +59,7 @@ orb(1024, scale=1.2).save('assets/images/icon.png')
 orb(512, alpha=True, scale=1.4).save('assets/images/splash-icon.png')
 fg = orb(432, alpha=True, scale=1.05)
 fg.save('assets/images/android-icon-foreground.png')
-Image.new('RGB', (432, 432), (9, 9, 11)).save('assets/images/android-icon-background.png')
+Image.new('RGB', (432, 432), (13, 22, 21)).save('assets/images/android-icon-background.png')
 m = fg.split()[3]
 Image.merge('RGBA', (m.point(lambda v: 255), m.point(lambda v: 255), m.point(lambda v: 255), m)).save('assets/images/android-icon-monochrome.png')
 orb(64, scale=1.4).save('assets/images/favicon.png')

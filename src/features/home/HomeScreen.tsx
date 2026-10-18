@@ -1,28 +1,33 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { currentTz, dayKey, latestPlace } from '@/domain/checkin';
 import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
+import { soundscape, timerLabel } from '@/domain/soundscapes';
 import { speakPlace } from '@/domain/regions';
 import { Card, haptic, Icon, PrimaryButton, SectionLabel, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
+import { pauseListening, resumeListening, useListen } from '@/voice/listen';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
+import { Landscape, sceneForHour } from '@/viz/Landscape';
 import { greeting } from '../shared/format';
 import { WeekStrip } from '../shared/WeekStrip';
 
 /**
- * Today: one next step. The day's lesson and practice, this week's practice days, a way in
+ * Today: a window onto the hour's sky, then one next step. The day's lesson and practice, this week's practice days, a way in
  * for a flare, a check-in, and the person's goal. The pain record isn't here — Today is
  * about doing, Progress is for looking back (docs/RESEARCH.md §5).
  */
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const listen = useListen();
   const { sessions, checkIns, prefs } = useData();
   const tz = currentTz();
   const now = Date.now();
@@ -55,18 +60,21 @@ export function HomeScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
     >
-      <View style={styles.head}>
-        <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
-          {greeting()}
-        </Txt>
-        <Txt variant="footnote" tone="tertiary">
-          {finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`}
-        </Txt>
+      <View style={{ marginHorizontal: -space.xl, height: insets.top + 200 }}>
+        <Landscape scene={sceneForHour(new Date(now).getHours())} width={width} height={insets.top + 200} fadeTo={color.bg} style={StyleSheet.absoluteFill} />
+        <View style={{ paddingTop: insets.top + space.l, paddingHorizontal: space.xl, paddingRight: space.huge }}>
+          <Txt variant="display" accessibilityRole="header" style={styles.onSky}>
+            {greeting()}
+          </Txt>
+          <Txt variant="footnote" style={[{ color: 'rgba(242,236,224,0.88)', fontWeight: '600', marginTop: space.xs }, styles.onSky]}>
+            {finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`}
+          </Txt>
+        </View>
       </View>
 
-      <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xl }}>
+      <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xs }}>
         <WeekStrip days={strip} />
         <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
           {weekLine(stats, now)}
@@ -126,6 +134,8 @@ export function HomeScreen() {
         </Card>
       </View>
 
+      <ListenCard listen={listen} lastId={prefs.listen?.id} />
+
       {prefs.goal ? (
         <Card style={styles.goal}>
           <Txt variant="caption" style={{ color: color.milestone, letterSpacing: 1.2 }}>
@@ -145,8 +155,56 @@ export function HomeScreen() {
   );
 }
 
+/**
+ * Just listen: a sound on its own, with a sleep timer. While one plays, the card shows it and
+ * pauses it in place; otherwise it opens the sounds.
+ */
+function ListenCard({ listen, lastId }: { listen: ReturnType<typeof useListen>; lastId?: string }) {
+  const s = soundscape(listen.id ?? lastId) ?? soundscape('rain')!;
+  const live = !!listen.id;
+  return (
+    <Card
+      label={live ? `${s.name}, ${listen.playing ? 'playing' : 'paused'}. Open sounds` : 'Just listen. Rain, forest, water and more, with a sleep timer'}
+      onPress={() => router.push('/listen')}
+      style={styles.listen}
+    >
+      <Landscape scene={s.id} width={64} height={64} radius={radius.m} still />
+      <View style={{ flex: 1 }}>
+        <Txt variant="caption" style={{ color: color.sky, letterSpacing: 1.2 }}>
+          {live ? (listen.playing ? 'PLAYING' : 'PAUSED') : 'JUST LISTEN'}
+        </Txt>
+        <Txt variant="headline" style={{ marginTop: 2 }}>
+          {live ? s.name : 'Rain, forest, water'}
+        </Txt>
+        <Txt variant="footnote" tone="secondary">
+          {live ? timerLabel(listen.timer, listen.timerElapsedMs) : 'Nature sounds, with a sleep timer'}
+        </Txt>
+      </View>
+      {live ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={listen.playing ? 'Pause' : 'Resume'}
+          hitSlop={8}
+          onPress={() => {
+            haptic('select');
+            if (listen.playing) pauseListening();
+            else resumeListening();
+          }}
+          style={styles.listenBtn}
+        >
+          <Icon name={listen.playing ? 'pause.fill' : 'play.fill'} size={14} tint={color.onAccent} />
+        </Pressable>
+      ) : (
+        <Icon name="chevron.right" size={14} tint={color.textTertiary} />
+      )}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'baseline', gap: space.m },
+  onSky: { textShadowColor: 'rgba(5,12,14,0.35)', textShadowRadius: 12, textShadowOffset: { width: 0, height: 1 } },
+  listen: { marginTop: space.m, padding: space.m, paddingRight: space.l, flexDirection: 'row', alignItems: 'center', gap: space.l },
+  listenBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.text, alignItems: 'center', justifyContent: 'center' },
   today: { marginTop: space.xl, padding: space.l, gap: space.m, borderRadius: radius.l },
   kicker: { color: color.practice, letterSpacing: 1.4 },
   step: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: HIT },

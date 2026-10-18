@@ -1,10 +1,12 @@
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { soundscape, type SoundscapeId } from '../domain/soundscapes';
+import { SOUNDSCAPE_ASSET } from './soundscapeAssets';
 import type { SessionStatus } from './VoiceSessionProvider';
 
 /**
- * A soft tone under the session: a low drone tuned to 432 Hz (assets/audio/tone-432.wav,
- * a seamless 30-second loop). It is atmosphere, nothing more — the app never calls it
- * healing or says it does anything for pain.
+ * A sound under the session: rain, forest, water, the 432 Hz tone (domain/soundscapes.ts),
+ * each a seamless loop. It is atmosphere, nothing more — the app never calls it healing or
+ * says it does anything for pain.
  *
  * It sits well under the voice: quieter while the guide speaks and while listening,
  * and fuller in the silences. When the person actually speaks it dips a little more,
@@ -39,17 +41,23 @@ export class Ambience {
   private ducked = false;
   private lastVoiceAt = 0;
   private release?: ReturnType<typeof setTimeout>;
+  /** Each sound's own level, so a quiet forest and a full waterfall sit alike under the voice. */
+  private readonly gain: number;
+
+  constructor(private readonly source: SoundscapeId = 'tone') {
+    this.gain = soundscape(source)?.gain ?? 1;
+  }
 
   start() {
     if (this.player) return;
     try {
       // Pausing must not switch the audio session off under the recogniser (see ElevenLabsSpeechOutput.play).
-      this.player = createAudioPlayer(require('../../assets/audio/tone-432.wav'), { keepAudioSessionActive: true });
+      this.player = createAudioPlayer(SOUNDSCAPE_ASSET[this.source], { keepAudioSessionActive: true });
       this.player.loop = true;
       this.player.volume = 0;
       this.player.play();
     } catch {
-      // No tone is better than no session.
+      // No sound is better than no session.
       this.player = undefined;
     }
   }
@@ -59,7 +67,7 @@ export class Ambience {
     if (status === this.status) return;
     this.status = status;
     this.unduck();
-    const level = LEVEL[status] ?? 0;
+    const level = this.level(status);
     // Started on the first audible state, after the runner has set the audio session (silent switch, speaker).
     if (level > 0) this.start();
     this.fadeTo(level, FADE_MS);
@@ -71,7 +79,7 @@ export class Ambience {
     this.lastVoiceAt = Date.now();
     if (this.ducked) return;
     this.ducked = true;
-    this.fadeTo((LEVEL.listening ?? 0) * DUCK, DUCK_MS);
+    this.fadeTo(this.level('listening') * DUCK, DUCK_MS);
     this.scheduleRelease();
   }
 
@@ -81,8 +89,12 @@ export class Ambience {
       if (!this.ducked) return;
       if (Date.now() - this.lastVoiceAt < RELEASE_MS) return this.scheduleRelease();
       this.ducked = false;
-      this.fadeTo(LEVEL[this.status] ?? 0, UNDUCK_MS);
+      this.fadeTo(this.level(this.status), UNDUCK_MS);
     }, RELEASE_MS);
+  }
+
+  private level(status: SessionStatus) {
+    return Math.min(1, (LEVEL[status] ?? 0) * this.gain);
   }
 
   private unduck() {

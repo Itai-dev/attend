@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
+import { backgroundFor, SOUNDSCAPES } from '@/domain/soundscapes';
 import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
 import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
@@ -57,6 +58,7 @@ export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
   const realCount = sessions.filter((s) => !s.isSample).length;
+  const background = backgroundFor(prefs);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: color.bg }} contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xxxl }}>
@@ -110,16 +112,15 @@ export function SettingsScreen() {
         ) : null}
       </Group>
 
-      <SectionLabel style={styles.section}>Background</SectionLabel>
+      <SectionLabel style={styles.section}>Sound under sessions</SectionLabel>
       <Group>
-        <Choice
-          label="Soft tone"
-          detail="A low 432 Hz drone under the voice"
-          selected={prefs.ambience !== false}
-          onPress={() => setPrefs({ ambience: true })}
-        />
-        <Hairline />
-        <Choice label="Silence" detail="Only the guide’s voice" selected={prefs.ambience === false} onPress={() => setPrefs({ ambience: false })} />
+        {SOUNDSCAPES.map((sc) => (
+          <View key={sc.id}>
+            <Choice label={sc.name} detail={sc.line} selected={background === sc.id} onPress={() => setPrefs({ background: sc.id })} />
+            <Hairline />
+          </View>
+        ))}
+        <Choice label="Voice only" detail="Only the guide’s voice" selected={background === 'none'} onPress={() => setPrefs({ background: 'none' })} />
       </Group>
 
       <SectionLabel style={styles.section}>Privacy</SectionLabel>
@@ -215,17 +216,17 @@ function DeveloperSettings() {
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Conversational sessions</Txt>
-          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: color.practice }} />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Debug panel in sessions</Txt>
-          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: color.practice }} />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Keep transcripts</Txt>
-          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: color.practice }} />
         </View>
         <Hairline />
         <View style={styles.textBlock}>

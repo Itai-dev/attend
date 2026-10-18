@@ -9,6 +9,7 @@ import { DESCRIPTORS } from '../domain/lexicon';
 import { currentTz, dayKey, latestPlace } from '../domain/checkin';
 import { completeDay, EMPTY_PROGRAM, type PracticeTheme } from '../domain/program';
 import { buildMemory } from '../domain/memory';
+import { backgroundFor, type BackgroundPref } from '../domain/soundscapes';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
 import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
@@ -21,6 +22,7 @@ import { WelcomeRunner, type WelcomeResult } from '../engine/WelcomeRunner';
 import type { GuideBrain } from '../engine/types';
 import { Ambience } from './ambience';
 import { endSessionAudio } from './audioSession';
+import { stopListening } from './listen';
 import { DevTextInput } from './input/DevTextInput';
 import { NoInput } from './input/NoInput';
 import { OnDeviceSpeechInput } from './input/OnDeviceSpeechInput';
@@ -192,7 +194,17 @@ function chooseBrain(pref: string, agent?: AgentSettings): GuideBrain {
 }
 
 /** What a program day (or the Before screen) adds to a session. */
-export type StartOptions = { theme?: PracticeTheme; place?: Place | null; programDay?: number };
+export type StartOptions = {
+  theme?: PracticeTheme;
+  place?: Place | null;
+  programDay?: number;
+  /** The sound under this session, chosen on Before. Otherwise the one in Settings. */
+  background?: BackgroundPref;
+};
+
+function ambienceFor(pref: BackgroundPref): Ambience | undefined {
+  return pref === 'none' ? undefined : new Ambience(pref);
+}
 
 export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const data = useData();
@@ -271,7 +283,9 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         programDay: opts.programDay,
         keepTranscript: __DEV__ && prefs.dev.keepTranscripts,
       });
-      const ambience = prefs.ambience === false ? undefined : new Ambience();
+      // A sound playing on its own (Just listen) gives way to the session's.
+      stopListening(600, true);
+      const ambience = ambienceFor(opts.background ?? backgroundFor(prefs));
       const r = new SessionRunner({
         engine,
         brain,
@@ -355,7 +369,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       return { answers: {}, ended: true, error: { code: 'permission', message: 'Microphone or speech recognition not allowed.' } };
     }
     const welcomeVoice = GUIDE_VOICES[0];
-    const ambience = prefs.ambience === false ? undefined : new Ambience();
+    stopListening(600, true);
+    const ambience = ambienceFor(backgroundFor(prefs));
     const r = new WelcomeRunner({
       input,
       outputFor: (voiceId) => chooseOutput(voiceId),

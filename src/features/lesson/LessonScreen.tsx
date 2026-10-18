@@ -92,9 +92,9 @@ export function LessonScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0D0C14' },
+  root: { flex: 1, backgroundColor: color.bgElevated },
   bars: { flexDirection: 'row', gap: 4, paddingHorizontal: space.xl },
-  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(242,240,235,0.2)' },
+  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(242,236,224,0.2)' },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: space.xl, paddingRight: space.s },
   body: { flexGrow: 1, paddingHorizontal: space.xl, paddingTop: space.l, paddingBottom: space.xxl },
   notice: { padding: space.l, borderRadius: radius.m, backgroundColor: color.practiceSoft },

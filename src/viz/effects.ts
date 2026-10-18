@@ -21,4 +21,5 @@ export function effect(name: 'body' | 'breath'): SkRuntimeEffect | null {
   return cache[name]!;
 }
 
-export const BG_RGB: [number, number, number] = [9 / 255, 9 / 255, 11 / 255];
+/** design/theme.ts color.bg, as the shaders want it. */
+export const BG_RGB: [number, number, number] = [13 / 255, 22 / 255, 21 / 255];

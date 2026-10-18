@@ -2,6 +2,7 @@ import type { EngineDraft } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
 import type { Moment } from '../domain/engagement';
 import type { ProgramState } from '../domain/program';
+import type { BackgroundPref, ListenTimer, SoundscapeId } from '../domain/soundscapes';
 import type { Place, SessionFeeling } from '../domain/types';
 import type { Session, SessionMoment, SessionType } from '../domain/types';
 
@@ -63,8 +64,12 @@ export type Prefs = {
   reminder?: { enabled: boolean; hour: number; minute: number };
   /** Steps toward the goal, saved by the person. Newest first. Small, so kept with the prefs. */
   moments?: Moment[];
-  /** The soft tone under the session. On unless turned off in Settings. */
+  /** Before soundscapes: the soft tone under the session, on unless turned off. Read by backgroundFor(). */
   ambience?: boolean;
+  /** The sound under sessions (domain/soundscapes.ts). Unset: rain, or none if `ambience` was off. */
+  background?: BackgroundPref;
+  /** The last Just listen: which sound and how long, offered again next time. */
+  listen?: { id: SoundscapeId; timer: ListenTimer };
   /** Developer settings. Ignored outside development builds. */
   dev: {
     inputMode: InputModePref;

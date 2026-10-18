@@ -8,6 +8,7 @@ import { latestPlace, WHERE_REGIONS } from '@/domain/checkin';
 import { presetById } from '@/domain/presets';
 import { programDay, type PracticeTheme } from '@/domain/program';
 import { REGIONS } from '@/domain/regions';
+import { backgroundFor, soundscape, SOUNDSCAPES, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
 import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
@@ -70,6 +71,9 @@ export function BeforeScreen() {
   const known = latestPlace(checkIns) ?? prefs.place;
   const [place, setPlace] = useState<Place | null>(plan.theme === 'open' ? null : (known ?? null));
   const [choosing, setChoosing] = useState(false);
+  const [background, setBackground] = useState<BackgroundPref>(backgroundFor(prefs));
+  const [choosingSound, setChoosingSound] = useState(false);
+  const soundName = background === 'none' ? 'Voice only' : (soundscape(background)?.name ?? '');
   const [minutes, setMinutes] = useState<SessionLength>(plan.minutes);
   const [voice, setVoice] = useState(plan.voice);
   const voiceName = GUIDE_VOICES.find((v) => v.id === voice)?.name ?? GUIDE_VOICES[0].name;
@@ -77,6 +81,8 @@ export function BeforeScreen() {
   const begin = () => {
     stopPreview();
     if (plan.day && voice !== prefs.voiceId) setPrefs({ voiceId: voice });
+    // The sound is a standing choice, the same under every session until changed.
+    if (background !== backgroundFor(prefs)) setPrefs({ background });
     router.replace({
       pathname: '/session',
       params: {
@@ -86,6 +92,7 @@ export function BeforeScreen() {
         theme: plan.theme,
         ...(plan.day ? { day: String(plan.day) } : {}),
         place: place ? JSON.stringify(place) : 'none',
+        background,
       },
     });
   };
@@ -181,6 +188,33 @@ export function BeforeScreen() {
               {voiceName} ›
             </Txt>
           </Pressable>
+          <View style={styles.hair} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Sound underneath: ${soundName}. Change`}
+            onPress={() => setChoosingSound(!choosingSound)}
+            style={styles.row}
+          >
+            <Txt variant="body">Sound</Txt>
+            <Txt variant="body" tone="secondary">
+              {soundName} ›
+            </Txt>
+          </Pressable>
+          {choosingSound ? (
+            <View style={styles.chips}>
+              {[...SOUNDSCAPES.map((x) => ({ id: x.id as BackgroundPref, name: x.name })), { id: 'none' as BackgroundPref, name: 'Voice only' }].map((x) => (
+                <Chip
+                  key={x.id}
+                  label={x.name}
+                  selected={x.id === background}
+                  onPress={() => {
+                    setBackground(x.id);
+                    setChoosingSound(false);
+                  }}
+                />
+              ))}
+            </View>
+          ) : null}
         </View>
 
         <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>

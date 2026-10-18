@@ -141,6 +141,9 @@ const GLYPHS: Record<string, string> = {
   checkmark: '✓',
   'lock.fill': '⌂',
   'star.fill': '✦',
+  'chevron.down': '⌄',
+  'speaker.wave.2.fill': '♪',
+  'moon.stars.fill': '☾',
 };
 
 export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: string; weight?: SymbolViewProps['weight'] }) {
@@ -255,14 +258,17 @@ export function Segmented<T extends string>({
   value,
   onChange,
   style,
+  fill,
 }: {
   options: Array<{ value: T; label: string }>;
   value: T;
   onChange: (v: T) => void;
   style?: StyleProp<ViewStyle>;
+  /** Stretch to the row's width, segments sharing it equally. */
+  fill?: boolean;
 }) {
   return (
-    <View accessibilityRole="tablist" style={[styles.segmented, style]}>
+    <View accessibilityRole="tablist" style={[styles.segmented, fill && { alignSelf: 'stretch' }, style]}>
       {options.map((o) => {
         const selected = o.value === value;
         return (
@@ -276,7 +282,7 @@ export function Segmented<T extends string>({
               if (!selected) haptic('select');
               onChange(o.value);
             }}
-            style={[styles.segment, selected && { backgroundColor: color.surfaceStrong }]}
+            style={[styles.segment, fill && { flex: 1, minWidth: 0, paddingHorizontal: 0 }, selected && { backgroundColor: color.surfaceStrong }]}
           >
             <Txt variant="footnote" tone={selected ? 'primary' : 'tertiary'} style={{ fontWeight: '500' }}>
               {o.label}

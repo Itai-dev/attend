@@ -36,7 +36,8 @@ export function YouScreen() {
       </View>
       <View style={{ gap: space.m, marginTop: space.xxl }}>
         <Place title="Your plan" detail="Where it hurts, your goal, your practice time" icon="waveform" onPress={() => setPrefs({ onboarded: false })} />
-        <Place title="Settings" detail="Reminder, background sound, privacy" icon="gearshape" onPress={() => router.push('/settings')} />
+        <Place title="Just listen" detail="Rain, forest, water and more, with a sleep timer" icon="speaker.wave.2.fill" onPress={() => router.push('/listen')} />
+        <Place title="Settings" detail="Reminder, sound under sessions, privacy" icon="gearshape" onPress={() => router.push('/settings')} />
       </View>
     </TitledScroll>
   );

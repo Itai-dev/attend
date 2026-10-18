@@ -3,8 +3,9 @@
 A voice-guided, eyes-closed somatic practice for chronic pain, with a simple pain record
 to show whether it helps. Expo SDK 57 / React Native / TypeScript, iOS first, one founder.
 Read `README.md` for the architecture, `docs/MERGE.md` for why Pattern's pain record
-moved in (12 Oct 2026), and `docs/RESEARCH.md` for the evidence the 28-day program and its
-engagement rules rest on (13 Oct 2026).
+moved in (12 Oct 2026), `docs/RESEARCH.md` for the evidence the 28-day program and its
+engagement rules rest on (13 Oct 2026), and `docs/LAUNCH.md` for the path to the App Store
+and paying users (18 Oct 2026).
 
 **Expo has changed.** Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/
 before touching an Expo API, and use `npx expo install` for packages.
@@ -85,7 +86,13 @@ sessions use no microphone. Speech, where it is used (the welcome), is recognise
 device and audio is never stored. No analytics. Changing what leaves the phone means
 updating the privacy copy in Settings and the README first.
 
-**Colour is never a verdict.** Dark, calm, no red in the body visualisation. The body map
+**Sounds are atmosphere, not treatment (18 Oct 2026).** Rain, forest, water and the tone
+(`domain/soundscapes.ts`) play under a session or on their own in Just listen. No copy says
+they heal, relax the nervous system or lower pain. Listening on its own is not practice: it
+never counts toward days, minutes or milestones, and nothing about it is recorded. Once a
+listen starts it needs nothing — it fades out on its own timer.
+
+**Colour is never a verdict.** Dark ("evening pine", `design/theme.ts`), calm, no red in the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.
 
 ## Structure rules

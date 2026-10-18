@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     right: space.m,
     padding: space.m,
     borderRadius: radius.m,
-    backgroundColor: 'rgba(20,20,24,0.92)',
+    backgroundColor: 'rgba(16,28,27,0.94)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.hairline,
   },
