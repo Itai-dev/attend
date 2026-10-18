@@ -139,3 +139,32 @@ real nature sounds. Screens: `docs/studio/r0-*.png`.
    - whether to stop weekly reminders after 4 unanswered (researcher's proposal; this changes
      AGENTS.md)
 
+**Built in round 2** (pushed, 131/131 tests):
+- **Body scan:** a full 16-step body scan for the body scan practice only. All steps are always
+  heard, and the session runs about 10.5 minutes.
+- **A shorter day:** 3 active minutes of the day's practice completes the day, and Today offers
+  "short on energy? 3 minutes completes the day." Paused time doesn't count, and a safety
+  pause never completes a day.
+- **Day boundary:** a practice counts on the day it *started*, so one begun before midnight
+  counts for that day.
+- **Listen to the lesson:** listen and read are equal options. Listen comes first, on a dark
+  screen, from 21:00 to 05:00 or when the welcome answer was Nights, but it never starts by
+  itself. Heard to the end, the lesson counts as read and flows into the practice.
+- **Sleep:** when a sleep practice runs to its end, the sound crosses into a 30-minute listen.
+  The screen stays near-black with "resting"; there's no After screen and no keep-awake.
+- **Reminders:** dated one-offs: daily for four days, skipping a day already practiced, then
+  weekly for about three months. The step-down happens even if the app is never opened.
+- **Day 7 card:** "your first week": practice, minutes, lessons, and how it felt in the
+  person's own taps, plus one optional, three-state question about their signs.
+- **Today:** refreshes when the app comes back to the foreground, and at midnight.
+- **Recorded time:** `Session.activeMs` is stored (database migration 4).
+
+**Built in round 3, first part:** the paywall at `/plus`, switched off
+(`PLUS_ENABLED = false`). It has the free-forever rules, the Day 8 gate, plans and a trial
+timeline with real dates, and a purchase stub where RevenueCat plugs in.
+
+## Round 3: review (21:36 onward)
+
+Copywriter, researcher and go-to-market review everything built so far, focusing on safety,
+copy and readiness for App Review. UX screenshots the whole product as one and polishes it.
+
