@@ -47,6 +47,14 @@ export interface SpeechInput {
   dispose(): void;
 }
 
+export type SpeakOptions = {
+  /**
+   * One short try instead of the usual retries: the line before this one couldn't be had and
+   * the person has just tapped Resume. A failure should come back in seconds, not half a minute.
+   */
+  quick?: boolean;
+};
+
 export interface SpeechOutput {
   readonly id: string;
   readonly label: string;
@@ -54,7 +62,7 @@ export interface SpeechOutput {
   /** Hint the lines coming next so they can be fetched while this one plays. */
   prepare?(texts: string[]): void;
   /** Resolves when the line has finished, or immediately when aborted. Rejects if the line can't be voiced. */
-  speak(text: string, signal: AbortSignal): Promise<void>;
+  speak(text: string, signal: AbortSignal, opts?: SpeakOptions): Promise<void>;
   /** A short sound that says "your turn", played after a question and before listening. Never rejects. */
   cue?(signal: AbortSignal): Promise<void>;
   stop(): void;

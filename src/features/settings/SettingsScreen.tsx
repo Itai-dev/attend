@@ -182,6 +182,9 @@ export function SettingsScreen() {
             Attend is a practice for familiar, long-standing sensations, built around somatic tracking: noticing a sensation with curiosity rather than fear. It isn’t a diagnostic tool and doesn’t replace medical care. If a symptom is new,
             changing quickly or severe, contact a medical professional.
           </Txt>
+          <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+            Close attention to the body doesn’t suit everyone. If a practice brings up old memories, panic, or a far-away feeling, open your eyes, look around the room, and stop. If you notice yourself checking your body more between practices, try a shorter practice, or just listen to a sound for a while.
+          </Txt>
           <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
             Version {Constants.expoConfig?.version ?? '0.1.0'}
           </Txt>

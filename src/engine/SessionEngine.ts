@@ -33,6 +33,10 @@ import type { AskKind, GuideContext, GuideLine, GuideTurn, HistoryItem, RemoteOb
  *
  * Everything time-based reads `now()`, so a whole session can be driven in a
  * unit test in milliseconds.
+ *
+ * The session's clock is ACTIVE time: wall time minus pauses (pauseClock/resumeClock). On
+ * wall time, a five-minute pause in a ten-minute practice made timeGuard close the session
+ * a minute after resume, and the minutes recorded counted the pause as practice.
  */
 
 export type EngineOptions = {
@@ -139,6 +143,8 @@ export class SessionEngine {
   private repeatRequested = false;
   private advanceAfterAnswer = false;
   private outcome: SessionOutcome = 'completed';
+  private pausedTotal = 0;
+  private pausedSince?: number;
 
   constructor(opts: EngineOptions) {
     this.sessionType = opts.sessionType;
@@ -165,8 +171,30 @@ export class SessionEngine {
     return this._phase === 'DONE';
   }
 
+  /** Active session time: what has been practised, never counting pauses. */
   get elapsedMs(): number {
-    return this.now() - this.startedAt;
+    return this.activeNow() - this.startedAt;
+  }
+
+  get clockPaused(): boolean {
+    return this.pausedSince !== undefined;
+  }
+
+  /** The session is paused (button, voice failure, interruption): its clock stops with it. */
+  pauseClock(): void {
+    if (this.pausedSince === undefined && !this.done) this.pausedSince = this.now();
+  }
+
+  resumeClock(): void {
+    if (this.pausedSince === undefined) return;
+    this.pausedTotal += this.now() - this.pausedSince;
+    this.pausedSince = undefined;
+  }
+
+  /** Wall time with every pause (including one still running) taken out. */
+  private activeNow(): number {
+    const now = this.now();
+    return now - this.pausedTotal - (this.pausedSince !== undefined ? now - this.pausedSince : 0);
   }
 
   get currentMap() {
@@ -393,7 +421,10 @@ export class SessionEngine {
 
   finalize(): { session: Session; moments: SessionMoment[] } {
     this.closeObserveWindow();
-    const endedAt = this.now();
+    // endedAt − startedAt is how every screen reads a session's minutes (After, practice stats,
+    // the "a real minute" rule), so it is the practised time, not the wall time: a session paused
+    // for twenty minutes is recorded as the ten it ran. createdAt keeps the real moment it ended.
+    const endedAt = this.startedAt + this.elapsedMs;
     return SessionEngine.build(
       {
         sessionId: this.sessionId,
@@ -411,6 +442,7 @@ export class SessionEngine {
       },
       endedAt,
       this.keepTranscript,
+      this.now(),
     );
   }
 
@@ -420,7 +452,8 @@ export class SessionEngine {
       sessionId: this.sessionId,
       sessionType: this.sessionType,
       startedAt: this.startedAt,
-      updatedAt: this.now(),
+      // A recovered draft is built with updatedAt as its end, so it too is start + active time.
+      updatedAt: this.startedAt + this.elapsedMs,
       map: { current: cloneMap(this.map.current), baseline: cloneMap(this.map.baseline), focusId: this.map.focusId },
       changes: [...this.changes],
       signals: { ...this.signals, observedSeconds: Math.round(this.observedMs / 1000) },
@@ -432,7 +465,7 @@ export class SessionEngine {
     };
   }
 
-  static build(draft: EngineDraft, endedAt: number, keepTranscript = false): { session: Session; moments: SessionMoment[] } {
+  static build(draft: EngineDraft, endedAt: number, keepTranscript = false, createdAt = endedAt): { session: Session; moments: SessionMoment[] } {
     const changes = consolidateChanges(draft.changes);
     const recap = buildRecap({
       sessionType: draft.sessionType,
@@ -457,7 +490,7 @@ export class SessionEngine {
       changes,
       outcome: draft.outcome,
       signals: draft.signals,
-      createdAt: endedAt,
+      createdAt,
       ...(draft.mode ? { mode: draft.mode } : {}),
       ...(draft.place ? { place: draft.place } : {}),
       ...(draft.programDay ? { programDay: draft.programDay } : {}),
@@ -646,7 +679,7 @@ export class SessionEngine {
     if (p === this._phase) return;
     const observing = (x: Phase) => x === 'OBSERVE' || x === 'REAPPRAISE';
     if (observing(this._phase) && !observing(p)) this.closeObserveWindow();
-    if (!observing(this._phase) && observing(p)) this.observeSince = this.now();
+    if (!observing(this._phase) && observing(p)) this.observeSince = this.activeNow();
     this._phase = p;
     this.phaseTurn = 0;
     this.phaseStep = 0;
@@ -655,7 +688,7 @@ export class SessionEngine {
 
   private closeObserveWindow() {
     if (this.observeSince !== undefined) {
-      this.observedMs += this.now() - this.observeSince;
+      this.observedMs += this.activeNow() - this.observeSince;
       this.observeSince = undefined;
     }
   }

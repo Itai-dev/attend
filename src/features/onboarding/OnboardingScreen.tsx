@@ -174,6 +174,10 @@ export function OnboardingScreen() {
               <Txt variant="footnote" tone="secondary">
                 Attend is for pain you already know. It doesn’t diagnose, and it sits beside any treatment you have. Anything new, or different from your usual, deserves a doctor’s look first.
               </Txt>
+              {/* Attention to the body doesn't suit everyone (trauma, health anxiety: Goldberg 2021); stopping must read as part of the practice. */}
+              <Txt variant="footnote" tone="secondary" style={{ marginTop: space.s }}>
+                Close attention to the body doesn’t suit everyone. If it brings up old memories, panic, or a far-away feeling, open your eyes, look around the room, and stop. Stopping is part of the practice.
+              </Txt>
             </View>
           </Animated.View>
         ) : null}
