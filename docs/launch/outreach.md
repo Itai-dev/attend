@@ -1,5 +1,7 @@
 # Outreach — communities, clinicians, waitlist
 
+> TestFlight rule (App Review 2.2): testers can't be compensated for testing. Any free year for early users is a gift to founding members announced after launch, never tied to testing (round 4).
+
 Written as Itai, a person, not a brand. Every post says up front that he made the app. No
 claims about results, no "it's your brain", no book or method presented as proof. Square
 brackets are for Itai to fill in **only with what is true**; delete the sentence if not.
@@ -42,8 +44,9 @@ What to expect, and how we act either way:
 6. Name the book or Sarno only where the community already does (r/TMSmindbody, PRT groups);
    never in r/ChronicPain.
 
-**Beta offer** (needs Itai's OK): TestFlight, iPhone only, all of Plus free during the beta,
-**and a free year of Plus after launch** as thanks. 30–50 spots.
+**Beta offer:** TestFlight, iPhone only, everything free during the beta. 30–50 spots. (A free
+year for founding members can be announced after launch as a gift, but never promised in
+exchange for testing; see the note at the top.)
 
 ---
 
@@ -83,8 +86,8 @@ beta testers (I'm the maker)
 > attention to the body isn't right for everyone; if it brings up panic or old memories,
 > stopping is part of the practice.
 >
-> **What I'm asking:** 30 testers on iPhone, for three weeks from mid-November. Plus is free in
-> the beta, and testers get a free year after launch. I'd love to hear where the voice feels
+> **What I'm asking:** 30 testers on iPhone, for three weeks from mid-November. Everything is free
+> in the beta. I'd love to hear where the voice feels
 > wrong, where a lesson misses, and whether you'd keep using it.
 >
 > Comment or DM and I'll send the TestFlight link. Critical feedback is the most useful kind.
@@ -116,7 +119,7 @@ from people who live with it (free beta, I'm the developer)
 >   want one. No scores, no streaks to lose.
 >
 > I'm looking for 30–50 people on iPhone to try it for three weeks from mid-November. It's free
-> during the beta, plus a free year afterwards. I especially want to hear from people for whom it
+> during the beta. I especially want to hear from people for whom it
 > *doesn't* work, and why.
 >
 > Comment or DM if you'd like a spot.
@@ -136,8 +139,7 @@ Ask the admin first with the modmail text. Facebook posts are read on phones: ke
 > No account and no tracking. Your record stays on your phone. It doesn't replace your PRT
 > coach or therapist; a few clinicians I've spoken to see it as practice between sessions.
 >
-> I'm looking for beta testers from mid-November: free during the beta, and a free year of the
-> full program after launch. Comment "beta" or message me and I'll send the link.
+> I'm looking for beta testers from mid-November: free during the beta. Comment "beta" or message me and I'll send the link.
 
 Delete "a few clinicians I've spoken to" until it's true.
 
@@ -198,8 +200,8 @@ No images, no tracking pixels, one link each. Every email ends with an unsubscri
 | --- | --- | --- | --- |
 | 1 | On sign-up | You're on the list | Thanks for joining. Attend starts in December; until then, here's the free 5-minute somatic tracking practice from the page, to try tonight. |
 | 2 | +4 days | What "somatic tracking" actually is | It's resting your attention on a sensation with curiosity instead of alarm: its edges, texture, whether it moves. Here's why Attend guides it with your eyes closed, and how the 28 days are built. |
-| 3 | ~9 Nov | 30 beta spots, from mid-November | I'm looking for people on iPhone to test the full 28 days for three weeks, free, with a free year of Plus after launch. Reply "beta" and I'll send the TestFlight link. |
-| 4 | Launch day (first week of Dec) | The 28 days start today | Attend is on the App Store. Week 1, the flare practice and every sound are free; the founding price for the rest holds until 10 January. |
+| 3 | ~9 Nov | 30 beta spots, from mid-November | I'm looking for people on iPhone to test the full 28 days for three weeks, free. Reply "beta" and I'll send the TestFlight link. |
+| 4 | Launch day (first week of Dec) | The 28 days start today | Attend is on the App Store. Week 1, the flare, sleep and worry practices and every sound are free; the founding price for the rest holds until 10 January. |
 | 5 | 26 Dec | Start 2027 with 28 days | If January is when you'd like to begin, Day 1 takes about a minute to start, and the path keeps your place. Founding prices end 10 January. |
 
 Rules for the sequence: no "don't miss out", no countdown timers, no "your recovery". An email
