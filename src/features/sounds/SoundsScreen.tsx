@@ -33,7 +33,7 @@ export function SoundsScreen() {
   return (
     <TitledScroll title="sounds">
       <Txt variant="callout" tone="secondary" style={{ marginTop: -space.m, marginBottom: space.xl }}>
-        Tap one to play. It keeps going with the screen locked and fades out on its own.
+        Tap one to play. It carries on with the screen locked, then fades out by itself.
       </Txt>
       <View style={styles.grid}>
         {SOUNDSCAPES.map((s) => {
@@ -70,7 +70,7 @@ export function SoundsScreen() {
         })}
       </View>
       <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.xl }}>
-        {under ? `${under.name} also plays softly under your practice. Change it in Settings.` : 'Your practice plays with the voice only. Add a sound under it in Settings.'}
+        {under ? `${under.name} plays under your practice. Change it in Settings.` : 'Your practice plays with the voice only. Add a sound under it in Settings.'}
       </Txt>
     </TitledScroll>
   );

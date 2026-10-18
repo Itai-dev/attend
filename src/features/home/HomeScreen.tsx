@@ -92,9 +92,9 @@ export function HomeScreen() {
       style={({ pressed }) => [styles.logRow, { opacity: pressed ? 0.6 : 1 }]}
     >
       <View style={{ flex: 1 }}>
-        <Txt variant="headline">Log today’s pain</Txt>
+        <Txt variant="headline">log today’s pain</Txt>
         <Txt variant="footnote" tone="secondary">
-          10 seconds. Over weeks, it shows you what’s changing.
+          10 seconds. Over weeks, a record you can look back on.
         </Txt>
       </View>
       <Icon name="chevron.right" size={14} tint={color.textTertiary} />

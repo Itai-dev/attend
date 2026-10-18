@@ -129,7 +129,7 @@ export function ListenScreen() {
           />
 
           <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
-            Keeps playing with the screen locked. Nothing is recorded.
+            Keeps playing with the screen locked. Just for listening; nothing is tracked.
           </Txt>
         </View>
       </ScrollView>

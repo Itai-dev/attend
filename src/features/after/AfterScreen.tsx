@@ -81,8 +81,14 @@ export function AfterScreen({ session }: { session: Session }) {
           </Txt>
           <Txt variant="title" align="center" style={{ marginTop: space.s }}>
             {/* Ending early was the person's choice, said as one: no "still counts", which concedes it might not. */}
-            {early ? `${quiet}. You chose when to stop.` : `${quiet}, done.`}
+            {early ? `${quiet}.` : `${quiet}, done.`}
           </Txt>
+          {early ? (
+            // A sentence to read, so sentence case; the title above is lowercase by type.
+            <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.xs }}>
+              You chose when to stop.
+            </Txt>
+          ) : null}
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(900).duration(900)} style={{ marginTop: space.xxl }}>

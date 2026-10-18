@@ -22,6 +22,8 @@ import { WelcomeRunner, type WelcomeResult } from '../engine/WelcomeRunner';
 import type { GuideBrain } from '../engine/types';
 import { Ambience } from './ambience';
 import { endSessionAudio } from './audioSession';
+import { KeepAlive } from './keepAlive';
+import { saveAgents, savedAgents, saveScript, savedScript } from './savedGuide';
 import { stopListening } from './listen';
 import { DevTextInput } from './input/DevTextInput';
 import { NoInput } from './input/NoInput';
@@ -40,9 +42,9 @@ import type { SpeechInput, SpeechOutput, VoiceError } from './types';
  * vendor.
  *
  * It also owns the things a session needs from the phone: the screen stays
- * awake, the session pauses if the app is backgrounded, progress is saved as
- * a draft after every answer, and the finished session is written to local
- * storage.
+ * awake, a guided session keeps going with the phone locked (a conversation
+ * pauses when the app is backgrounded), progress is saved as a draft after
+ * every answer, and the finished session is written to local storage.
  */
 
 export type SessionStatus = RunnerStatus | 'idle' | 'unavailable';
@@ -54,6 +56,8 @@ type VoiceSessionValue = {
   error?: VoiceError;
   pausedBy?: PauseReason;
   sessionType?: SessionType;
+  /** 'guided' or 'conversation', once a session has started: only a conversation ever listens. */
+  sessionMode?: SessionMode;
   completedSessionId?: string;
   /** Session time excluding pauses, read on demand by the timer. */
   activeMs(): number;
@@ -107,17 +111,37 @@ async function chooseInput(mode: string): Promise<SpeechInput> {
 type AgentSettings = { voiceId?: string; speed?: number; stability?: number; similarity?: number; prompt?: string; firstMessage?: string };
 const lastAgent: Partial<Record<SessionType, AgentSettings>> = {};
 
+let restored = false;
+/**
+ * Before anything is fetched: the script and agents the server last sent (savedGuide.ts), so a
+ * cold start offline asks the cache for the same words in the same voice it saved them under.
+ * Once, and before any fetch, so a saved copy never overwrites a fresher one.
+ */
+function restoreGuide() {
+  if (restored) return;
+  restored = true;
+  const script = savedScript();
+  if (script) applyScript(script);
+  for (const [type, agent] of Object.entries(savedAgents<AgentSettings>())) {
+    if (!lastAgent[type as SessionType]) lastAgent[type as SessionType] = agent;
+  }
+}
+
 /**
  * The guide's voice and tone are edited in ElevenLabs, one agent per session type.
  * Fetched with the script at the start of a session; offline, the last one fetched (or the defaults) is used.
  */
 async function fetchAgent(type: SessionType): Promise<AgentSettings | undefined> {
+  restoreGuide();
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 2500);
     const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/agent?type=${type}`, { headers: apiHeaders(), signal: ctl.signal });
     clearTimeout(t);
-    if (res.ok) lastAgent[type] = (await res.json()) as AgentSettings;
+    if (res.ok) {
+      lastAgent[type] = (await res.json()) as AgentSettings;
+      saveAgents(lastAgent);
+    }
   } catch {
     // Keep the last settings.
   }
@@ -133,6 +157,7 @@ const warmedAt: Partial<Record<SessionType, number>> = {};
  * a silence while these download.
  */
 async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSettings | undefined> {
+  restoreGuide();
   if (!hasRemote) return undefined;
   if (Date.now() - (warmedAt[type] ?? 0) > FRESH_MS) {
     await Promise.all([refreshScript(), fetchAgent(type)]);
@@ -158,6 +183,8 @@ function knownVoice(id?: string): string | undefined {
 
 function chooseOutput(voiceId?: string, agent?: AgentSettings): SpeechOutput {
   // ElevenLabs is the guide's only voice. If it can't be reached the session pauses; it never switches to the phone's voice.
+  // The voice is fixed for the output's life, so a session never moves to another cache folder mid-practice;
+  // offline, `agent` is the saved one, so the folder is the one the last session filled.
   return new ElevenLabsSpeechOutput({
     apiUrl: config.apiUrl,
     headers: apiHeaders(),
@@ -173,13 +200,17 @@ function chooseOutput(voiceId?: string, agent?: AgentSettings): SpeechOutput {
  * Fetched at the start of each session; offline or slow, the last script (or the bundled one) is used.
  */
 async function refreshScript(): Promise<void> {
+  restoreGuide();
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 2500);
     const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/script`, { headers: apiHeaders(), signal: ctl.signal });
     clearTimeout(t);
     if (!res.ok) return;
-    const rejected = applyScript(await res.json());
+    const script: unknown = await res.json();
+    const rejected = applyScript(script);
+    // Kept whole; applyScript checks it again at the next launch.
+    saveScript(script);
     if (__DEV__ && rejected.length) console.warn(`Guide script: kept the bundled words for ${rejected.join(', ')}`);
   } catch {
     // Keep whatever script is already in use.
@@ -212,6 +243,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<VoiceError | undefined>();
   const [pausedBy, setPausedBy] = useState<PauseReason | undefined>();
   const [sessionType, setSessionType] = useState<SessionType | undefined>();
+  const [sessionMode, setSessionMode] = useState<SessionMode | undefined>();
   const [completedSessionId, setCompleted] = useState<string | undefined>();
   const [labels, setLabels] = useState({ input: '', output: '', brain: '' });
   const [debug, setDebug] = useState<DebugEntry[]>([]);
@@ -232,6 +264,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setDebug([]);
       setSessionType(type);
       setStatus('preparing');
+      restoreGuide();
       // Usually already warmed from Home. If not, wait briefly, then start with what is known:
       // a slower network should cost a slightly less fresh script, not a silence.
       const chosenVoice = knownVoice(voiceId) ?? knownVoice(prefs.voiceId);
@@ -243,6 +276,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       // Guided is the session (12 Oct 2026): it never listens, so it asks for no microphone and
       // needs no model to adapt to answers. The conversation stays reachable for comparison.
       const mode: SessionMode = __DEV__ && prefs.dev.conversation ? 'conversation' : 'guided';
+      setSessionMode(mode);
       const input = mode === 'guided' ? new NoInput() : await chooseInput(prefs.dev.inputMode);
       const output = chooseOutput(chosenVoice, agent);
       const brain = mode === 'guided' ? new LocalGuideBrain() : chooseBrain(prefs.dev.brain, agent);
@@ -286,6 +320,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       // A sound playing on its own (Just listen) gives way to the session's.
       stopListening(600, true);
       const ambience = ambienceFor(opts.background ?? backgroundFor(prefs));
+      const keepAlive = mode === 'guided' ? new KeepAlive() : undefined;
       const r = new SessionRunner({
         engine,
         brain,
@@ -294,7 +329,11 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         onState: (s) => {
           setStatus(s.status);
           setPausedBy(s.pausedBy);
-          ambience?.follow(s.status);
+          // The voice failed, not the person: the room stays as it was (at the silences' level)
+          // instead of fading to nothing, while the screen says what happened.
+          ambience?.follow(s.status === 'paused' && s.pausedBy === 'error' ? 'holding' : s.status);
+          if (s.status === 'speaking' || s.status === 'holding' || s.status === 'listening') keepAlive?.start();
+          else if (s.status === 'paused') keepAlive?.pause();
           if (s.error) setError(s.error);
         },
         onLevel: (l) => {
@@ -340,6 +379,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         deactivateKeepAwake('attend-session');
         input.dispose();
         output.dispose();
+        keepAlive?.stop();
         ambience?.stop();
         // After the tone's fade-out: releasing the audio session stops every player at once.
         // Skipped if another session has started by then.
@@ -404,10 +444,20 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [level]);
 
-  // Leaving the app mid-session pauses it; the person resumes when they come back.
+  useEffect(() => {
+    restoreGuide();
+  }, []);
+
+  // A guided session goes on when the phone locks or the app is left: it needs nothing from the
+  // screen, and pausing there stopped the practice of anyone who locked the phone to lie down
+  // (background audio is on: app.json UIBackgroundModes, keepAlive.ts). A conversation, or the
+  // spoken welcome, listens, and iOS gives a backgrounded app no microphone: those pause.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'background') runner.current?.pause('background');
+      if (state !== 'background') return;
+      const r = runner.current;
+      if (r instanceof SessionRunner && r.engine.mode === 'guided') return;
+      r?.pause('background');
     });
     return () => sub.remove();
   }, []);
@@ -422,6 +472,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       error,
       pausedBy,
       sessionType,
+      sessionMode,
       completedSessionId,
       activeMs: () => runner.current?.activeMs ?? 0,
       level,
@@ -442,9 +493,10 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         setCompleted(undefined);
         setError(undefined);
         setSessionType(undefined);
+        setSessionMode(undefined);
       },
     }),
-    [status, error, pausedBy, sessionType, completedSessionId, level, labels, debug, devInput, start, warm, startWelcome],
+    [status, error, pausedBy, sessionType, sessionMode, completedSessionId, level, labels, debug, devInput, start, warm, startWelcome],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

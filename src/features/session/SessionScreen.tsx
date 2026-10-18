@@ -1,34 +1,49 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
-import { Linking, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import type { PracticeTheme } from '@/domain/program';
 import { soundscape, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
-import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
+import { haptic, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_LENGTHS } from '@/engine/phases';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import { BreathingField, type BreathMode } from '@/viz/BreathingField';
-import { clock } from '../shared/format';
 import { DevPanel } from './DevPanel';
 
 /**
  * The session. The person's eyes are closed; this screen should feel almost
- * unnecessary. A breathing form, a single quiet word, pause and end. No
- * transcript, no questions written out, no body diagram.
+ * unnecessary. A breathing form, a quiet word only when one is needed, pause and
+ * end. No transcript, no questions written out, no body diagram, no clock.
+ *
+ * The controls fade away after a few seconds, so a phone lying face-up in a dim room
+ * is just the breathing form. A tap anywhere brings them back; that first tap only
+ * shows them, so a hand reaching for the phone never pauses or ends by accident.
+ * VoiceOver reaches pause and end at all times, faded or not.
  */
 
+/**
+ * The status word, only where it tells the person something: the session is getting
+ * ready, or it is paused. "Speaking" and "listening" said what an eyes-closed person
+ * could already hear.
+ */
 export const STATUS_WORD: Partial<Record<SessionStatus, string>> = {
   preparing: 'Preparing',
-  speaking: 'Speaking',
-  listening: 'Listening',
   paused: 'Paused',
 };
+
+/** Shown instead of "paused" when the guide's voice couldn't be had (SessionRunner pauses with 'error'). */
+export const VOICE_FAILED_LINE = 'The guide’s voice couldn’t load. Check your connection, then resume.';
+
+/** How long the controls stay after the session starts or a tap, and how slowly they go. */
+const CONTROLS_FIRST_MS = 8000;
+const CONTROLS_AGAIN_MS = 6000;
+const CONTROLS_FADE_MS = 1600;
 
 export function breathMode(s: SessionStatus): BreathMode {
   if (s === 'speaking') return 'speaking';
@@ -51,7 +66,6 @@ export function SessionScreen() {
   const started = useRef(false);
   // A completion id left over from an earlier session must not navigate this one.
   const sawThisSession = useRef(false);
-  const [elapsed, setElapsed] = useState(0);
   const [hint, setHint] = useState(true);
   const [confirmEnd, setConfirmEnd] = useState(false);
 
@@ -82,17 +96,15 @@ export function SessionScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const t = setInterval(() => setElapsed(vs.activeMs()), 1000);
-    return () => clearInterval(t);
-  }, [vs]);
-
   if (vs.status === 'preparing') sawThisSession.current = true;
 
   useEffect(() => {
     if (!sawThisSession.current || vs.completedSessionId === undefined) return;
-    if (vs.completedSessionId) router.replace({ pathname: '/recap/[id]', params: { id: vs.completedSessionId } });
-    else router.back();
+    if (vs.completedSessionId) {
+      // One soft tap in the hand or on the floor: the practice is over, before the screen changes.
+      haptic('soft');
+      router.replace({ pathname: '/recap/[id]', params: { id: vs.completedSessionId } });
+    } else router.back();
   }, [vs.completedSessionId]);
 
   useEffect(() => {
@@ -103,7 +115,70 @@ export function SessionScreen() {
 
   const paused = vs.status === 'paused';
   const blocked = vs.status === 'unavailable' || (vs.status === 'error' && !!vs.error);
-  const word = STATUS_WORD[vs.status];
+  const voiceFailed = paused && vs.pausedBy === 'error';
+  const word = voiceFailed ? undefined : STATUS_WORD[vs.status];
+  // Listening copy belongs to a conversation; a guided session never listens.
+  const listeningProblem = vs.sessionMode === 'conversation' || vs.error?.code === 'permission';
+
+  // ——— controls that fade away ———
+  const [shown, setShown] = useState(true);
+  const [screenReader, setScreenReader] = useState(false);
+  const controlsOpacity = useSharedValue(1);
+  const controlsStyle = useAnimatedStyle(() => ({ opacity: controlsOpacity.value }));
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // While paused the controls are what the person needs (resume), so they stay.
+  const keepControls = paused || blocked || confirmEnd;
+
+  useEffect(() => {
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then(setScreenReader)
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', setScreenReader);
+    return () => sub.remove();
+  }, []);
+
+  const showControls = useCallback(
+    (forMs: number) => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      setShown(true);
+      controlsOpacity.value = withTiming(1, { duration: 300 });
+      hideTimer.current = setTimeout(() => {
+        setShown(false);
+        controlsOpacity.value = withTiming(0, { duration: CONTROLS_FADE_MS });
+      }, forMs);
+    },
+    [controlsOpacity],
+  );
+
+  useEffect(() => {
+    if (keepControls) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      setShown(true);
+      controlsOpacity.value = withTiming(1, { duration: 300 });
+    } else showControls(sawShow.current ? CONTROLS_AGAIN_MS : CONTROLS_FIRST_MS);
+    sawShow.current = true;
+  }, [keepControls, showControls, controlsOpacity]);
+  const sawShow = useRef(false);
+
+  useEffect(
+    () => () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    },
+    [],
+  );
+
+  /**
+   * A press on a faded control only brings the controls back. With VoiceOver on, the person
+   * chose the control by name, so it acts at once.
+   */
+  const act = (fn: () => void) => () => {
+    if (!shown && !screenReader) {
+      showControls(CONTROLS_AGAIN_MS);
+      return;
+    }
+    fn();
+    if (!keepControls) showControls(CONTROLS_AGAIN_MS);
+  };
 
   return (
     <View style={styles.root}>
@@ -111,14 +186,28 @@ export function SessionScreen() {
       {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
       <BreathingField width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
 
+      {/* Anywhere on the screen: bring the controls back. Hidden from VoiceOver, which reaches the controls directly. */}
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={() => showControls(CONTROLS_AGAIN_MS)}
+        accessible={false}
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+      />
+
       <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
-        <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="none">
+        <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="polite">
           {word ?? ' '}
         </Txt>
-        <Txt variant="caption" tone="tertiary" style={[styles.status, { opacity: 0.6 }]}>
-          {elapsed > 0 ? clock(elapsed) : ' '}
-        </Txt>
       </View>
+
+      {voiceFailed ? (
+        <Animated.View entering={FadeIn.duration(800)} exiting={FadeOut.duration(800)} style={styles.notice} pointerEvents="none">
+          <Txt variant="callout" tone="secondary" align="center" accessibilityLiveRegion="polite">
+            {VOICE_FAILED_LINE}
+          </Txt>
+        </Animated.View>
+      ) : null}
 
       {hint && !blocked ? (
         <Animated.View entering={FadeIn.duration(1200).delay(400)} exiting={FadeOut.duration(1600)} style={styles.hint} pointerEvents="none">
@@ -134,17 +223,23 @@ export function SessionScreen() {
       {blocked ? (
         <View style={styles.blocked}>
           <Txt variant="title2" align="center">
-            {vs.error?.code === 'permission' ? 'Attend can’t hear you yet.' : 'Listening isn’t available here.'}
+            {vs.error?.code === 'permission'
+              ? 'Attend can’t hear you yet.'
+              : listeningProblem
+                ? 'Listening isn’t available here.'
+                : 'The session stopped.'}
           </Txt>
           <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.s, marginBottom: space.xl }}>
             {vs.error?.code === 'permission'
               ? 'Allow the microphone and speech recognition in Settings. What you say is turned into words on this iPhone and never saved as audio.'
-              : 'This build has no on-device speech recognition. A development build adds it.'}
+              : listeningProblem
+                ? 'This build has no on-device speech recognition. A development build adds it.'
+                : 'Something on this iPhone interrupted it. Close, and begin again when you’re ready.'}
           </Txt>
           {vs.error?.code === 'permission' && Platform.OS !== 'web' ? (
             <PrimaryButton label="Open Settings" onPress={() => Linking.openSettings()} />
           ) : null}
-          {__DEV__ ? (
+          {__DEV__ && listeningProblem ? (
             <QuietButton
               label="Use the simulated participant"
               style={{ alignSelf: 'center', marginTop: space.m }}
@@ -166,7 +261,7 @@ export function SessionScreen() {
       ) : null}
 
       {!blocked ? (
-        <View style={[styles.controls, { paddingBottom: insets.bottom + space.xl }]}>
+        <Animated.View style={[styles.controls, { paddingBottom: insets.bottom + space.xl }, controlsStyle]}>
           {confirmEnd ? (
             <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.confirm}>
               <Txt variant="footnote" tone="secondary">
@@ -182,7 +277,7 @@ export function SessionScreen() {
               size={60}
               iconSize={20}
               tint={color.textSecondary}
-              onPress={() => (paused ? vs.resume() : vs.pause())}
+              onPress={act(() => (paused ? vs.resume() : vs.pause()))}
             />
             <IconButton
               icon="xmark"
@@ -191,15 +286,15 @@ export function SessionScreen() {
               size={60}
               iconSize={18}
               tint={color.textSecondary}
-              onPress={() => {
+              onPress={act(() => {
                 if (confirmEnd) {
                   setConfirmEnd(false);
                   vs.end();
                 } else setConfirmEnd(true);
-              }}
+              })}
             />
           </View>
-        </View>
+        </Animated.View>
       ) : null}
 
       {__DEV__ && prefs.dev.panel ? <DevPanel /> : null}
@@ -213,6 +308,7 @@ const makeStyles = (color: Palette) =>
   top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
   status: { letterSpacing: 0.4, textTransform: 'lowercase', fontSize: 13 },
   hint: { position: 'absolute', left: space.xl, right: space.xl, top: '62%', gap: 2 },
+  notice: { position: 'absolute', left: space.xl, right: space.xl, top: '62%' },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
   buttons: { flexDirection: 'row', gap: space.xxl },
   confirm: { marginBottom: space.m },

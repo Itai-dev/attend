@@ -155,12 +155,12 @@ export function ProgressScreen() {
               ))
             ) : (
               <Txt variant="callout" tone="secondary">
-                Steps you take and quieter moments you notice will gather here, in your words.
+                Small steps toward it, in your own words, gather here.
               </Txt>
             )}
             <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={{ minHeight: HIT, justifyContent: 'center', alignSelf: 'flex-start' }}>
               <Txt variant="callout" style={{ color: color.milestone }}>
-                Save a moment
+                save a moment
               </Txt>
             </Pressable>
           </Card>
@@ -176,7 +176,7 @@ export function ProgressScreen() {
           <Chart days={progress.days} />
         ) : (
           <Txt variant="callout" tone="secondary">
-            Not a picture yet. After check-ins on {MIN_DAYS_FOR_PICTURE} different days, your pain over the weeks appears here, beside the days you practised.
+            After check-ins on {MIN_DAYS_FOR_PICTURE} different days, your record appears here, beside the days you practiced.
           </Txt>
         )}
         <Txt variant="callout" style={{ marginTop: space.l }}>
