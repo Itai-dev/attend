@@ -9,7 +9,8 @@ import type { PracticeTheme } from '@/domain/program';
 import { soundscape, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
 import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
-import { color, space } from '@/design/theme';
+import { space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_LENGTHS } from '@/engine/phases';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import { BreathingField, type BreathMode } from '@/viz/BreathingField';
@@ -38,6 +39,8 @@ export function breathMode(s: SessionStatus): BreathMode {
 }
 
 export function SessionScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string; background?: string }>();
   const type = (['notice', 'flare', 'sleep', 'fear'].includes(params.type ?? '') ? params.type : 'notice') as SessionType;
   const minutes = SESSION_LENGTHS.find((m) => String(m) === params.minutes);
@@ -204,10 +207,11 @@ export function SessionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
-  status: { letterSpacing: 2, textTransform: 'uppercase', fontSize: 11 },
+  status: { letterSpacing: 0.4, textTransform: 'lowercase', fontSize: 13 },
   hint: { position: 'absolute', left: space.xl, right: space.xl, top: '62%', gap: 2 },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
   buttons: { flexDirection: 'row', gap: space.xxl },

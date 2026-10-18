@@ -6,7 +6,8 @@ import { primarySensation } from '@/domain/bodyMap';
 import { analyzeJourney } from '@/domain/journey';
 import type { Session } from '@/domain/types';
 import { Hairline, QuietButton, SampleBadge, SectionLabel, TitledScroll, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { BodyField } from '@/viz/BodyField';
 import { preferredView } from '@/viz/bodyUniforms';
 import { sessionDate, shortDate } from '../shared/format';
@@ -18,6 +19,7 @@ import { sessionDate, shortDate } from '../shared/format';
  */
 
 export function JourneyScreen() {
+  const styles = useStyles(makeStyles);
   const { sessions, hasSamples, deleteSamples } = useData();
   const { width } = useWindowDimensions();
   const analysis = useMemo(() => analyzeJourney(sessions), [sessions]);
@@ -84,12 +86,13 @@ export function JourneyScreen() {
 }
 
 function ThenNow({ session, label, width }: { session: Session; label: string; width: number }) {
+  const styles = useStyles(makeStyles);
   return (
     <Pressable onPress={() => router.push({ pathname: '/journey/[id]', params: { id: session.id } })} style={{ width }} accessibilityElementsHidden>
       <View style={styles.pairCard}>
         <BodyField map={session.bodyMapEnd} view={preferredView(session.bodyMapEnd)} width={width} height={width * 1.25} animated={false} scale={1.65} />
       </View>
-      <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s, textTransform: 'uppercase' }}>
+      <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s, textTransform: 'lowercase' }}>
         {label} · {shortDate(session.startedAt)}
       </Txt>
     </Pressable>
@@ -97,6 +100,7 @@ function ThenNow({ session, label, width }: { session: Session; label: string; w
 }
 
 function SessionRow({ session, first, last }: { session: Session; first: boolean; last: boolean }) {
+  const styles = useStyles(makeStyles);
   const p = primarySensation(session.bodyMapEnd);
   return (
     <Pressable
@@ -133,7 +137,8 @@ function SessionRow({ session, first, last }: { session: Session; first: boolean
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',

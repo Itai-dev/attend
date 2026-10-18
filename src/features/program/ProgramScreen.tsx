@@ -5,7 +5,8 @@ import { currentTz, dayKey } from '@/domain/checkin';
 import { PRESETS } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE, programDay, WEEKS } from '@/domain/program';
 import { Card, Icon, SectionLabel, TitledScroll, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { PresetCard } from '../shared/PresetCard';
 
 /**
@@ -14,6 +15,8 @@ import { PresetCard } from '../shared/PresetCard';
  * before it is reached. Below, the any-time sessions for flares, sleep and worry.
  */
 export function ProgramScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const { prefs } = useData();
   const program = prefs.program ?? EMPTY_PROGRAM;
   const { day: today } = currentDay(program, dayKey(Date.now(), currentTz()));
@@ -101,9 +104,10 @@ export function ProgramScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   week: { padding: space.l, gap: space.m, borderRadius: radius.l },
-  weekNow: { backgroundColor: 'rgba(168,220,196,0.07)', borderColor: 'rgba(168,220,196,0.3)' },
+  weekNow: { backgroundColor: color.practiceSoft, borderColor: color.practice },
   weekHead: { flexDirection: 'row', alignItems: 'center', gap: space.m },
   days: { flexDirection: 'row', gap: space.s },
   day: { flex: 1, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

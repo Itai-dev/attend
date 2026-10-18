@@ -92,7 +92,14 @@ they heal, relax the nervous system or lower pain. Listening on its own is not p
 never counts toward days, minutes or milestones, and nothing about it is recorded. Once a
 listen starts it needs nothing — it fades out on its own timer.
 
-**Colour is never a verdict.** Dark ("evening pine", `design/theme.ts`), calm, no red in the body visualisation. The body map
+**The look is Daisy's (18 Oct 2026; replaces "dark only").** Quiet and editorial, after
+daisysound.com: off-white and ink by day, black by night (the app follows the iPhone, or
+Settings → Appearance), misty 35mm-style photographs of places (`design/Photo.tsx`),
+lowercase headings, nearly square controls with an arrow. The session, recap and body map are
+always dark (`forceDark`): eyes open onto them in a dim room. Photographs show places, never a
+body or pain.
+
+**Colour is never a verdict.** Calm, muted accents (`design/theme.ts`), no red in the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.
 
 ## Structure rules

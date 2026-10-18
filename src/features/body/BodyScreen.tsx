@@ -6,7 +6,8 @@ import { descriptorInfo } from '@/domain/lexicon';
 import { labelPlace } from '@/domain/regions';
 import type { BodyRegion, Session, Side } from '@/domain/types';
 import { Hairline, SectionLabel, Segmented, TitledScroll, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { BodyField } from '@/viz/BodyField';
 import { compositeMap, preferredView, type View as FigureView } from '@/viz/bodyUniforms';
 import { shortDate } from '../shared/format';
@@ -37,6 +38,7 @@ function placesFrom(sessions: Session[]): Place[] {
 }
 
 export function BodyScreen() {
+  const styles = useStyles(makeStyles);
   const { sessions } = useData();
   const { width } = useWindowDimensions();
   const composite = useMemo(() => compositeMap(sessions), [sessions]);
@@ -127,7 +129,8 @@ function lowerFirst(s: string) {
   return s.startsWith('The ') || s.startsWith('You ') || s.startsWith('Today') ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   mapCard: {
     alignSelf: 'center',
     borderRadius: radius.l,

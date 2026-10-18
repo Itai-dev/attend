@@ -8,7 +8,8 @@ import { newId } from '@/domain/ids';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion, Place } from '@/domain/types';
 import { Chip, haptic, IconButton, PrimaryButton, SectionLabel, Txt } from '@/design/components';
-import { color, HIT, radius, space } from '@/design/theme';
+import { HIT, radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 
 /**
  * The check-in, from Pattern: how much it hurts right now, and where. Pain is the only
@@ -28,6 +29,8 @@ function cap(s: string) {
 }
 
 export function CheckinScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { saveCheckIn } = useData();
   const [pain, setPain] = useState<number | null>(null);
@@ -130,7 +133,8 @@ export function CheckinScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: space.s },
   readout: { flexDirection: 'row', alignItems: 'baseline', gap: space.m, marginTop: space.xl },

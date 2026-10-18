@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useData } from '@/data/store';
 import { Card, Icon, TitledScroll, Txt } from '@/design/components';
-import { color, space } from '@/design/theme';
+import { space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 
 /**
  * You: the body map and journey (from conversational sessions), the welcome again (to change
@@ -10,6 +11,8 @@ import { color, space } from '@/design/theme';
  */
 
 function Place({ title, detail, icon, onPress }: { title: string; detail: string; icon: string; onPress: () => void }) {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   return (
     <Card label={`${title}. ${detail}`} onPress={onPress} style={styles.place}>
       <View style={styles.icon}>
@@ -43,7 +46,8 @@ export function YouScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   place: { flexDirection: 'row', alignItems: 'center', gap: space.l, padding: space.l, minHeight: 72 },
   icon: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.surfaceStrong, alignItems: 'center', justifyContent: 'center' },
 });

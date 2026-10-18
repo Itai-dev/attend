@@ -9,10 +9,11 @@ import { WHERE_REGIONS } from '@/domain/checkin';
 import { EMPTY_PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE, WEEKS } from '@/domain/program';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion } from '@/domain/types';
-import { Chip, haptic, PrimaryButton, QuietButton, Txt } from '@/design/components';
-import { color, HIT, radius, space } from '@/design/theme';
+import { Chip, haptic, PrimaryButton, QuietButton, Txt, Wordmark } from '@/design/components';
+import { HIT, radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
-import { BreathingField } from '@/viz/BreathingField';
+import { Photo } from '@/design/Photo';
 
 /**
  * The welcome: four screens, about a minute and a half. A promise (pain can change), how it
@@ -46,6 +47,8 @@ function hhmm(h: number, m: number) {
 }
 
 export function OnboardingScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { prefs, sessions, setPrefs } = useData();
   const [step, setStep] = useState(0);
@@ -88,17 +91,13 @@ export function OnboardingScreen() {
           ))}
         </View>
       ) : (
-        <Txt variant="caption" tone="tertiary" style={{ letterSpacing: 3.2, paddingHorizontal: space.xl }}>
-          ATTEND
-        </Txt>
+        <Wordmark size={20} style={{ marginHorizontal: space.xl }} />
       )}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {step === 0 ? (
           <Animated.View key="0" entering={FadeIn.duration(700)} style={{ flex: 1 }}>
-            <View style={styles.orb}>
-              <BreathingField width={240} height={240} mode="idle" dim={0.9} />
-            </View>
+            <Photo scene="tone" height={260} radius={radius.s} drift style={{ marginBottom: space.xl }} />
             <Txt variant="display">Pain is real.{'\n'}And it can change.</Txt>
             <Txt variant="body" tone="secondary" style={{ marginTop: space.l }}>
               A few minutes a day of guided attention, eyes closed. A short program that helps you meet pain with less alarm.
@@ -289,12 +288,12 @@ export function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   bars: { flexDirection: 'row', gap: 6, paddingHorizontal: space.xl },
   bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: color.surfaceStrong },
   content: { flexGrow: 1, padding: space.xl, paddingTop: space.xxl },
-  orb: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 260 },
   point: { flexDirection: 'row', gap: space.l },
   num: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.practiceSoft, alignItems: 'center', justifyContent: 'center' },
   note: { padding: space.l, borderRadius: radius.m, backgroundColor: color.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
@@ -327,9 +326,9 @@ const styles = StyleSheet.create({
     padding: space.xl,
     gap: space.s,
     borderRadius: radius.l,
-    backgroundColor: 'rgba(168,220,196,0.08)',
+    backgroundColor: color.practiceSoft,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(168,220,196,0.3)',
+    borderColor: color.practice,
   },
   weeks: { flexDirection: 'row', gap: space.s, marginTop: space.s },
   weekBar: { height: 4, borderRadius: 2, backgroundColor: color.practice },

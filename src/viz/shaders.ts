@@ -283,10 +283,11 @@ half4 main(float2 fragCoord) {
   float rim = exp(-abs(d) * 36.0);
   float halo = exp(-max(d, 0.0) * 6.5);
 
-  // Evening pine (design/theme.ts): sage at rest, warming toward sun while the guide speaks.
-  float3 sage = float3(0.6, 0.86, 0.76);
-  float3 apricot = float3(1.0, 0.8, 0.6);
-  float3 sea = float3(0.6, 0.78, 0.96);
+  // Mist (design/theme.ts, after the photographs): a pale sea-grey at rest, warming a little
+  // while the guide speaks, cooler while it listens.
+  float3 sage = float3(0.74, 0.84, 0.85);
+  float3 apricot = float3(0.98, 0.85, 0.7);
+  float3 sea = float3(0.68, 0.79, 0.9);
   float3 moon = float3(0.95, 0.93, 0.88);
   float3 tint = mix(sage, apricot, uSpeak * 0.5);
   tint = mix(tint, sea, uListen * 0.6);

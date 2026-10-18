@@ -9,12 +9,13 @@ import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { soundscape, timerLabel } from '@/domain/soundscapes';
 import { speakPlace } from '@/domain/regions';
-import { Card, haptic, Icon, PrimaryButton, SectionLabel, Txt } from '@/design/components';
-import { color, HIT, radius, space } from '@/design/theme';
+import { Card, haptic, Icon, OutlineButton, PrimaryButton, SectionLabel, Txt, Wordmark } from '@/design/components';
+import { HIT, radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { pauseListening, resumeListening, useListen } from '@/voice/listen';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { Landscape, sceneForHour } from '@/viz/Landscape';
+import { Photo, sceneForHour } from '@/design/Photo';
 import { greeting } from '../shared/format';
 import { WeekStrip } from '../shared/WeekStrip';
 
@@ -25,8 +26,10 @@ import { WeekStrip } from '../shared/WeekStrip';
  */
 
 export function HomeScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const listen = useListen();
   const { sessions, checkIns, prefs } = useData();
   const tz = currentTz();
@@ -62,19 +65,23 @@ export function HomeScreen() {
       style={{ flex: 1, backgroundColor: color.bg }}
       contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
     >
-      <View style={{ marginHorizontal: -space.xl, height: insets.top + 200 }}>
-        <Landscape scene={sceneForHour(new Date(now).getHours())} width={width} height={insets.top + 200} fadeTo={color.bg} style={StyleSheet.absoluteFill} />
-        <View style={{ paddingTop: insets.top + space.l, paddingHorizontal: space.xl, paddingRight: space.huge }}>
-          <Txt variant="display" accessibilityRole="header" style={styles.onSky}>
-            {greeting()}
-          </Txt>
-          <Txt variant="footnote" style={[{ color: 'rgba(242,236,224,0.88)', fontWeight: '600', marginTop: space.xs }, styles.onSky]}>
-            {finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`}
-          </Txt>
+      {/* Daisy's opening: a full-bleed photograph of the hour's sky, the wordmark over it. */}
+      <Photo scene={sceneForHour(new Date(now).getHours())} width={width} height={Math.round(height * 0.5)} drift style={{ marginHorizontal: -space.xl }}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: color.scrim }]} />
+        <View style={[styles.hero, { paddingTop: insets.top + space.s }]}>
+          <Wordmark tone="onImage" style={{ alignSelf: 'center' }} />
+          <View>
+            <Txt variant="display" accessibilityRole="header" style={[styles.onImage, styles.onSky]}>
+              {greeting()}
+            </Txt>
+            <Txt variant="callout" style={[styles.onImage, styles.onSky, { opacity: 0.9, marginTop: space.xs }]}>
+              {finished ? 'program complete' : `day ${day} of ${PROGRAM_DAYS}`}
+            </Txt>
+          </View>
         </View>
-      </View>
+      </Photo>
 
-      <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xs }}>
+      <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xl }}>
         <WeekStrip days={strip} />
         <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
           {weekLine(stats, now)}
@@ -82,8 +89,8 @@ export function HomeScreen() {
       </Animated.View>
 
       <Card style={styles.today}>
-        <Txt variant="caption" style={styles.kicker}>
-          {finished ? 'ANY TIME' : `TODAY · WEEK ${today.week} · ${WEEKS[today.week].name.toUpperCase()}`}
+        <Txt variant="footnote" style={styles.kicker}>
+          {finished ? 'any time' : `today · week ${today.week} · ${WEEKS[today.week].name.toLowerCase()}`}
         </Txt>
         <Pressable
           accessibilityRole="button"
@@ -125,12 +132,12 @@ export function HomeScreen() {
 
       <View style={styles.quick}>
         <Card label="Flare. A 3-minute session for right now" onPress={() => router.push({ pathname: '/before', params: { preset: 'flare-3' } })} style={styles.quickCard}>
-          <SectionLabel style={{ marginBottom: space.xs }}>Flare?</SectionLabel>
-          <Txt variant="callout">A 3-minute session for right now</Txt>
+          <SectionLabel style={{ marginBottom: space.xs }}>flare?</SectionLabel>
+          <Txt variant="callout">A 3-minute session for right now →</Txt>
         </Card>
         <Card label="Check in. How it is today, and where" onPress={() => router.push('/checkin')} style={styles.quickCard}>
-          <SectionLabel style={{ marginBottom: space.xs }}>Check in</SectionLabel>
-          <Txt variant="callout">How it is today, and where</Txt>
+          <SectionLabel style={{ marginBottom: space.xs }}>check in</SectionLabel>
+          <Txt variant="callout">How it is today, and where →</Txt>
         </Card>
       </View>
 
@@ -138,17 +145,13 @@ export function HomeScreen() {
 
       {prefs.goal ? (
         <Card style={styles.goal}>
-          <Txt variant="caption" style={{ color: color.milestone, letterSpacing: 1.2 }}>
-            TOWARD · {prefs.goal.toUpperCase()}
+          <Txt variant="footnote" style={{ color: color.milestone, fontWeight: '500' }}>
+            toward · {prefs.goal.toLowerCase()}
           </Txt>
           <Txt variant="callout" style={{ marginTop: space.xs }}>
             {lastMoment ? `Last moment you saved: “${lastMoment.text}”` : 'Did something toward it today, however small? Save it as a moment.'}
           </Txt>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={styles.goalLink} hitSlop={8}>
-            <Txt variant="callout" style={{ color: color.milestone }}>
-              Save a moment
-            </Txt>
-          </Pressable>
+          <OutlineButton label="save a moment" onPress={() => router.push('/moment')} style={{ marginTop: space.m }} />
         </Card>
       ) : null}
     </ScrollView>
@@ -160,58 +163,60 @@ export function HomeScreen() {
  * pauses it in place; otherwise it opens the sounds.
  */
 function ListenCard({ listen, lastId }: { listen: ReturnType<typeof useListen>; lastId?: string }) {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const s = soundscape(listen.id ?? lastId) ?? soundscape('rain')!;
   const live = !!listen.id;
   return (
-    <Card
-      label={live ? `${s.name}, ${listen.playing ? 'playing' : 'paused'}. Open sounds` : 'Just listen. Rain, forest, water and more, with a sleep timer'}
-      onPress={() => router.push('/listen')}
-      style={styles.listen}
-    >
-      <Landscape scene={s.id} width={64} height={64} radius={radius.m} still />
-      <View style={{ flex: 1 }}>
-        <Txt variant="caption" style={{ color: color.sky, letterSpacing: 1.2 }}>
-          {live ? (listen.playing ? 'PLAYING' : 'PAUSED') : 'JUST LISTEN'}
+    <Card style={styles.listen}>
+      <Photo scene={s.id} width={132} height={164} />
+      <View style={styles.listenText}>
+        <Txt variant="footnote" style={{ color: color.sky, fontWeight: '500' }}>
+          {live ? (listen.playing ? 'playing' : 'paused') : 'just listen'}
         </Txt>
-        <Txt variant="headline" style={{ marginTop: 2 }}>
-          {live ? s.name : 'Rain, forest, water'}
+        <Txt variant="title2" style={{ marginTop: 2 }}>
+          {live ? s.name.toLowerCase() : 'rain, forest, water'}
         </Txt>
-        <Txt variant="footnote" tone="secondary">
-          {live ? timerLabel(listen.timer, listen.timerElapsedMs) : 'Nature sounds, with a sleep timer'}
+        <Txt variant="footnote" tone="secondary" style={{ marginTop: 2 }}>
+          {live ? timerLabel(listen.timer, listen.timerElapsedMs) : 'Nature sounds, with a sleep timer.'}
         </Txt>
+        <View style={{ flexDirection: 'row', gap: space.s, marginTop: space.m, alignItems: 'center' }}>
+          <OutlineButton label={live ? 'sounds' : 'listen'} onPress={() => router.push('/listen')} />
+          {live ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={listen.playing ? 'Pause' : 'Resume'}
+              hitSlop={8}
+              onPress={() => {
+                haptic('select');
+                if (listen.playing) pauseListening();
+                else resumeListening();
+              }}
+              style={styles.listenBtn}
+            >
+              <Icon name={listen.playing ? 'pause.fill' : 'play.fill'} size={13} tint={color.onAccent} />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
-      {live ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={listen.playing ? 'Pause' : 'Resume'}
-          hitSlop={8}
-          onPress={() => {
-            haptic('select');
-            if (listen.playing) pauseListening();
-            else resumeListening();
-          }}
-          style={styles.listenBtn}
-        >
-          <Icon name={listen.playing ? 'pause.fill' : 'play.fill'} size={14} tint={color.onAccent} />
-        </Pressable>
-      ) : (
-        <Icon name="chevron.right" size={14} tint={color.textTertiary} />
-      )}
     </Card>
   );
 }
 
-const styles = StyleSheet.create({
-  onSky: { textShadowColor: 'rgba(5,12,14,0.35)', textShadowRadius: 12, textShadowOffset: { width: 0, height: 1 } },
-  listen: { marginTop: space.m, padding: space.m, paddingRight: space.l, flexDirection: 'row', alignItems: 'center', gap: space.l },
-  listenBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.text, alignItems: 'center', justifyContent: 'center' },
-  today: { marginTop: space.xl, padding: space.l, gap: space.m, borderRadius: radius.l },
-  kicker: { color: color.practice, letterSpacing: 1.4 },
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
+  hero: { flex: 1, justifyContent: 'space-between', paddingHorizontal: space.xl, paddingBottom: space.xl },
+  onImage: { color: color.onImage },
+  onSky: { textShadowColor: 'rgba(5,8,9,0.3)', textShadowRadius: 14, textShadowOffset: { width: 0, height: 1 } },
+  listen: { marginTop: space.m, flexDirection: 'row' },
+  listenText: { flex: 1, padding: space.l, justifyContent: 'center' },
+  listenBtn: { width: 40, height: 40, borderRadius: 3, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
+  today: { marginTop: space.xl, padding: space.l, gap: space.m },
+  kicker: { color: color.practice, fontWeight: '500' },
   step: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: HIT },
   mark: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: color.text, alignItems: 'center', justifyContent: 'center' },
   markDone: { borderWidth: 0, backgroundColor: color.practiceSoft },
   quick: { flexDirection: 'row', gap: space.m, marginTop: space.m },
   quickCard: { flex: 1, padding: space.l, minHeight: 96 },
-  goal: { marginTop: space.m, padding: space.l, backgroundColor: color.milestoneSoft, borderColor: 'rgba(242,196,141,0.24)' },
-  goalLink: { minHeight: 36, justifyContent: 'center', marginTop: space.xs, alignSelf: 'flex-start' },
+  goal: { marginTop: space.m, padding: space.l, backgroundColor: color.milestoneSoft, borderColor: color.hairline },
 });

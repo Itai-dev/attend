@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { newId } from '@/domain/ids';
 import { haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 
 /**
  * A moment: something the person did toward their goal, or a time the pain was quieter than
@@ -13,6 +14,8 @@ import { color, radius, space } from '@/design/theme';
  * §4). No rating, no amount, nothing derived.
  */
 export function MomentScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs } = useData();
   const [text, setText] = useState('');
@@ -61,7 +64,8 @@ export function MomentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: { flexDirection: 'row', justifyContent: 'flex-end', padding: space.s },
   input: {

@@ -1,4 +1,5 @@
 import { Skia, type SkRuntimeEffect } from '@shopify/react-native-skia';
+import { dark } from '../design/theme';
 import { BODY_SKSL, BREATH_SKSL } from './shaders';
 
 /**
@@ -21,5 +22,10 @@ export function effect(name: 'body' | 'breath'): SkRuntimeEffect | null {
   return cache[name]!;
 }
 
-/** design/theme.ts color.bg, as the shaders want it. */
-export const BG_RGB: [number, number, number] = [13 / 255, 22 / 255, 21 / 255];
+/**
+ * The night background (design/theme.ts `dark.bg`), as the shaders want it. The fields only
+ * appear on screens that are always dark: their glow is light added to darkness, and on a
+ * light page it would vanish.
+ */
+const hex = dark.bg.replace('#', '');
+export const BG_RGB: [number, number, number] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];

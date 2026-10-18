@@ -2,7 +2,8 @@ import { Canvas, Fill, Shader, useClock } from '@shopify/react-native-skia';
 import { useEffect } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useDerivedValue, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
-import { color } from '../design/theme';
+import { type Palette } from '../design/theme';
+import { useColors, useStyles } from '../design/ThemeProvider';
 import { BG_RGB, effect } from './effects';
 
 /**
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function BreathingField({ width, height, mode, level, dim = 1, style }: Props) {
+  const color = useColors();
   const fx = effect('breath');
   const reduceMotion = useReducedMotion();
   const clock = useClock();

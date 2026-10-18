@@ -8,7 +8,8 @@ import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
 import { backgroundFor, SOUNDSCAPES } from '@/domain/soundscapes';
 import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
-import { color, HIT, radius, space } from '@/design/theme';
+import { HIT, radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { speechModule } from '@/voice/speechModule';
 
@@ -26,10 +27,12 @@ function confirm(title: string, message: string, action: string, run: () => void
 }
 
 function Group({ children }: { children: ReactNode }) {
+  const styles = useStyles(makeStyles);
   return <View style={styles.group}>{children}</View>;
 }
 
 function Choice({ label, detail, selected, disabled, onPress }: { label: string; detail?: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
+  const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="radio"
@@ -55,6 +58,8 @@ function Choice({ label, detail, selected, disabled, onPress }: { label: string;
 }
 
 export function SettingsScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
   const realCount = sessions.filter((s) => !s.isSample).length;
@@ -112,6 +117,15 @@ export function SettingsScreen() {
         ) : null}
       </Group>
 
+      <SectionLabel style={styles.section}>Appearance</SectionLabel>
+      <Group>
+        <Choice label="Automatic" detail="Light by day, dark at night, as the iPhone is" selected={(prefs.appearance ?? 'auto') === 'auto'} onPress={() => setPrefs({ appearance: 'auto' })} />
+        <Hairline />
+        <Choice label="Light" selected={prefs.appearance === 'light'} onPress={() => setPrefs({ appearance: 'light' })} />
+        <Hairline />
+        <Choice label="Dark" detail="Sessions are always dark" selected={prefs.appearance === 'dark'} onPress={() => setPrefs({ appearance: 'dark' })} />
+      </Group>
+
       <SectionLabel style={styles.section}>Sound under sessions</SectionLabel>
       <Group>
         {SOUNDSCAPES.map((sc) => (
@@ -141,7 +155,7 @@ export function SettingsScreen() {
           }
           style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
         >
-          <Txt variant="body" style={{ color: '#FFB4A8' }}>
+          <Txt variant="body" style={{ color: color.destructive }}>
             Delete all sessions
           </Txt>
           <Txt variant="footnote" tone="tertiary">
@@ -176,6 +190,8 @@ export function SettingsScreen() {
 }
 
 function DeveloperSettings() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const { prefs, setPrefs } = useData();
   const dev = prefs.dev;
   const speech = !!speechModule();
@@ -241,7 +257,8 @@ function DeveloperSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xl },
   section: { marginTop: space.xxl },
   group: {

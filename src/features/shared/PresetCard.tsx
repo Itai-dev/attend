@@ -2,8 +2,9 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import type { Preset, PresetCategory } from '@/domain/presets';
 import { Card, Icon, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
-import { Landscape, type SceneId } from '@/viz/Landscape';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
+import { Photo, type SceneId } from '@/design/Photo';
 
 
 /** Any-time sessions go through Before too, so where attention rests is chosen with the eyes open. */
@@ -12,7 +13,7 @@ export function startPreset(p: Pick<Preset, 'id'>) {
 }
 
 /**
- * Each category's landscape: settled dusk for the familiar practice, waves that come and go
+ * Each category's photograph: settled dusk for the familiar practice, waves that come and go
  * for a flare, a night sky for sleep, moving water for worry. Calm places, never a picture of pain.
  */
 const CATEGORY_SCENE: Record<PresetCategory, SceneId> = {
@@ -22,13 +23,15 @@ const CATEGORY_SCENE: Record<PresetCategory, SceneId> = {
   worry: 'stream',
 };
 
-/** A small still landscape: the category, at a glance. */
+/** A small photograph: the category, at a glance. */
 export function PresetArt({ category, size }: { category: PresetCategory; size: number }) {
-  return <Landscape scene={CATEGORY_SCENE[category]} width={size} height={size} radius={radius.m} still />;
+  return <Photo scene={CATEGORY_SCENE[category]} width={size} height={Math.round(size * 1.15)} radius={radius.s} />;
 }
 
 /** One ready-made session: art, title, length and voice, and a play button. One tap begins it. */
 export function PresetCard({ preset, featured }: { preset: Preset; featured?: boolean }) {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const art = featured ? 92 : 76;
   return (
     <Card
@@ -57,8 +60,9 @@ export function PresetCard({ preset, featured }: { preset: Preset; featured?: bo
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: space.l, padding: space.m, paddingRight: space.l },
   text: { flex: 1 },
-  play: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.text, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
+  play: { width: 40, height: 40, borderRadius: 3, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
 });

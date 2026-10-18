@@ -68,6 +68,8 @@ export type Prefs = {
   ambience?: boolean;
   /** The sound under sessions (domain/soundscapes.ts). Unset: rain, or none if `ambience` was off. */
   background?: BackgroundPref;
+  /** Light, dark, or following the phone (unset). */
+  appearance?: 'auto' | 'light' | 'dark';
   /** The last Just listen: which sound and how long, offered again next time. */
   listen?: { id: SoundscapeId; timer: ListenTimer };
   /** Developer settings. Ignored outside development builds. */

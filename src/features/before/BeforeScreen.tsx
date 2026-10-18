@@ -11,10 +11,11 @@ import { REGIONS } from '@/domain/regions';
 import { backgroundFor, soundscape, SOUNDSCAPES, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
 import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
-import { color, HIT, radius, space } from '@/design/theme';
+import { HIT, radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
-import { BreathingField } from '@/viz/BreathingField';
+import { Photo } from '@/design/Photo';
 
 /**
  * Before a session: everything decided with the eyes open, so nothing needs deciding once
@@ -45,6 +46,8 @@ function cap(s: string) {
 }
 
 export function BeforeScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const params = useLocalSearchParams<{ day?: string; preset?: string }>();
   const insets = useSafeAreaInsets();
   const { prefs, checkIns, setPrefs } = useData();
@@ -54,12 +57,12 @@ export function BeforeScreen() {
     const preset = presetById(params.preset);
     if (preset) {
       const theme: PracticeTheme = preset.type === 'flare' ? 'flare' : preset.type === 'fear' ? 'fear' : preset.type === 'sleep' ? 'open' : 'curious';
-      return { title: preset.title, kicker: 'ANY TIME', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: preset.voiceId, day: undefined };
+      return { title: preset.title, kicker: 'any time', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: preset.voiceId, day: undefined };
     }
     const d = programDay(Number(params.day) || 1);
     return {
       title: d.practice.title,
-      kicker: `DAY ${d.day} · WEEK ${d.week}`,
+      kicker: `day ${d.day} · week ${d.week}`,
       theme: d.practice.theme,
       type: d.practice.sessionType,
       minutes: d.practice.minutes as SessionLength,
@@ -108,13 +111,12 @@ export function BeforeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <View style={{ alignItems: 'center' }}>
-          <BreathingField width={170} height={170} mode="idle" dim={0.85} />
-        </View>
-        <Txt variant="title" align="center" style={{ marginTop: space.s }}>
+        {/* The place the session's sound comes from: changes as the sound does. */}
+        <Photo scene={background === 'none' ? 'tone' : background} height={220} radius={radius.s} />
+        <Txt variant="title" style={{ marginTop: space.xl }}>
           {plan.title}
         </Txt>
-        <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.s }}>
+        <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
           {BLURB[plan.theme]} Nothing to answer. Just listen.
         </Txt>
 
@@ -217,7 +219,7 @@ export function BeforeScreen() {
           ) : null}
         </View>
 
-        <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>
+        <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
           Headphones on · Sit or lie down · Eyes closed
         </Txt>
       </ScrollView>
@@ -229,7 +231,8 @@ export function BeforeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.s, paddingTop: space.m },
   body: { padding: space.xl, paddingTop: space.s },

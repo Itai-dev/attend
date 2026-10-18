@@ -1,10 +1,12 @@
 import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useData } from '@/data/store';
-import { color } from '@/design/theme';
+import { type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 
 /** Four places: Today (the day's lesson and practice), Program (the 28 days and any-time sessions), Progress (practice and the pain record), You. */
 export default function TabsLayout() {
+  const color = useColors();
   const { prefs } = useData();
   if (!prefs.onboarded) return <Redirect href="/onboarding" />;
   return (

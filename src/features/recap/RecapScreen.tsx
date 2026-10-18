@@ -7,7 +7,8 @@ import { useData } from '@/data/store';
 import { consolidateChanges } from '@/domain/bodyMap';
 import type { BodyMapState, Session } from '@/domain/types';
 import { Hairline, IconButton, PrimaryButton, QuietButton, SampleBadge, Segmented, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_TYPE_LABELS } from '@/engine/phases';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { BodyField } from '@/viz/BodyField';
@@ -38,6 +39,8 @@ export function SessionDetailRoute() {
 }
 
 function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const { sessions, deleteSession } = useData();
   const vs = useVoiceSession();
   const session = sessions.find((s) => s.id === id);
@@ -206,6 +209,7 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
 }
 
 function Changes({ session }: { session: Session }) {
+  const styles = useStyles(makeStyles);
   const lines = useMemo(
     () =>
       consolidateChanges(session.changes)
@@ -217,7 +221,7 @@ function Changes({ session }: { session: Session }) {
   return (
     <View style={{ marginTop: space.xl }}>
       <Hairline style={{ marginBottom: space.l }} />
-      <Txt variant="caption" tone="tertiary" style={{ textTransform: 'uppercase', marginBottom: space.s }}>
+      <Txt variant="caption" tone="tertiary" style={{ textTransform: 'lowercase', marginBottom: space.s }}>
         As you watched
       </Txt>
       {lines.map((l, i) => (
@@ -230,7 +234,8 @@ function Changes({ session }: { session: Session }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   pad: { paddingHorizontal: space.xl },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },

@@ -32,7 +32,7 @@ What makes it different, and what the store page leads with:
 3. **Honest progress.** Your practice and your own pain record side by side — never a score,
    never a grade.
 4. **Private by design.** No account. Everything stays on the phone.
-5. **Calm to look at and listen to.** Landscapes, nature sounds, a sleep timer.
+5. **Calm to look at and listen to.** Misty photographs, nature sounds, a sleep timer.
 
 ### Pricing (decision needed — recommendation below)
 
@@ -65,8 +65,9 @@ never with guilt, never tied to pain going up or down.
 
 Each item is a pull request. ✅ = done in this branch.
 
-1. ✅ **Look and sound** — evening-pine palette, rounded headings, illustrated landscapes,
-   seven nature soundscapes, "Just listen" with a sleep timer, a sound under every session.
+1. ✅ **Look and sound** — Daisy-style design (light by day, dark at night), misty
+   photographs, seven nature soundscapes, "Just listen" with a sleep timer, a sound under
+   every session.
 2. **Payments** (~2 days once pricing is decided) — RevenueCat (`react-native-purchases`) in
    a development build, guarded like the other native modules; an `access.ts` in `domain/`
    that decides what's free (tested in Node); a paywall screen in the app's design; Restore

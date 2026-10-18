@@ -1,7 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import type { WeekStripDay } from '@/domain/engagement';
 import { Txt } from '@/design/components';
-import { color, space } from '@/design/theme';
+import { space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 
 /**
  * This week, Monday to Sunday: a filled dot for each practice day. A day without practice
@@ -9,6 +10,7 @@ import { color, space } from '@/design/theme';
  * resets, so there is no streak to lose.
  */
 export function WeekStrip({ days }: { days: WeekStripDay[] }) {
+  const styles = useStyles(makeStyles);
   const done = days.filter((d) => d.practised).length;
   return (
     <View style={styles.row} accessible accessibilityLabel={`This week: practised on ${done} ${done === 1 ? 'day' : 'days'}.`}>
@@ -26,7 +28,8 @@ export function WeekStrip({ days }: { days: WeekStripDay[] }) {
 
 const SIZE = 30;
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   col: { alignItems: 'center', gap: space.s, flex: 1 },
   dot: { width: SIZE, height: SIZE, borderRadius: SIZE / 2 },

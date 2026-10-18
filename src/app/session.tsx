@@ -1,1 +1,5 @@
-export { SessionScreen as default } from '@/features/session/SessionScreen';
+import { forceDark } from '@/design/ThemeProvider';
+import { SessionScreen } from '@/features/session/SessionScreen';
+
+/** Always dark: eyes open onto this screen in a dim room (design/theme.ts). */
+export default forceDark(SessionScreen);

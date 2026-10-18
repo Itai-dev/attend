@@ -8,7 +8,8 @@ import { EMPTY_PROGRAM } from '@/domain/program';
 import { buildProgress, PROGRESS_MEANING, type ProgressDay } from '@/domain/progress';
 import { REGIONS } from '@/domain/regions';
 import { Card, Hairline, Icon, PrimaryButton, SectionLabel, TitledScroll, Txt } from '@/design/components';
-import { color, HIT, space } from '@/design/theme';
+import { HIT, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { sessionDate } from '../shared/format';
 
 /**
@@ -22,6 +23,7 @@ import { sessionDate } from '../shared/format';
 const CHART_H = 140;
 
 function Chart({ days }: { days: ProgressDay[] }) {
+  const styles = useStyles(makeStyles);
   const [w, setW] = useState(0);
   const step = days.length > 1 ? w / (days.length - 1) : 0;
   const onLayout = (e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width);
@@ -71,6 +73,8 @@ function placesText(c: CheckIn): string | undefined {
 }
 
 export function ProgressScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const { checkIns, sessions, prefs, deleteCheckIn } = useData();
   const tz = currentTz();
   const progress = useMemo(() => buildProgress(checkIns, sessions, { tz }), [checkIns, sessions, tz]);
@@ -204,7 +208,8 @@ export function ProgressScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   card: { marginTop: space.xl, padding: space.xl },
   grid: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: color.hairline },
   gridLabel: { position: 'absolute', right: 0, top: -16, fontSize: 10 },
@@ -219,6 +224,6 @@ const styles = StyleSheet.create({
   marks: { flexDirection: 'row', gap: space.xs, marginTop: space.l },
   mark: { flex: 1, alignItems: 'center', gap: space.xs },
   badge: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  badgeOn: { backgroundColor: 'rgba(242,196,141,0.16)' },
+  badgeOn: { backgroundColor: color.milestoneSoft },
   badgeOff: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.hairline },
 });

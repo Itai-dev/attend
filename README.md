@@ -12,8 +12,10 @@ pain record (ported from Pattern) to show whether practice is helping. See `docs
 > `docs/RESEARCH.md` and `docs/MERGE.md`. The conversational loop described below is kept
 > behind `mode: 'conversation'` (Settings → Developer).
 
-> **18 Oct 2026:** a calmer, friendlier look — the "evening pine" palette, SF Pro Rounded
-> headings, illustrated landscapes drawn in Skia (`viz/Landscape.tsx`) — and sound: seven
+> **18 Oct 2026:** the look follows daisysound.com — off-white and ink by day, black at night
+> (follows the iPhone; the session is always dark), lowercase headings, square controls, and
+> misty film-style photographs for every sound and time of day (`design/Photo.tsx`,
+> `tools/grade-photos.py`) — and sound: seven
 > nature soundscapes generated as seamless loops (`tools/make-soundscapes.py`), chosen under
 > each session or played on their own in **Just listen** with a sleep timer
 > (`voice/listen.ts`). The plan to the App Store and paying users is `docs/LAUNCH.md`.
@@ -95,9 +97,9 @@ src/
                ElevenLabsSpeechOutput (via proxy; the only voice),
                VoiceSessionProvider (the only thing the UI talks to).
   data/        SessionRepository: SQLite on device, localStorage on web; seed samples.
-  viz/         SkSL shaders (body field, breathing field), BodyMapState → uniforms,
-               Landscape (illustrated scenes for sounds, presets and Today).
-  design/      Tokens and a handful of components. System type, Dynamic Type.
+  viz/         SkSL shaders (body field, breathing field), BodyMapState → uniforms.
+  design/      Light and dark palettes, ThemeProvider (useColors/useStyles, forceDark),
+               Photo, a handful of components. System type, Dynamic Type.
   features/    Screens. app/ holds routes only.
 supabase/functions/attend   The proxy: POST /guide (Claude), GET /tts (ElevenLabs).
 server/                     The voice server on Vercel: GET /tts (ElevenLabs v4), GET /script, POST /guide.

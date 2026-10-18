@@ -9,7 +9,8 @@ import { milestones, newlyEarned, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM, PROGRAM_DAYS, programDay, type ProgramState } from '@/domain/program';
 import type { Session, SessionFeeling } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { BreathingField } from '@/viz/BreathingField';
 
@@ -36,6 +37,8 @@ function withoutDay(p: ProgramState, day?: number): ProgramState {
 }
 
 export function AfterScreen({ session }: { session: Session }) {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { sessions, prefs, setFeeling } = useData();
   const vs = useVoiceSession();
@@ -66,7 +69,7 @@ export function AfterScreen({ session }: { session: Session }) {
         <Animated.View entering={FadeIn.duration(1400)} style={{ alignItems: 'center' }}>
           <BreathingField width={150} height={150} mode="idle" dim={0.95} />
           <Txt variant="caption" style={{ color: color.practice, letterSpacing: 1.4, marginTop: space.xs }}>
-            {dayDone ? `DAY ${session.programDay} COMPLETE` : 'PRACTICE COMPLETE'}
+            {dayDone ? `day ${session.programDay} complete` : 'practice complete'}
           </Txt>
           <Txt variant="title" align="center" style={{ marginTop: space.s }}>
             {early ? `You stopped after ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}. That still counts.` : `${WORDS[minutes] ?? minutes} quiet minutes, done.`}
@@ -139,7 +142,8 @@ export function AfterScreen({ session }: { session: Session }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   tiles: { flexDirection: 'row', gap: space.s, marginTop: space.xl },
   tile: { flex: 1, alignItems: 'center', gap: 2, padding: space.m, borderRadius: radius.m, backgroundColor: color.surface },
@@ -153,6 +157,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.m,
     backgroundColor: color.milestoneSoft,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(242,196,141,0.3)',
+    borderColor: color.milestone,
   },
 });
