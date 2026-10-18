@@ -19,12 +19,21 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSPhotoLibraryUsageDescription": "Attend doesn't use your photo library. This permission is listed only because a component in the app could ask for it; it is never requested."
+        "NSPhotoLibraryUsageDescription": "Attend doesn't access your photo library."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyTrackingDomains": [],
-        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeHealth",
+            "NSPrivacyCollectedDataTypeLinked": false,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          }
+        ],
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
@@ -73,15 +82,15 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Guided sessions never use the microphone. Attend asks only if you choose to answer the welcome by voice; your words are recognized on this iPhone and audio is never saved.",
+          "microphonePermission": "Attend's guided practices only play audio and never use the microphone. Attend asks only in an optional voice mode, where your words are recognized on this iPhone and audio is never saved.",
           "enableBackgroundPlayback": true
         }
       ],
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Guided sessions never use the microphone. Attend asks only if you choose to answer the welcome by voice; your words are recognized on this iPhone and audio is never saved.",
-          "speechRecognitionPermission": "Attend turns what you say during a session into words, on this iPhone, so the guide can follow what you notice."
+          "microphonePermission": "Attend's guided practices only play audio and never use the microphone. Attend asks only in an optional voice mode, where your words are recognized on this iPhone and audio is never saved.",
+          "speechRecognitionPermission": "Attend's guided practices never listen. Speech is recognized only in an optional voice mode, on this iPhone, and audio is never saved."
         }
       ]
     ],
