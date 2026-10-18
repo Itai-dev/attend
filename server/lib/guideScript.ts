@@ -25,7 +25,12 @@
  *     wrong". The app rejects any line that crosses those lines and keeps the
  *     built-in version instead.
  *   - Safety and crisis lines are deliberately not here: they stay fixed in the
- *     app and can't be changed remotely.
+ *     app and can't be changed remotely. That includes the arrival's doctor and
+ *     emergency lines and "You can open your eyes, or stop, at any time.": the
+ *     app adds them to every arrival (src/engine/guide/lines.ts, ARRIVAL_SAFETY),
+ *     so don't write them here.
+ *   - Guided sessions never listen, so no line a guided session can reach may be a
+ *     question, and none may call the sensation safe, harmless or "not a problem".
  *
  * voice.direction is read by ElevenLabs v4 before every line — delivery tags
  * like [softly] [slowly] [whispers] [long pause]. Changing it re-records every
@@ -117,12 +122,14 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let the phone rest, and let your eyes close.', 4500],
-        ["There's nothing you need to fix right now.", 5500],
+        // Scoped to the practice: "nothing you need to fix" said of a body reads as "nothing is wrong".
+        ["There's nothing to fix in this practice.", 5500],
       ],
       [
         ['Take a moment to settle in.', 3500],
         ['Get comfortable, and let your eyes close.', 5000],
-        ["There's nothing you need to fix right now.", 5500],
+        // Scoped to the practice: "nothing you need to fix" said of a body reads as "nothing is wrong".
+        ["There's nothing to fix in this practice.", 5500],
       ],
     ],
     flare: [
@@ -131,7 +138,6 @@ export const GUIDE_SCRIPT: GuideScript = {
         ['Let the phone rest, and let your eyes close.', 4500],
         ["You don't have to make anything go away right now.", 5000],
         ['Let your breath be however it is.', 5000],
-        ['If this feels different from your usual pain, stop here and contact a doctor.', 4500],
       ],
     ],
     sleep: [
@@ -145,9 +151,8 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let your eyes close.', 4000],
-        ["We'll go slowly. You can stop at any time.", 5500],
-        // Worry at 2am may be about something new; the welcome's note was days ago (fixed text, never sent to a model).
-        ['This practice is for a sensation you know. If this one is new, or different, stop here and contact a doctor.', 5500],
+        // "You can stop at any time" and the doctor and emergency lines are added by the app.
+        ["We'll go slowly.", 5500],
       ],
     ],
   },
@@ -214,13 +219,18 @@ export const GUIDE_SCRIPT: GuideScript = {
     [['Up into the thighs.', 5000], ['Their weight, resting on whatever is under you.', 14000], ['If attention wanders, that is part of it. Bring it back to where you were.', 12000]],
     [['Now the hips, and the pelvis.', 6000], ['The places where you are sitting, or lying. Where the body is held.', 18000]],
     [['Let attention come to the belly.', 6000], ['The breath moving here, however it moves.', 18000]],
-    [['If a place is loud, let attention pass over it, like weather.', 8000], ['It can be there. Attention keeps moving.', 10000]],
+    [
+      ['If a place is loud, let attention pass over it, like weather.', 8000],
+      ['It can be there. Attention keeps moving.', 10000],
+      ['If attention makes anything louder, open your eyes and look around the room.', 8000],
+    ],
     [['Now the lower back.', 6000], ['Either side of the spine. Wherever the back meets support.', 18000]],
     [['Let attention climb the spine, into the upper back.', 8000], ['The shoulder blades. The space between them.', 16000]],
-    [['Now the chest.', 5000], ['The ribs, widening and settling with each breath.', 14000], ['The breastbone, at the center.', 12000]],
+    // No breastbone, no throat: for someone with health anxiety those are the places they check.
+    [['Now the chest.', 5000], ['The ribs, widening and settling with each breath.', 14000], ['The ribs, resting.', 12000]],
     [['Now let attention find your hands.', 6000], ['The palms. The backs of the hands. Each finger.', 14000], ['Up through the wrists, the forearms, the elbows, the upper arms.', 14000]],
     [['Into the shoulders.', 6000], ['Wherever they sit, they can stay just as they are.', 16000]],
-    [['Now the neck.', 5000], ['The back of the neck, the sides, the throat.', 16000]],
+    [['Now the neck.', 5000], ['The back of the neck, the sides.', 16000]],
     [['The jaw.', 5000], ['The hinge, just in front of the ears.', 12000], ['The cheeks. The eyes, resting behind the lids. The forehead.', 16000]],
     [['And the top of the head.', 6000], ['The scalp. The back of the head, where it rests.', 16000]],
     [['Now let attention widen, until it holds the whole body at once.', 12000], ['Feet to scalp. The body as a whole, breathing.', 18000], ['Nothing to do here but be with it.', 24000]],
@@ -342,7 +352,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Just stay with it, a little longer.', 14000],
     ],
     [
-      ['If it gets too loud, let attention move to your hands, or the sounds in the room.', 8000],
+      ['If a sensation gets too loud, let attention move to your hands, or the sounds in the room.', 8000],
       ['That is part of the practice too. Come back when you are ready.', 12000],
     ],
   ],
@@ -412,14 +422,15 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Let the place around the sensation be a little looser.', 14000]],
     ],
     fear: [
-      [['If there is fear here, notice it too.', 6000], ['Notice where in the body the fear sits.', 12000]],
+      // Not "notice where the fear sits": that sends a worried person searching the body.
+      [['If there is fear here, notice it too.', 6000], ['Let the fear be here too, without looking for it.', 12000]],
       [['Let the fear and the sensation sit side by side.', 6000], ['You don’t need to push either away.', 12000]],
       [['Fear makes sense. Meet it the way you would meet a frightened friend.', 14000]],
     ],
     urge: [
       [['Notice any urge to move, rub, or check it.', 8000], ['See if you can let the urge be there, and not act on it, just for now.', 14000]],
       [['Urges rise, and pass, like waves.', 6000], ['Watch one pass.', 12000]],
-      [['Nothing needs fixing in this moment.', 12000]],
+      [['Nothing needs fixing in this practice.', 12000]],
     ],
     kind: [
       [['Imagine the sensation belongs to someone you care about.', 6000], ['Notice the tone you would use with them.', 12000]],
@@ -437,10 +448,10 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['When you take the step, you can come back to this: notice, breathe, carry on gently.', 12000]],
     ],
     flare: [
-      [['Let the breath be slow.', 6000], ['There is nothing you have to do right now.', 10000]],
+      [['Let the breath be slow.', 6000], ['Nothing to do here but breathe.', 10000]],
       [['Find the edges, even roughly.', 6000], ['Let your attention rest just outside them.', 10000]],
       [['Soften what you can. Let the rest be as it is.', 12000]],
-      [['If it is too much, let attention rest on your hands, or the breath.', 8000], ['You can shift, or move, whenever you need to.', 12000]],
+      [['If this is too much, let attention move to your hands, or the sounds in the room.', 8000], ['You can shift, or move, whenever you need to.', 12000]],
     ],
     open: [
       [['Let attention widen, until it holds the whole body.', 12000]],
@@ -544,10 +555,13 @@ export const GUIDE_SCRIPT: GuideScript = {
   REAPPRAISE_CORE: [
     [
       ["You don't need to solve the sensation right now.", 5000],
-      ['See if you can notice it without immediately treating it as an emergency.', 9000],
+      // Not "without treating it as an emergency": that tells the person it isn't one.
+      ['See if you can notice it for a moment, without rushing to do anything about it.', 9000],
     ],
+    // Guided sessions reach every variant here, and they never ask. "Rather than a problem" also
+    // told the person their sensation is not a problem, which only a doctor can say.
     [
-      ['Can you allow it to be a sensation for a moment, rather than a problem that needs to be fixed?', 10000],
+      ['For this moment, let it simply be a sensation.', 10000],
     ],
     [
       ['Notice the difference between feeling something, and needing to react to it.', 10000],

@@ -19,7 +19,8 @@ test('a guided session rests on the place, then reappraises and closes', async (
   const r = await runSession({}, { mode: 'guided', place: LOWER_BACK, minutes: 10, maxTurns: 200 });
   const said = r.spoken.join(' ');
   assert.match(said, /the middle of your lower back/);
-  assert.match(said, /rather than a problem|difference between feeling something|You don't need to solve/);
+  assert.match(said, /simply be a sensation|difference between feeling something|You don't need to solve/);
+  assert.doesNotMatch(said, /rather than a problem|not a problem/);
   assert.match(r.spoken[r.spoken.length - 1], /open your eyes/);
   assert.ok(r.session.signals.observedSeconds > 4 * 60, `${r.session.signals.observedSeconds}`);
 });

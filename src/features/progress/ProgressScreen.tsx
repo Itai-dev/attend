@@ -24,11 +24,17 @@ import { ProgramPath } from '../shared/ProgramPath';
  */
 
 const CHART_H = 140;
+/**
+ * The scale's numbers sit in their own column to the right of the plot. Inside it, the latest
+ * days — the ones people look at — landed on top of "5" and "10", and the last dot was cut in half.
+ */
+const AXIS_W = 22;
 
 function Chart({ days }: { days: ProgressDay[] }) {
   const styles = useStyles(makeStyles);
   const [w, setW] = useState(0);
-  const step = days.length > 1 ? w / (days.length - 1) : 0;
+  const plotW = Math.max(0, w - AXIS_W);
+  const step = days.length > 1 ? plotW / (days.length - 1) : 0;
   const onLayout = (e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width);
   const label = `Pain over the last ${days.length} days. ${days.filter((d) => d.peak !== undefined).length} days with a check-in, ${days.filter((d) => d.practised).length} days practised.`;
   return (
@@ -36,7 +42,7 @@ function Chart({ days }: { days: ProgressDay[] }) {
       <View style={{ height: CHART_H }}>
         {[0, 5, 10].map((v) => (
           <View key={v} style={[styles.grid, { top: CHART_H - (v / PAIN_MAX) * CHART_H }]}>
-            <Txt variant="caption" tone="tertiary" style={styles.gridLabel}>
+            <Txt variant="caption" tone="tertiary" align="right" style={styles.gridLabel}>
               {v}
             </Txt>
           </View>
@@ -56,13 +62,13 @@ function Chart({ days }: { days: ProgressDay[] }) {
         <View style={styles.legendItem}>
           <View style={[styles.dot, { position: 'relative' }]} />
           <Txt variant="footnote" tone="tertiary">
-            Highest pain that day
+            highest pain that day
           </Txt>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.tick, { position: 'relative' }]} />
           <Txt variant="footnote" tone="tertiary">
-            Practised
+            practiced
           </Txt>
         </View>
       </View>
@@ -133,7 +139,7 @@ export function ProgressScreen() {
             <View style={[styles.badge, m.earned ? styles.badgeOn : styles.badgeOff]}>
               <Icon name="star.fill" size={16} tint={m.earned ? color.milestone : color.textTertiary} />
             </View>
-            <Txt variant="footnote" tone={m.earned ? 'secondary' : 'tertiary'} align="center">
+            <Txt variant="footnote" tone={m.earned ? 'secondary' : 'tertiary'} align="center" style={{ textTransform: 'lowercase' }}>
               {m.label}
             </Txt>
           </View>
@@ -228,8 +234,8 @@ export function ProgressScreen() {
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
   card: { marginTop: space.xl, padding: space.xl },
-  grid: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: color.hairline },
-  gridLabel: { position: 'absolute', right: 0, top: -16, fontSize: 10 },
+  grid: { position: 'absolute', left: 0, right: AXIS_W, height: StyleSheet.hairlineWidth, backgroundColor: color.hairline },
+  gridLabel: { position: 'absolute', right: -AXIS_W, width: AXIS_W - 4, top: -8, fontSize: 10, lineHeight: 15 },
   dot: { position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: color.text },
   practiceRow: { height: 14, marginTop: space.m },
   tick: { position: 'absolute', width: 3, height: 12, borderRadius: 2, backgroundColor: color.textTertiary },

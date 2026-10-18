@@ -13,7 +13,7 @@ import { buildMemory } from '../domain/memory';
 import { afterPractice, backgroundFor, SLEEP_TAIL_MINUTES, type BackgroundPref } from '../domain/soundscapes';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
-import { applyOpening, applyScript, ARRIVE, SCAN_BODY, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
+import { applyOpening, applyScript, ARRIVE, arrivalSafetyTexts, SCAN_BODY, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
 import type { SessionLength } from '../engine/phases';
@@ -190,7 +190,8 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
   }
   const agent = lastAgent[type];
   applyOpening(type, agent?.firstMessage);
-  const opening = [...new Set(ARRIVE[type].flatMap((v) => v.map(([text]) => text)))];
+  // The fixed safety lines are spoken in the arrival too, so they are warmed with it.
+  const opening = [...new Set([...ARRIVE[type].flatMap((v) => v.map(([text]) => text)), ...arrivalSafetyTexts(type)])];
   const out = chooseOutput(voiceId, agent);
   if (out instanceof ElevenLabsSpeechOutput) {
     await out.warm(opening).catch(() => {});
@@ -353,6 +354,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         theme: opts.theme,
         programDay: opts.programDay,
         scan: opts.scan,
+        // The first session ever (samples aside) hears what the practice is for, once.
+        firstSession: !dataRef.current.sessions.some((s) => !s.isSample),
         keepTranscript: __DEV__ && prefs.dev.keepTranscripts,
       });
       // Before sleep, the practice ends in rest: the phone may lock (no keep-awake), nothing

@@ -89,6 +89,8 @@ export type GuideContext = {
   theme?: PracticeTheme;
   /** Guided: 'body' is the body scan practice, which scans with SCAN_BODY instead of its length's scan. */
   scan?: 'body';
+  /** The person's first session ever: the arrival says, once, what the practice is for (lines.withArrivalSafety). */
+  firstSession?: boolean;
   plan: SessionPlan;
   phase: Phase;
   /** Questions already asked in this phase. */

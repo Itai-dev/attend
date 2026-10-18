@@ -73,4 +73,24 @@ export function Photo({ scene, width, height, radius = 0, drift, style, children
   );
 }
 
+/**
+ * A soft darkening at the photograph's foot, under type laid over it. Pale scenes (the tone's
+ * fog, a bright shore) left white words at under 2:1; a flat scrim dark enough to fix that
+ * would grey every photograph. Stacked bands, so no gradient library: each covers a little
+ * more of the foot, and together they deepen toward the edge.
+ */
+export function PhotoFade({ portion = 0.6, strength = 0.5 }: { portion?: number; strength?: number }) {
+  const bands = 8;
+  return (
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
+      {Array.from({ length: bands }, (_, i) => (
+        <View
+          key={i}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${(portion * 100 * (i + 1)) / bands}%`, backgroundColor: `rgba(5,8,9,${(strength / bands).toFixed(3)})` }}
+        />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({ fill: { width: '100%', height: '100%' } });

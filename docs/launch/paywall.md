@@ -1,5 +1,7 @@
 # Paywall — Day 8 gate, Today, Settings, trial reminder
 
+> Round 3 (18 Oct 2026): sleep and worry practices are always free too — a practice for a hard moment is never paywalled. `src/domain/access.ts` is the source of truth.
+
 Final copy for the Attend Plus build (LAUNCH.md §1–2). Prices are the round 1 founding prices
 and **need Itai's OK**; they come from RevenueCat/StoreKit at runtime (`{price}`), never
 hard-coded, so a change of price or currency needs no copy change.
@@ -34,7 +36,7 @@ Week 2 one.
 
 > - 21 more days of lessons and practice
 > - can't sleep, body scan and worried, any time
-> - Week 1, the flare practice, your check-ins and every sound stay free
+> - Week 1, the flare, sleep and worry practices, your check-ins and every sound stay free
 
 **Plans** (yearly selected by default)
 
@@ -104,7 +106,7 @@ no lock icon.
 
 Under it, one quiet line:
 
-> Week 1 and the flare practice are yours to repeat any time.
+> Week 1 and the flare, sleep and worry practices are yours any time.
 
 **Locked one-tap rows** (can't sleep, body scan, feeling worried): keep the row, change the
 detail from `{n} min` to `{n} min · Plus`. Tapping opens the paywall. "In a flare" is never
@@ -130,7 +132,7 @@ Section label: `attend plus`
 | In trial | `attend plus` | `Free until {date}, then {price}/year` | `manage subscription →` |
 | Yearly / monthly | `attend plus` | `Yearly · founding price` / `Monthly` | `manage subscription →` |
 | Lifetime | `attend plus` | `Yours for good` | — |
-| Lapsed | `attend plus →` | `Week 1, the flare practice and every sound stay free` | `restore purchases` |
+| Lapsed | `attend plus →` | `Week 1, the flare, sleep and worry practices and every sound stay free` | `restore purchases` |
 
 `manage subscription` opens Apple's subscription sheet. `redeem a code` opens Apple's offer-code
 sheet (clinician and tester codes). Below the section, footnote:

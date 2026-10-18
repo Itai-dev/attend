@@ -15,10 +15,10 @@ export type Script = Partial<Record<AskKind | 'default', string | string[] | nul
  */
 export async function runSession(
   script: Script,
-  opts: { type?: SessionType; minutes?: SessionLength; brain?: GuideBrain; seed?: number; maxTurns?: number; memory?: SessionMemory; mode?: SessionMode; place?: Place; theme?: PracticeTheme; scan?: ScanBank } = {},
+  opts: { type?: SessionType; minutes?: SessionLength; brain?: GuideBrain; seed?: number; maxTurns?: number; memory?: SessionMemory; mode?: SessionMode; place?: Place; theme?: PracticeTheme; scan?: ScanBank; firstSession?: boolean } = {},
 ) {
   let t = 1_000_000;
-  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', minutes: opts.minutes, now: () => t, seed: opts.seed ?? 3, memory: opts.memory, mode: opts.mode, place: opts.place, theme: opts.theme, scan: opts.scan });
+  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', minutes: opts.minutes, now: () => t, seed: opts.seed ?? 3, memory: opts.memory, mode: opts.mode, place: opts.place, theme: opts.theme, scan: opts.scan, firstSession: opts.firstSession });
   const brain = opts.brain ?? new LocalGuideBrain();
   const spoken: string[] = [];
   /** Each turn as heard, questions marked with their kind: for reading a session back. */

@@ -4,8 +4,9 @@ import { presetById } from './presets';
 /**
  * What is free and what comes with Attend Plus (LAUNCH.md §1, docs/launch/paywall.md).
  *
- * Free forever: Week 1 (program days 1–7, to repeat any time), the flare practice, every
- * sound, and the pain record. Plus: days 8–28, and the other one-tap practices any time.
+ * Free forever: Week 1 (program days 1–7, to repeat any time), every distress practice (in a
+ * flare, can't sleep, feeling worried), every sound, and the pain record. Plus: days 8–28, the
+ * body scan, and the longer everyday practices any time.
  * During Week 1 every one-tap practice is open too, so someone who can't sleep on the first
  * night never meets a paywall in their first hour — that would be the onboarding paywall the
  * studio ruled out.
@@ -26,15 +27,20 @@ export const PLUS_ENABLED = false;
 /** The last free program day. */
 export const FREE_DAYS = 7;
 
-/** One-tap practices that are never locked: "In a flare" must always open. */
-export const ALWAYS_FREE_PRESETS: readonly string[] = ['flare-3', 'flare-5'];
+/**
+ * One-tap practices that are never locked: the ones a person reaches for in distress. A
+ * paywall met at 2am, in a flare, unable to sleep or frightened by a sensation, is the worst
+ * moment to ask for money and the moment the practice matters most (safety review round 3).
+ * sleep-10 is the "can't sleep" tile on Today (presets.NEED_IT), so it is free with sleep-5.
+ */
+export const ALWAYS_FREE_PRESETS: readonly string[] = ['flare-3', 'flare-5', 'sleep-5', 'sleep-10', 'worry-3', 'worry-5'];
 
 /**
- * Open through Week 1 and locked after (paywall.md §2, "Recommended — needs Itai's OK"). Every
- * other one-tap practice is listed here, not only the three on Today, so a link into any of them
- * during Week 1 behaves the same.
+ * Open through Week 1 and locked after (paywall.md §2, "Recommended — needs Itai's OK"): the
+ * body scan and the everyday practices. Every one-tap practice not always free is listed here,
+ * so a link into any of them during Week 1 behaves the same.
  */
-export const WEEK_ONE_PRESETS: readonly string[] = ['sleep-10', 'sleep-5', 'scan-10', 'worry-5', 'worry-3', 'notice-3', 'notice-5', 'notice-10'];
+export const WEEK_ONE_PRESETS: readonly string[] = ['scan-10', 'notice-3', 'notice-5', 'notice-10'];
 
 export type PlanId = 'yearly' | 'monthly' | 'lifetime';
 
@@ -115,7 +121,7 @@ export function lockedReason(day: number, entitlement: Entitlement, opts: Option
 }
 
 /** The quiet line under the locked Day 8 card. */
-export const LOCKED_DAY_NOTE = 'Week 1 and the flare practice are yours to repeat any time.';
+export const LOCKED_DAY_NOTE = 'Week 1, and the flare, sleep and worry practices, are yours any time.';
 
 /** A one-tap row's detail: "10 min", or "10 min · Plus" when it would open the paywall. */
 export function presetDetail(id: string, entitlement: Entitlement, programDay: number, opts: Options = {}): string {
@@ -133,7 +139,15 @@ export function presetDetail(id: string, entitlement: Entitlement, programDay: n
  */
 export type PaywallFrom = 'day8' | 'settings' | 'practice';
 
-export const PAYWALL_HEADING = 'week 2 · notice';
+/** The small word above the heading. */
+export const PAYWALL_KICKER = 'attend plus';
+
+/** The heading, by where the paywall was opened from (copy review round 3). */
+export function paywallHeading(from: PaywallFrom): string {
+  if (from === 'day8') return 'week 2 · notice';
+  if (from === 'practice') return 'every practice, any time';
+  return 'all 28 days';
+}
 
 /** Body copy. Counts days practiced, never days missed; with nothing yet, the general line. */
 export function paywallBody(from: PaywallFrom, practicedDays: number): string {
@@ -145,8 +159,10 @@ export function paywallBody(from: PaywallFrom, practicedDays: number): string {
 
 export const PAYWALL_LINES: readonly string[] = [
   '21 more days of lessons and practice',
-  'can’t sleep, body scan and worried, any time',
-  'Week 1, the flare practice, your check-ins and every sound stay free',
+  // Not "the sleep, body scan and worry practices": sleep and worry are always free (above), so
+  // listing them as Plus would sell what is already the person's.
+  'The body scan and the longer practices, any time',
+  'Week 1, the flare, sleep and worry practices, your check-ins and every sound stay free',
 ];
 
 export type Plan = {
@@ -241,7 +257,7 @@ export function trialTimeline(now: number, tzMinutes: number, price: string, { r
 }
 
 export const PAYWALL_LEGAL =
-  'The free week applies to the yearly plan for new subscribers. Payment is charged to your Apple ID when the free week ends, or when you confirm. Subscriptions renew automatically at the same price unless cancelled at least 24 hours before the end of the current period. Manage or cancel any time in Settings → [your name] → Subscriptions. Founding members keep their price for as long as they stay subscribed. Lifetime is a single purchase.';
+  'The free week applies to the yearly plan for new subscribers. Payment is charged to your Apple ID when the free week ends, or when you confirm. Subscriptions renew automatically at the same price unless canceled at least 24 hours before the end of the current period. Manage or cancel any time in Settings → [your name] → Subscriptions. Founding members keep their price for as long as they stay subscribed. Lifetime is a single purchase.';
 
 /** Placeholders until the landing page's domain is chosen (docs/launch/store-listing.md). */
 export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';

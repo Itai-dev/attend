@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useData } from '@/data/store';
 import { backgroundFor, DEFAULT_LISTEN_TIMER, SOUNDSCAPES, soundscape, timerLabel, type SoundscapeId } from '@/domain/soundscapes';
 import { haptic, Icon, TitledScroll, Txt } from '@/design/components';
-import { Photo } from '@/design/Photo';
+import { Photo, PhotoFade } from '@/design/Photo';
 import { radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { startListening, useListen } from '@/voice/listen';
@@ -48,6 +48,7 @@ export function SoundsScreen() {
             >
               <Photo scene={s.id} width={tile} height={Math.round(tile * 1.2)} radius={radius.s}>
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: color.scrim }]} />
+                <PhotoFade />
                 {on ? (
                   <View style={styles.badge}>
                     <Icon name={live.playing ? 'speaker.wave.2.fill' : 'pause.fill'} size={12} tint={color.onImage} />

@@ -208,8 +208,12 @@ function phaseTurn(ctx: GuideContext): GuideTurn {
   const prefix: GuideLine[] = ctx.resumed ? [line(L.RESUME[0], L.RESUME[1], ctx)] : [];
 
   switch (ctx.phase) {
-    case 'ARRIVE':
-      return turn({ lines: lines(pickLines(L.ARRIVE[ctx.sessionType], ctx), ctx), expectsResponse: false, advance: true });
+    case 'ARRIVE': {
+      // The script supplies the words; the doctor, emergency and "stop at any time" lines are
+      // fixed and added here, so no remote edit can remove them (safety review round 3).
+      const arrival = L.withArrivalSafety(pickLines(L.ARRIVE[ctx.sessionType], ctx), ctx.sessionType, ctx.firstSession);
+      return turn({ lines: lines(arrival, ctx), expectsResponse: false, advance: true });
+    }
 
     case 'SCAN': {
       // One region per turn, so a pause cuts in between regions and resumes at the next.

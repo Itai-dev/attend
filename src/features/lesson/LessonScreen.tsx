@@ -197,7 +197,14 @@ function LessonBody({ day, i, setI, first, listening, voiceState, failed, onList
           // Two equal ways in, the same control side by side; at night, listen is the first.
           <View style={styles.choices}>{first ? [listenButton, readButton] : [readButton, listenButton]}</View>
         ) : last ? (
-          <PrimaryButton label="begin the practice" detail={`${day.practice.minutes} min · find a comfortable place, then close your eyes`} onPress={onFinish} />
+          // What it takes, above the button, as on Today: inside the button it broke onto a
+          // second line with "your eyes" alone.
+          <>
+            <Txt variant="footnote" tone="secondary" style={{ marginBottom: space.xs }}>
+              {day.practice.minutes} min · find a comfortable place, then close your eyes
+            </Txt>
+            <PrimaryButton label="begin the practice" accessibilityLabel={`Begin the practice. ${day.practice.minutes} minutes. Find a comfortable place, then close your eyes`} onPress={onFinish} />
+          </>
         ) : (
           <PrimaryButton
             label="next"

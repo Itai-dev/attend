@@ -13,8 +13,11 @@ import { currentDay, PROGRAM_DAYS, programDay, type ProgramState } from './progr
  * The plan is anchored on the latest practice, not on "now", so opening the app without
  * practicing doesn't push the step-down back, and rescheduling twice gives the same plan.
  *
- * Copy rules (researcher): no health words beyond the lesson's own title, never a count of
- * days missed, never "waiting" as an obligation. Pure: no React, no Expo, tested in Node.
+ * Copy rules (researcher, safety review round 3): nothing on the lock screen says what the app
+ * is for. A lesson title ("day 1 · pain is real") above a notification told anyone glancing at
+ * the phone that its owner has chronic pain, so titles carry the day number only and no line
+ * names pain, a flare, or a lesson. Never a count of days missed, never "waiting" as an
+ * obligation. Pure: no React, no Expo, tested in Node.
  */
 
 export type PlannedReminder = {
@@ -74,20 +77,23 @@ const WEEKLY_BODIES: Array<(n: number) => string> = [
   (n) => `Whenever you’d like to come back, day ${n} is right where it was.`,
   (n) => `Nothing has reset. Day ${n} is here whenever you are.`,
   () => 'Your practice is here. Nothing to catch up on.',
-  (n) => `Day ${n} is waiting, just as it was. 3 minutes is enough to begin.`,
+  (n) => `Day ${n} is just as you left it. 3 minutes is enough to begin.`,
   (n) => `A few minutes, eyes closed, whenever you want them. Day ${n} is ready.`,
   () => 'Come back any time. The next practice starts from where you are.',
 ];
 
 const AFTER_PROGRAM = [
   'A practice is here whenever you’d like one.',
-  'The body scan, a flare practice, or 3 quiet minutes. Here when you want them.',
+  'The body scan, or 3 quiet minutes, eyes closed. Here when you want them.',
 ];
 
-/** `day 3 · the worry loop`. Day 28's lesson is titled "Day 28", so it gets its own. */
+/**
+ * `day 3`: the number only. The lesson's title is health information on a lock screen (see
+ * the copy rules above). Day 28 keeps its own words, which say nothing about health.
+ */
 export function dailyTitle(day: number): string {
   if (day === PROGRAM_DAYS) return `day ${PROGRAM_DAYS} · the last day`;
-  return `day ${day} · ${programDay(day).lesson.title.toLowerCase()}`;
+  return `day ${day}`;
 }
 
 export function planReminders(input: ReminderPlanInput): PlannedReminder[] {

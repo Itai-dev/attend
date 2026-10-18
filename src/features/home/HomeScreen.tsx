@@ -104,13 +104,19 @@ export function HomeScreen() {
       onPress={() => router.push('/checkin')}
       style={({ pressed }) => [styles.logRow, { opacity: pressed ? 0.6 : 1 }]}
     >
-      <View style={{ flex: 1 }}>
-        <Txt variant="headline">log today’s pain</Txt>
-        <Txt variant="footnote" tone="secondary">
-          10 seconds. Over weeks, a record you can look back on.
+      {/* The arrow sits with the label, as on every other row here, so the line under it has the
+          full width (beside a chevron it broke with one word left over). */}
+      <View style={styles.logHead}>
+        <Txt variant="headline" style={{ flex: 1 }}>
+          log today’s pain
+        </Txt>
+        <Txt variant="callout" importantForAccessibility="no" accessibilityElementsHidden>
+          →
         </Txt>
       </View>
-      <Icon name="chevron.right" size={14} tint={color.textTertiary} />
+      <Txt variant="footnote" tone="secondary">
+        10 seconds. Over weeks, a record you can look back on.
+      </Txt>
     </Pressable>
   ) : null;
 
@@ -277,7 +283,7 @@ function NowPlaying({ listen }: { listen: ReturnType<typeof useListen> }) {
       <View style={{ flex: 1 }}>
         <Txt variant="headline">{s.name}</Txt>
         <Txt variant="footnote" tone="secondary">
-          {listen.playing ? timerLabel(listen.timer, listen.timerElapsedMs) : 'Paused'}
+          {listen.playing ? timerLabel(listen.timer, listen.timerElapsedMs) : 'paused'}
         </Txt>
       </View>
       <Pressable
@@ -304,9 +310,8 @@ const makeStyles = (color: Palette) =>
     onImage: { color: color.onImage },
     shadow: { textShadowColor: 'rgba(5,8,9,0.3)', textShadowRadius: 14, textShadowOffset: { width: 0, height: 1 } },
     logRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: space.m,
+      justifyContent: 'center',
+      gap: space.xxs,
       minHeight: 64,
       marginTop: space.xxl,
       paddingVertical: space.m,
@@ -314,6 +319,7 @@ const makeStyles = (color: Palette) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderColor: color.hairline,
     },
+    logHead: { flexDirection: 'row', alignItems: 'center', gap: space.m },
     needRow: {
       flexDirection: 'row',
       alignItems: 'center',

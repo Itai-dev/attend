@@ -92,7 +92,9 @@ const DAYS: Def[] = [
     'The worry loop',
     [
       { text: ['Pain brings worry. About what this is, whether it will get worse, whether you might make it worse.'] },
-      { text: ['Worry tells the alarm there may be danger, and the alarm turns the volume up. More pain, more worry.'] },
+      // The loop must not read as "worry causes your pain", nor as a reason to wave off a new worry
+      // (safety review round 3).
+      { text: ['Worry tells the alarm there may be danger, and the alarm turns the volume up. More pain, more worry.', 'This doesn’t mean worry causes pain. Worry about something new is a reason to have it checked.'] },
       { text: ['Meeting a sensation with less alarm is one way to loosen the loop. That is what the practice trains.'] },
     ],
     'Breath around it',
@@ -102,7 +104,14 @@ const DAYS: Def[] = [
   [
     'Signs from your own pain',
     [
-      { text: ['Clinicians look for signs that pain is coming from a sensitive alarm rather than from ongoing damage.'] },
+      // Merged into card 1 so card 2 stays the signs (firstWeek.ts reads it), and so the signs are
+      // never read without the other half of what clinicians look for (safety review round 3).
+      {
+        text: [
+          'Clinicians look for signs that pain is coming from a sensitive alarm rather than from ongoing damage.',
+          'They also look for signs that need a closer look. That’s why anything new or changing goes to a doctor first.',
+        ],
+      },
       { text: ['Here are some of those signs. It began during a stressful time. It moves, or spreads. It changes with mood or setting. It fades when you are absorbed in something.'] },
       {
         text: ['Only you can weigh your own signs, ideally with your doctor. The app can’t.'],

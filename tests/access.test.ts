@@ -11,10 +11,11 @@ import {
   lockedReason,
   longDate,
   NO_PLUS,
-  PAYWALL_HEADING,
+  PAYWALL_KICKER,
   PAYWALL_LEGAL,
   PAYWALL_LINES,
   paywallBody,
+  paywallHeading,
   PLANS,
   PLUS_ENABLED,
   presetDetail,
@@ -37,7 +38,7 @@ test('the app ships with Plus off, and with it off everything is allowed', () =>
   for (const d of DAYS) assert.ok(canStartDay(d, NO_PLUS), `day ${d}`);
   for (const p of PRESETS) for (const day of [1, 8, 28]) assert.ok(canStartPreset(p.id, NO_PLUS, day, { daysSinceStart: 40 }), `${p.id} on day ${day}`);
   assert.equal(lockedReason(8, NO_PLUS), null);
-  assert.equal(presetDetail('sleep-10', NO_PLUS, 20), '10 min');
+  assert.equal(presetDetail('scan-10', NO_PLUS, 20), '10 min');
 });
 
 test('with Plus on, days 1–7 are free forever and days 8–28 need Plus', () => {
@@ -45,17 +46,31 @@ test('with Plus on, days 1–7 are free forever and days 8–28 need Plus', () =
   for (const d of DAYS) assert.ok(canStartDay(d, PLUS, ON), `day ${d} with Plus`);
 });
 
-test('the flare practice is never locked', () => {
-  for (const id of ['flare-3', 'flare-5']) {
+test('a distress practice is never locked: in a flare, can’t sleep, feeling worried', () => {
+  for (const id of ['flare-3', 'flare-5', 'sleep-5', 'sleep-10', 'worry-3', 'worry-5']) {
     assert.ok(ALWAYS_FREE_PRESETS.includes(id));
     for (const day of [1, 7, 8, 28]) assert.ok(canStartPreset(id, NO_PLUS, day, { ...ON, daysSinceStart: 90 }), `${id} on day ${day}`);
   }
-  const flare = NEED_IT.find((n) => n.label === 'in a flare')!;
-  assert.equal(presetDetail(flare.id, NO_PLUS, 20, ON), '3 min');
+  for (const label of ['in a flare', 'can’t sleep', 'feeling worried']) {
+    const tile = NEED_IT.find((n) => n.label === label)!;
+    assert.ok(ALWAYS_FREE_PRESETS.includes(tile.id), label);
+    assert.equal(presetDetail(tile.id, NO_PLUS, 20, { ...ON, daysSinceStart: 90 }), tile.detail, label);
+  }
+  // Every preset of a distress type is free, however many are added later.
+  for (const p of PRESETS.filter((x) => x.type === 'flare' || x.type === 'sleep' || x.type === 'fear')) assert.ok(ALWAYS_FREE_PRESETS.includes(p.id), p.id);
+});
+
+test('Plus covers days 8–28, the body scan and the longer everyday practices', () => {
+  for (const id of ['scan-10', 'notice-5', 'notice-10']) {
+    assert.ok(!ALWAYS_FREE_PRESETS.includes(id), id);
+    assert.equal(canStartPreset(id, NO_PLUS, 8, ON), false, id);
+    assert.ok(canStartPreset(id, PLUS, 8, ON), id);
+  }
+  for (const id of WEEK_ONE_PRESETS) assert.ok(!ALWAYS_FREE_PRESETS.includes(id), id);
 });
 
 test('nobody meets a paywall in Week 1: every one-tap practice is open until Day 8', () => {
-  for (const id of ['sleep-10', 'scan-10', 'worry-5']) {
+  for (const id of ['scan-10', 'notice-5', 'notice-10']) {
     assert.ok(WEEK_ONE_PRESETS.includes(id), id);
     for (const day of [1, 4, 7]) assert.ok(canStartPreset(id, NO_PLUS, day, ON), `${id} on day ${day}`);
     assert.equal(canStartPreset(id, NO_PLUS, 8, ON), false, `${id} on day 8`);
@@ -67,8 +82,8 @@ test('nobody meets a paywall in Week 1: every one-tap practice is open until Day
 });
 
 test('the free week also ends seven days after starting, whichever comes first', () => {
-  assert.ok(canStartPreset('sleep-10', NO_PLUS, 3, { ...ON, daysSinceStart: 6 }));
-  assert.equal(canStartPreset('sleep-10', NO_PLUS, 3, { ...ON, daysSinceStart: 7 }), false);
+  assert.ok(canStartPreset('scan-10', NO_PLUS, 3, { ...ON, daysSinceStart: 6 }));
+  assert.equal(canStartPreset('scan-10', NO_PLUS, 3, { ...ON, daysSinceStart: 7 }), false);
   // The program days themselves stay free whenever they're done.
   assert.ok(canStartDay(3, NO_PLUS, { ...ON, daysSinceStart: 30 }));
 });
@@ -84,8 +99,9 @@ test('the locked copy for Today and its rows', () => {
   assert.equal(lockedReason(15, NO_PLUS, ON), 'week 3 · soften — continues with Plus');
   assert.equal(lockedReason(28, NO_PLUS, ON), 'week 4 · live — continues with Plus');
   assert.equal(lockedReason(8, PLUS, ON), null);
-  assert.equal(presetDetail('sleep-10', NO_PLUS, 8, ON), '10 min · Plus');
-  assert.equal(presetDetail('sleep-10', NO_PLUS, 3, ON), '10 min');
+  assert.equal(presetDetail('scan-10', NO_PLUS, 8, ON), '10 min · Plus');
+  assert.equal(presetDetail('scan-10', NO_PLUS, 3, ON), '10 min');
+  assert.equal(presetDetail('sleep-10', NO_PLUS, 8, ON), '10 min');
 });
 
 test('the entitlement comes from the stored record, and a lapse is simply no Plus', () => {
@@ -98,6 +114,17 @@ test('the entitlement comes from the stored record, and a lapse is simply no Plu
   const trial = entitlementFrom({ plus: { plan: 'yearly', trialEndsAt: now + 3 * 86_400_000, expiresAt: now + 3 * 86_400_000 } }, now);
   assert.equal(trial.plus, true);
   assert.equal(trial.inTrial, true);
+});
+
+test('the paywall heading follows where it was opened from, and the legal copy is American English', () => {
+  assert.equal(PAYWALL_KICKER, 'attend plus');
+  assert.equal(paywallHeading('day8'), 'week 2 · notice');
+  assert.equal(paywallHeading('practice'), 'every practice, any time');
+  assert.equal(paywallHeading('settings'), 'all 28 days');
+  assert.match(PAYWALL_LEGAL, /unless canceled/);
+  assert.doesNotMatch(PAYWALL_LEGAL, /cancelled/);
+  // Nothing always free is sold as Plus.
+  assert.doesNotMatch(PAYWALL_LINES[1], /sleep|worr|flare/i);
 });
 
 test('the paywall body counts days practiced, singular and plural, never days missed', () => {
@@ -146,7 +173,7 @@ test('the trial timeline gives real dates, written out, not program days', () =>
 });
 
 test('nothing on the paywall pressures, grades, or mentions pain', () => {
-  const copy = [PAYWALL_HEADING, paywallBody('day8', 5), paywallBody('settings', 0), ...PAYWALL_LINES, PAYWALL_LEGAL, ...Object.values(PURCHASE_COPY)];
+  const copy = [PAYWALL_KICKER, paywallHeading('day8'), paywallHeading('practice'), paywallHeading('settings'), paywallBody('day8', 5), paywallBody('settings', 0), ...PAYWALL_LINES, PAYWALL_LEGAL, ...Object.values(PURCHASE_COPY)];
   for (const p of PLANS) copy.push(p.label, p.note ?? '', p.detail('$1', true), p.button(true), p.billing('$1', true), p.button(false), p.billing('$1', false));
   for (const s of trialTimeline(Date.UTC(2026, 9, 18), 0, '$1')) copy.push(s.when, s.what);
   for (let d = 1; d <= PROGRAM_DAYS; d++) copy.push(lockedReason(d, NO_PLUS, ON) ?? '');

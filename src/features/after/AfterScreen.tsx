@@ -93,7 +93,8 @@ export function AfterScreen({ session }: { session: Session }) {
 
         <Animated.View entering={FadeInDown.delay(900).duration(900)} style={{ marginTop: space.xxl }}>
           <WeekStrip days={strip} />
-          <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
+          {/* Centred with the moment above it; the form below is left-aligned like every form. */}
+          <Txt variant="footnote" tone="secondary" align="center" style={{ marginTop: space.m }}>
             {weekLine(stats, now)}
           </Txt>
         </Animated.View>

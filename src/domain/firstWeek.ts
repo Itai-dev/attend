@@ -31,8 +31,18 @@ export type SignAnswer = SignId | 'none' | 'unsure';
 /** Stored in prefs. Absent: never asked. `skipped`: asked, and "not now". Otherwise answered. */
 export type SignsReply = { at: number; skipped?: true; signs?: SignAnswer[] };
 
-export const SIGNS_PROMPT = 'On Day 4 you read some signs. Which, if any, have you noticed?';
-export const NONE_REPLY = 'That’s worth knowing too. Signs can show up later, or not at all. You can talk them over with your doctor.';
+export const SIGNS_PROMPT = 'Day 4 named some signs. Which, if any, sound familiar?';
+/**
+ * "Signs can show up later" read as "keep watching for them", an invitation to check the body
+ * (safety review round 3). Many people's pain shows none of these; the practice doesn't depend
+ * on it, and weighing what's behind the pain is the doctor's part, not the app's.
+ */
+export const NONE_REPLY = 'That’s worth knowing too. Not everyone’s pain shows these. The practice is the same either way, and your doctor can help you weigh what’s behind it.';
+/**
+ * Shown under the question after any answer (signs, none, or not sure). Ticking signs must not
+ * read as a result: the app never concludes what someone's pain is.
+ */
+export const SIGNS_NOTE = 'These are things to notice, not a diagnosis.';
 export const SIGN_EXTRAS: Array<{ id: 'none' | 'unsure'; label: string }> = [
   { id: 'none', label: 'none of these' },
   { id: 'unsure', label: 'not sure' },
@@ -92,19 +102,20 @@ export function firstWeekCard(input: { sessions: Session[]; program: ProgramStat
     );
   }
   if (lessons > 0) lines.push(`${plural(lessons, 'lesson', 'lessons')}.`);
-  if (chips.length === 1 && chips[0] === 'hard today') lines.push('How practice felt: hard today. Hard ones count the same.');
+  if (chips.length === 1 && chips[0] === 'hard today') lines.push('How practice felt: hard today. Showing up was the practice.');
   else if (chips.length) lines.push(`How practice felt: ${list(chips)}.`);
 
-  // The copy's footnote is "day 8 opens tomorrow", written for the evening Day 7 is done; the
-  // card shows from the next day, when Day 8 is already open, so it says what is true today.
+  // Only once today's day is done does the footnote add anything ("day 9 opens tomorrow"); on a
+  // day still open, Today already shows it, and a second line pointing at it reads as a nudge.
   const { day, doneToday, finished } = currentDay(program, dayKey(now, tz));
-  const footnote = finished ? undefined : doneToday ? `day ${day + 1} opens tomorrow` : `day ${day} is open today`;
+  const footnote = doneToday && !finished ? `day ${day + 1} opens tomorrow` : undefined;
 
   return {
     kicker: 'your first week',
     title: 'a week of practice',
     lines,
-    closing: 'Keep noticing your own signs, and saving moments as they come. They’re your evidence, gathered by you.',
+    // Not "keep noticing your own signs": that invites checking the body (copy review round 3).
+    closing: 'Save moments as they come. They gather in Progress, in your own words.',
     footnote,
   };
 }

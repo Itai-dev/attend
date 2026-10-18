@@ -67,6 +67,11 @@ export type EngineOptions = {
    * too, and must keep their own scan and theme lines.
    */
   scan?: ScanBank;
+  /**
+   * No earlier session (samples aside): the arrival adds the fixed first-session doctor line.
+   * Set by the app from the device's sessions, never by a model or the remote script.
+   */
+  firstSession?: boolean;
 };
 
 /** Which scan bank a session uses, beyond the one its length gives it. */
@@ -120,6 +125,7 @@ export class SessionEngine {
   readonly theme?: PracticeTheme;
   readonly programDay?: number;
   readonly scan?: ScanBank;
+  readonly firstSession: boolean;
 
   private readonly now: () => number;
   private readonly newId: (prefix?: string) => string;
@@ -172,6 +178,7 @@ export class SessionEngine {
     this.theme = this.mode === 'guided' ? opts.theme : undefined;
     this.programDay = opts.programDay;
     this.scan = this.mode === 'guided' && opts.scan === 'body' && this.plan.targetMs >= BODY_SCAN_MIN_MS ? 'body' : undefined;
+    this.firstSession = opts.firstSession ?? false;
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
   }
@@ -225,6 +232,7 @@ export class SessionEngine {
       place: this.place,
       theme: this.theme,
       scan: this.scan,
+      firstSession: this.firstSession,
       plan: this.plan,
       phase: this._phase,
       phaseTurn: this.phaseTurn,

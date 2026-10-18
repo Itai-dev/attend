@@ -144,8 +144,13 @@ export function SettingsScreen() {
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
             Your sessions and check-ins are stored only on this iPhone. There is no account. Sessions are guided: they never use the microphone, and nothing you say is heard. Where the guide rests your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
-            {hasRemote ? ' The guide’s lines are voiced through Attend’s voice service by ElevenLabs. The only thing about you in them is the body area a practice rests on, such as “your lower back”, with no name or account attached.' : ''}
           </Txt>
+          {/* Its own paragraph: the one thing that leaves the phone shouldn't sit mid-wall. */}
+          {hasRemote ? (
+            <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+              The guide’s lines are voiced through Attend’s voice service by ElevenLabs. The only thing about you in them is the body area a practice rests on, such as “your lower back”, with no name or account attached.
+            </Txt>
+          ) : null}
         </View>
         <Hairline />
         <Pressable

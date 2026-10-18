@@ -139,10 +139,14 @@ const makeStyles = (color: Palette) =>
   top: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: space.s },
   readout: { flexDirection: 'row', alignItems: 'baseline', gap: space.m, marginTop: space.xl },
   scale: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, marginTop: space.xl },
+  // Six to a row across the full width, nearly square (Daisy): the 0–5 row lines up with the
+  // labels under it, where fixed circles left a ragged edge and "10" far from "most intense".
   step: {
-    width: HIT + 4,
+    flexBasis: '14%',
+    flexGrow: 1,
+    maxWidth: '15.5%',
     height: HIT + 4,
-    borderRadius: radius.pill,
+    borderRadius: radius.s,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: color.surface,

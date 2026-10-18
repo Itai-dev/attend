@@ -11,7 +11,7 @@ import { REGIONS } from '@/domain/regions';
 import { backgroundFor, soundscape, SOUNDSCAPES, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
 import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
-import { HIT, radius, space, type Palette } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { startPractice } from '../shared/start';
 import { SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
@@ -94,12 +94,12 @@ export function BeforeScreen() {
 
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom + space.l }]}>
+      {/* Kicker left, close right: the same top bar as the lesson and the check-in. */}
       <View style={styles.top}>
-        <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
         <Txt variant="footnote" tone="tertiary">
           {plan.kicker}
         </Txt>
-        <View style={{ width: HIT }} />
+        <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -212,7 +212,7 @@ export function BeforeScreen() {
         </View>
 
         <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
-          Headphones on · Sit or lie down · Eyes closed
+          headphones on · sit or lie down · eyes closed
         </Txt>
       </ScrollView>
 
@@ -226,7 +226,7 @@ export function BeforeScreen() {
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.s, paddingTop: space.m },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: space.xl, paddingRight: space.s, paddingTop: space.m },
   body: { padding: space.xl, paddingTop: space.s },
   group: {
     marginTop: space.xl,
@@ -238,7 +238,8 @@ const makeStyles = (color: Palette) =>
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.l },
   hair: { height: StyleSheet.hairlineWidth, backgroundColor: color.hairline, marginHorizontal: space.l },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, padding: space.l, paddingTop: 0 },
-  lengths: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: radius.pill, backgroundColor: color.surfaceStrong },
-  len: { minWidth: 46, minHeight: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  // Nearly square, like every other control (Daisy), and 44pt with the frame around it.
+  lengths: { flexDirection: 'row', gap: 2, padding: 2, borderRadius: radius.s, backgroundColor: color.surfaceStrong },
+  len: { minWidth: 44, minHeight: 40, borderRadius: 3, alignItems: 'center', justifyContent: 'center' },
   lenOn: { backgroundColor: color.text },
 });

@@ -58,7 +58,7 @@ export function practiceStats(sessions: Session[], now: number, tz: number): Pra
 
 /** One line under the week strip. Never a count of missed days, never a judgement. */
 export function weekLine(stats: PracticeStats, now: number): string {
-  if (stats.sessions === 0) return 'Your first practice is waiting.';
+  if (stats.sessions === 0) return 'Practice days show here as dots.';
   const away = stats.lastPractice ? Math.floor((now - stats.lastPractice) / DAY) : 0;
   if (away >= 4) return 'Welcome back. Pick up wherever you like.';
   if (stats.daysThisWeek === 0) return 'A new week. Nothing to catch up on.';
@@ -70,12 +70,12 @@ export type MilestoneId = 'first' | 'three_days' | 'seven_days' | 'flare_met' | 
 export type Milestone = { id: MilestoneId; label: string; detail: string; earned: boolean };
 
 export const MILESTONE_COPY: Record<MilestoneId, { label: string; detail: string }> = {
-  first: { label: 'First session', detail: 'You began.' },
+  first: { label: 'first session', detail: 'You began.' },
   three_days: { label: '3 days', detail: 'Three days of practice.' },
-  seven_days: { label: 'A full week', detail: 'Seven practice days since you began.' },
-  flare_met: { label: 'A flare met', detail: 'You met a flare with a practice.' },
-  first_moment: { label: 'A first step', detail: 'You saved a moment toward your goal.' },
-  halfway: { label: 'Halfway', detail: 'Fourteen days of the program.' },
+  seven_days: { label: 'a full week', detail: 'Seven practice days since you began.' },
+  flare_met: { label: 'a flare met', detail: 'You met a flare with a practice.' },
+  first_moment: { label: 'a first step', detail: 'You saved a moment toward your goal.' },
+  halfway: { label: 'halfway', detail: 'Fourteen days of the program.' },
   program_done: { label: '28 days', detail: 'The whole program, done.' },
 };
 

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import {
   DEFAULT_PLAN,
-  PAYWALL_HEADING,
+  paywallHeading,
   PAYWALL_LEGAL,
   PAYWALL_LINES,
   paywallBody,
@@ -125,7 +125,7 @@ export function PlusScreen() {
               attend plus
             </Txt>
             <Txt variant="display" accessibilityRole="header" style={styles.onImage}>
-              {PAYWALL_HEADING}
+              {paywallHeading(from)}
             </Txt>
           </View>
         </Photo>
@@ -240,7 +240,7 @@ export function PlusScreen() {
 
 function FooterLink({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={{ top: 14, bottom: 14, left: 6, right: 6 }} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
       <Txt variant="footnote" tone="secondary" style={{ textDecorationLine: 'underline' }}>
         {label}
       </Txt>
@@ -262,7 +262,8 @@ const makeStyles = (color: Palette) =>
     heroText: { position: 'absolute', left: space.xl, right: space.xl, bottom: space.xl },
     onImage: { color: color.onImage },
     top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.l },
-    closeBtn: { backgroundColor: 'rgba(0,0,0,0.18)' },
+    // The same close as Just listen's: nearly square, on the photograph.
+    closeBtn: { backgroundColor: 'rgba(5,8,9,0.25)', borderRadius: radius.s },
     body: { paddingHorizontal: space.xl, paddingTop: space.xl },
     lines: { marginTop: space.xl, gap: space.m },
     line: { flexDirection: 'row', alignItems: 'flex-start', gap: space.m },

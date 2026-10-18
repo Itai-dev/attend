@@ -47,7 +47,7 @@ test('a sensation described as new ends the practice with a medical suggestion, 
   assert.equal(r.session.outcome, 'safety_pause');
   const said = r.spoken.join(' ');
   assert.match(said, /doctor|medical professional/);
-  assert.doesNotMatch(said, /emergency\b.*treating|without immediately treating it as an emergency/);
+  assert.doesNotMatch(said, /emergency\b.*treating|without immediately treating it as an emergency|rushing to do anything about it|simply be a sensation/);
 });
 
 test('a hint of something new asks once; "familiar" continues the practice', async () => {

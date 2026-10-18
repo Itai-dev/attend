@@ -40,9 +40,9 @@ The studio's go-to-market review changed the earlier plan. Competitors: Curable 
 year ($191.88 list) / $399.99 lifetime; Pathways $59.99–69.99/yr; Calm/Headspace $69.99–79.99/yr.
 No one sells a daily, eyes-closed somatic-tracking practice.
 
-- **Free forever:** Week 1 (Days 1–7), the flare practice, the pain record, and **every sound**
+- **Free forever:** Week 1 (Days 1–7), the flare, sleep and worry practices (round 3: a practice for a hard moment is never paywalled), the pain record, and **every sound**
   (sounds cost nothing to play and bring people back each evening; a locked sound reads cheap).
-- **Attend Plus:** Days 8–28; can't sleep, body scan and worried any time; voice and length
+- **Attend Plus:** Days 8–28; the body scan and the longer practices any time; voice and length
   options.
 - **Founding prices until 10 Jan 2027:** **$39.99/year with 7 days free**, **$7.99/month**,
   **$99 lifetime** (this audience is tired of subscriptions, and a 28-day program reads as a

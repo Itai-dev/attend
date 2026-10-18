@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { firstWeekCard, NONE_REPLY, showFirstWeek, SIGNS, toggleSign } from '../src/domain/firstWeek';
+import { firstWeekCard, NONE_REPLY, showFirstWeek, SIGNS, SIGNS_NOTE, SIGNS_PROMPT, toggleSign } from '../src/domain/firstWeek';
 import { completeDay, EMPTY_PROGRAM, markRead, programDay, type ProgramState } from '../src/domain/program';
 import type { Session } from '../src/domain/types';
 
@@ -32,8 +32,10 @@ test('the card says what was done: days, active minutes, lessons, how practice f
   assert.equal(card.kicker, 'your first week');
   assert.equal(card.title, 'a week of practice');
   assert.deepEqual(card.lines, ['7 days of practice, 39 minutes with eyes closed.', '7 lessons.', 'How practice felt: settled, curious, and hard today.']);
-  assert.equal(card.footnote, 'day 8 is open today');
-  for (const l of [...card.lines, card.closing]) assert.doesNotMatch(l, /of 7|miss|pain|\?/i);
+  // Day 8 is open and Today already says so: no footnote pointing at it.
+  assert.equal(card.footnote, undefined);
+  assert.equal(card.closing, 'Save moments as they come. They gather in Progress, in your own words.');
+  for (const l of [...card.lines, card.closing]) assert.doesNotMatch(l, /of 7|miss|pain|evidence|signs|\?/i);
 });
 
 test('lines with nothing to show are left out, and hard today alone gets its own line', () => {
@@ -41,7 +43,7 @@ test('lines with nothing to show are left out, and hard today alone gets its own
   const bare = firstWeekCard({ sessions: [], program: { ...program, read: [] }, now: NOW, tz: TZ });
   assert.deepEqual(bare.lines, []);
   const hard = firstWeekCard({ sessions: [s(2, 5, { feeling: 'hard' }), s(1, 1, { feeling: 'hard' })], program: { ...program, read: [1] }, now: NOW, tz: TZ });
-  assert.deepEqual(hard.lines, ['2 days of practice, 6 minutes with eyes closed.', '1 lesson.', 'How practice felt: hard today. Hard ones count the same.']);
+  assert.deepEqual(hard.lines, ['2 days of practice, 6 minutes with eyes closed.', '1 lesson.', 'How practice felt: hard today. Showing up was the practice.']);
 });
 
 test('the first week stays the first week: later sessions and samples are not counted', () => {
@@ -66,5 +68,12 @@ test('the signs question: the four Day 4 signs, several allowed; none and not su
   assert.deepEqual(toggleSign(picked, 'none'), ['none']);
   assert.deepEqual(toggleSign(['unsure'], 'stress'), ['stress']);
   assert.deepEqual(toggleSign(['stress'], 'stress'), []);
-  assert.doesNotMatch(NONE_REPLY, /safe|nothing is wrong|brain|\?/i);
+  assert.doesNotMatch(NONE_REPLY, /safe|nothing is wrong|brain|later|\?/i);
+  assert.match(NONE_REPLY, /doctor/);
+  assert.equal(SIGNS_PROMPT, 'Day 4 named some signs. Which, if any, sound familiar?');
+});
+
+test('after any answer, the signs are named as things to notice, never a diagnosis', () => {
+  assert.equal(SIGNS_NOTE, 'These are things to notice, not a diagnosis.');
+  assert.doesNotMatch(SIGNS_NOTE, /safe|benign|nothing is wrong|brain|\?/i);
 });

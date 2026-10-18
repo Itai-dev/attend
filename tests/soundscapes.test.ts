@@ -50,8 +50,8 @@ test('a timer changed mid-listen counts from when it was set, without a second f
 
 test('the timer reads plainly', () => {
   assert.equal(timerLabel(20, 2 * MIN), '18 min left');
-  assert.equal(timerLabel(20, 19.5 * MIN), 'Fading out');
-  assert.equal(timerLabel(0, 99 * MIN), 'Until you stop');
+  assert.equal(timerLabel(20, 19.5 * MIN), 'fading out');
+  assert.equal(timerLabel(0, 99 * MIN), 'until you stop');
 });
 
 test('levels stay within range, and the copy makes no claim about the body', () => {

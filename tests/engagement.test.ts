@@ -25,7 +25,7 @@ test('a missed day is a day without a dot, nothing resets, and coming back is we
   assert.equal(weekLine(stats, NOW), '3 practice days this week.');
   const away = practiceStats([s(6)], NOW, TZ);
   assert.equal(weekLine(away, NOW), 'Welcome back. Pick up wherever you like.');
-  assert.equal(weekLine(practiceStats([], NOW, TZ), NOW), 'Your first practice is waiting.');
+  assert.equal(weekLine(practiceStats([], NOW, TZ), NOW), 'Practice days show here as dots.');
   for (const line of [weekLine(stats, NOW), weekLine(away, NOW)]) assert.doesNotMatch(line, /miss|lost|broke|streak|behind/i);
 });
 

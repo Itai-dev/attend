@@ -39,7 +39,7 @@ export const SOUNDSCAPES: readonly Soundscape[] = [
   { id: 'ocean', name: 'Ocean', line: 'Slow waves on a wide shore', gain: toneMatch(MASTERED_DB) },
   { id: 'night', name: 'Night', line: 'Crickets and a warm evening', gain: toneMatch(MASTERED_DB) },
   { id: 'fire', name: 'Fireside', line: 'A small fire, settling', gain: toneMatch(MASTERED_DB) },
-  { id: 'tone', name: 'Soft tone', line: 'A low drone, tuned to 432 Hz', gain: 1 },
+  { id: 'tone', name: 'Soft tone', line: 'A low, steady drone', gain: 1 },
 ];
 
 /** Under a session, for someone who has never chosen: rain is the most even of the sounds. */
@@ -99,11 +99,11 @@ export function listenVolumeAt(elapsedMs: number, timerMin: ListenTimer, timerEl
   return ease(Math.min(rise, fall));
 }
 
-/** "18 min left", "Until you stop": the timer, in words. `elapsedMs` counts from when it was set. */
+/** "18 min left", "until you stop": the timer, in words, lowercase like everything glanced at. `elapsedMs` counts from when it was set. */
 export function timerLabel(timerMin: ListenTimer, elapsedMs = 0): string {
-  if (!timerMin) return 'Until you stop';
+  if (!timerMin) return 'until you stop';
   const left = Math.max(0, Math.ceil((timerMin * 60_000 - elapsedMs) / 60_000));
-  return left <= 1 ? 'Fading out' : `${left} min left`;
+  return left <= 1 ? 'fading out' : `${left} min left`;
 }
 
 /**
