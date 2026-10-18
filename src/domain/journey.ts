@@ -190,7 +190,7 @@ export function analyzeJourney(all: Session[], now = Date.now()): JourneyAnalysi
         id: 'stable',
         text: "Across these sessions, the sensation has mostly stayed the same. You’ve kept returning to it all the same.",
         evidence: `Mostly unchanged in ${n - anyVar} of ${sessions(n)}.`,
-        homeLine: "Lately, the sensation has mostly stayed the same, and you’ve kept practising with it.",
+        homeLine: "Lately, the sensation has mostly stayed the same, and you’ve kept practicing with it.",
       });
     }
   }

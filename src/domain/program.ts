@@ -56,7 +56,8 @@ export const WEEKS: Record<1 | 2 | 3 | 4, { name: string; about: string }> = {
   4: { name: 'Live', about: 'Back to what you want to do' },
 };
 
-const DOCTOR = 'If your pain is new, changing, or worries you, have it checked by a doctor before practising with it.';
+// Not a gate before the first practice: it reads as a check that sits beside care (research round 1, 18 Oct 2026).
+const DOCTOR = 'If a pain is new, or different from your usual, have it checked by a doctor. Keep any treatment you have; this practice sits beside it.';
 
 type Def = [title: string, cards: LessonCard[], practice: string, theme: PracticeTheme, minutes: 3 | 5 | 7 | 10];
 
@@ -65,7 +66,7 @@ const DAYS: Def[] = [
   [
     'Pain is real',
     [
-      { text: ['Every pain you feel is real. All pain is made by the nervous system — that is how pain works for everyone.'] },
+      { text: ['Every pain you feel is real.', 'All pain, from a broken bone to a migraine, is made by the nervous system. That is how pain works, for everyone. It makes pain no less real.'] },
       { text: ['Pain is a protector. It is an alarm that says: something might be wrong, take care.'] },
       {
         text: ['For many people whose pain lasts, the alarm becomes more sensitive over time, and goes off more easily and more loudly.', DOCTOR],
@@ -77,10 +78,10 @@ const DAYS: Def[] = [
     5,
   ],
   [
-    'An alarm that learned',
+    'An alarm that learns',
     [
       { text: ['Nervous systems learn. Whatever happens often gets easier to do again — a skill, a habit, and pain too.'] },
-      { text: ['After months or years, the pathways that make pain can become well worn, sometimes long after an injury has healed.'] },
+      { text: ['After months or years, the pathways that make pain can become well worn, sometimes long after an injury has healed, sometimes with no injury at all.'] },
       { text: ['What was learned can be relearned. That is the idea this program is built on.'] },
     ],
     'Finding the place',
@@ -88,7 +89,7 @@ const DAYS: Def[] = [
     5,
   ],
   [
-    'The pain–fear loop',
+    'The worry loop',
     [
       { text: ['Pain brings worry. What is this? Will it get worse? What if I make it worse?'] },
       { text: ['Worry tells the alarm there may be danger, and the alarm turns the volume up. More pain, more worry.'] },
@@ -139,7 +140,7 @@ const DAYS: Def[] = [
     [
       { text: ['This week was about the alarm: what it is for, how it learns, and how fear feeds it.'] },
       { text: ['Next week the practice gets more detailed: the edges of a sensation, its texture, whether it moves.'] },
-      { text: ['Showing up is the work. Whatever the pain did this week, you practised.'] },
+      { text: ['Showing up is the work. Whatever the pain did this week, you practiced.'] },
     ],
     'The body as a whole',
     'open',
@@ -303,7 +304,7 @@ const DAYS: Def[] = [
     [
       { text: ['When you started, you named what you want to get back to.'] },
       { text: ['This week, choose one small step toward it. Small means: a little more than easy, well short of a flare.'] },
-      { text: ['Practise first, then take the step. Save it as a moment when you have.'] },
+      { text: ['Practice first, then take the step. Save it as a moment when you have.'] },
     ],
     'Before a step',
     'activity',
@@ -313,7 +314,7 @@ const DAYS: Def[] = [
     'Small steps, often',
     [
       { text: ['Fear of an activity shrinks most when you do a little of it, often, and notice what actually happens.'] },
-      { text: ['If a step brings a sensation, it is an invitation to practise: notice it, without alarm, and carry on gently if you can.'] },
+      { text: ['If a step brings a sensation, it is an invitation to practice: notice it, without alarm, and carry on gently if you can.'] },
     ],
     'Before a step',
     'activity',
@@ -334,7 +335,7 @@ const DAYS: Def[] = [
     'Flares are part of the road',
     [
       { text: ['A flare does not mean you are back at the start. Most people’s path goes up and down.'] },
-      { text: ['In a flare: practise, rest, be kind to yourself. If a flare is different from your usual, or comes with new symptoms, see a doctor.'] },
+      { text: ['In a flare: practice, rest, be kind to yourself. If a flare is different from your usual, or comes with new symptoms, see a doctor.'] },
     ],
     'In the moment',
     'flare',

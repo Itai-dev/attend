@@ -35,12 +35,13 @@ export function MomentScreen() {
       </View>
       <View style={{ paddingHorizontal: space.xl, flex: 1 }}>
         <Txt variant="title" accessibilityRole="header">
-          Save a moment
+          save a moment
         </Txt>
         <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
           {prefs.goal
-            ? `A step toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}, or a time the pain was quieter than you expected.`
-            : 'A step you took, or a time the pain was quieter than you expected.'}
+            ? // A step, never a quieter-pain moment: "A first step" is a milestone, and no milestone may be earned by pain going down (AGENTS.md).
+              `A step toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}, in your own words.`
+            : 'A step you took, in your own words.'}
         </Txt>
         <TextInput
           value={text}

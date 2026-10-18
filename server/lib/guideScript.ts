@@ -129,6 +129,7 @@ export const GUIDE_SCRIPT: GuideScript = {
         ['Let the phone rest, and let your eyes close.', 4500],
         ["You don't have to make anything go away right now.", 5000],
         ['Let your breath be however it is.', 5000],
+        ['If this feels different from your usual pain, stop here and contact a doctor.', 4500],
       ],
     ],
     sleep: [
@@ -143,6 +144,8 @@ export const GUIDE_SCRIPT: GuideScript = {
         ['Take a moment to settle in.', 3500],
         ['Let your eyes close.', 4000],
         ["We'll go slowly. You can stop at any time.", 5500],
+        // Worry at 2am may be about something new; the welcome's note was days ago (fixed text, never sent to a model).
+        ['This practice is for a sensation you know. If this one is new, or different, stop here and contact a doctor.', 5500],
       ],
     ],
   },
@@ -314,6 +317,10 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Nothing here needs an answer.', 6000],
       ['Just stay with it, a little longer.', 14000],
     ],
+    [
+      ['If it gets too loud, let attention move to your hands, or the sounds in the room.', 8000],
+      ['That is part of the practice too. Come back when you are ready.', 12000],
+    ],
   ],
   GUIDED_OPEN: [
     [
@@ -341,13 +348,13 @@ export const GUIDE_SCRIPT: GuideScript = {
   // said anything, and none may claim the sensation is safe or harmless.
   GUIDED_THEMES: {
     settle: [
-      [['Let your attention rest there, the way a hand rests on a table.', 8000], ['No effort. Just resting.', 12000]],
+      [['Let your attention rest, the way a hand rests on a table.', 8000], ['No effort. Just resting.', 12000]],
       [['Notice that you can be here with it, for this moment.', 12000]],
     ],
     locate: [
       [['Find the place where it is clearest.', 8000], ['Not to judge it. Just to know where it is.', 12000]],
-      [['Is it near the surface, or deeper in?', 6000], ['You don’t need an answer. Just look.', 12000]],
-      [['Notice how big the area is. Smaller than a coin? Larger than a hand?', 12000]],
+      [['Notice whether it sits near the surface, or deeper in.', 6000], ['Just look.', 12000]],
+      [['Notice how big the area is. The size of a coin, or a hand.', 12000]],
     ],
     breath: [
       [['Let the breath come and go on its own.', 8000], ['Imagine it moving around {place}, and out again.', 12000]],
@@ -355,13 +362,13 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Notice the pause at the end of each breath out.', 12000]],
     ],
     edges: [
-      [['Look for the edge of the sensation.', 6000], ['Where does it stop, and something easier begin?', 12000]],
+      [['If a sensation stands out, look for its edge.', 6000], ['Notice where it stops, and something easier begins.', 12000]],
       [['Trace the outline slowly, as if with a fingertip.', 14000]],
-      [['Is the edge sharp, or does it fade gradually?', 6000], ['Either is fine. Just notice.', 12000]],
+      [['Notice if the edge is sharp, or fades slowly.', 6000], ['Either is fine. Just notice.', 12000]],
       [['Rest your attention just outside the edge, in what feels neutral.', 12000]],
     ],
     moves: [
-      [['Watch whether the sensation stays in one place, or drifts.', 14000]],
+      [['If a sensation stands out, watch whether it stays in one place, or drifts.', 14000]],
       [['Notice if it pulses, or comes and goes.', 12000]],
       [['If it moves, let your attention follow, loosely.', 6000], ['If it stays still, watch the stillness.', 12000]],
     ],
@@ -371,7 +378,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Notice whether the texture is the same all the way through.', 12000]],
     ],
     curious: [
-      [['Look at it as if for the first time.', 6000], ['What is actually here, right now?', 12000]],
+      [['Look at it as if for the first time.', 6000], ['Just what is here, right now.', 12000]],
       [['See if a little curiosity can sit beside it.', 6000], ['Even a small wondering is enough.', 12000]],
       [['Watch it the way you might watch a cloud.', 14000]],
     ],
@@ -381,7 +388,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Let the place around the sensation be a little looser.', 14000]],
     ],
     fear: [
-      [['If there is fear here, notice it too.', 6000], ['Where in the body is the fear?', 12000]],
+      [['If there is fear here, notice it too.', 6000], ['Notice where in the body the fear sits.', 12000]],
       [['Let the fear and the sensation sit side by side.', 6000], ['You don’t need to push either away.', 12000]],
       [['Fear makes sense. Meet it the way you would meet a frightened friend.', 14000]],
     ],
@@ -391,7 +398,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Nothing needs fixing in this moment.', 12000]],
     ],
     kind: [
-      [['Imagine the sensation belongs to someone you care about.', 6000], ['How would you speak to them?', 12000]],
+      [['Imagine the sensation belongs to someone you care about.', 6000], ['Notice the tone you would use with them.', 12000]],
       [['Offer yourself the same tone.', 5000], ['This is hard. And you are here.', 12000]],
       [['Let a little warmth be there, beside it.', 14000]],
     ],
@@ -409,6 +416,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Let the breath be slow.', 6000], ['There is nothing you have to do right now.', 10000]],
       [['Find the edges, even roughly.', 6000], ['Let your attention rest just outside them.', 10000]],
       [['Soften what you can. Let the rest be as it is.', 12000]],
+      [['If it is too much, let attention rest on your hands, or the breath.', 8000], ['You can shift, or move, whenever you need to.', 12000]],
     ],
     open: [
       [['Let attention widen, until it holds the whole body.', 12000]],
@@ -416,7 +424,7 @@ export const GUIDE_SCRIPT: GuideScript = {
     ],
   },
   OPEN_AWARENESS: [
-    ["Then let's simply be with the body as a whole.", 5000],
+    ["Let's simply be with the body as a whole.", 5000],
     ['Feel where it is supported.', 9000],
     ['Notice the breath moving, without changing it.', 12000],
     ['Let your attention be wide, and soft.', 12000],
@@ -562,27 +570,27 @@ export const GUIDE_SCRIPT: GuideScript = {
 
   CLOSE: {
     notice: [
-      ["Now let the sensation do whatever it's going to do.", 5000],
+      ["Now let whatever is there be as it is.", 5000],
       ["There's no need to check it again.", 4500],
       ['Notice the room around you.', 4500],
       ['Feel where your body meets the chair, or the bed, or the floor.', 5000],
       ["When you're ready, open your eyes.", 7000],
     ],
     flare: [
-      ["Now let the sensation do whatever it's going to do.", 5000],
+      ["Now let whatever is there be as it is.", 5000],
       ["There's no need to check it again.", 4500],
       ['Notice the sounds around you.', 4500],
       ['Feel where your body is supported.', 5000],
       ["When you're ready, open your eyes, and move gently.", 7000],
     ],
     sleep: [
-      ["Now let the sensation do whatever it's going to do.", 6500],
+      ["Now let whatever is there be as it is.", 6500],
       ["There's no need to check it again.", 6500],
       ['Let your body be heavy, and supported.', 8000],
       ["There's nothing else to do now. Just rest.", 12000],
     ],
     fear: [
-      ["Now let the sensation do whatever it's going to do.", 5000],
+      ["Now let whatever is there be as it is.", 5000],
       ["There's no need to check it again.", 4500],
       ['Notice the room around you.', 4500],
       ['Feel where your body meets the chair, or the bed, or the floor.', 5000],

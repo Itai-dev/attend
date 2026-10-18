@@ -81,7 +81,8 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
   const done = () => {
     vs.reset();
     if (router.canDismiss()) router.dismissAll();
-    router.navigate('/journey');
+    // Journey left the tabs (18 Oct 2026); a recap ends back on Today.
+    router.navigate('/');
   };
 
   return (

@@ -77,6 +77,12 @@ line. No "thank you for sharing", "I hear you", praise, apologies
 for pain, or therapy clichés. Closing moves attention out of the body and into the room —
 the app is used, then left. Do not add anything that encourages checking the body more.
 
+**App copy (studio, 18 Oct 2026).** Describe the practice, never its effect: no "calmer",
+"less pain", "heals". Lowercase for what you glance at (headings, labels, buttons, tiles);
+sentence case for what you read; never all caps. American English (US launch first). The guide
+invites and never asks: a guided line never ends in a question mark (tests guard it). Full
+notes and the voice guide: `docs/STUDIO.md`.
+
 **The engine owns structure; models own words.** Phase, whether to ask, what kind of
 question, and when to end are decided in `SessionEngine`. A `GuideBrain` only phrases the
 turn. Arrival, closing and all safety lines are fixed text and never sent to a model.

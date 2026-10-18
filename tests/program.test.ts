@@ -64,3 +64,22 @@ test('one new day a day; a missed day waits; nothing is lost', () => {
   for (let d = 3; d <= 28; d++) s = completeDay(s, d, `2026-11-${String(d).padStart(2, '0')}`);
   assert.equal(currentDay(s, '2026-12-01').finished, true);
 });
+
+test('the guide invites; it never asks: no guided line is a question', () => {
+  // Guided sessions never listen, so a question leaves the person waiting to answer (studio round 1).
+  const banks = [
+    ...Object.values(GUIDE_SCRIPT.GUIDED_THEMES).flat(),
+    ...GUIDE_SCRIPT.GUIDED_SETTLE,
+    ...GUIDE_SCRIPT.GUIDED_OBSERVE,
+    ...GUIDE_SCRIPT.GUIDED_OPEN,
+    ...Object.values(GUIDE_SCRIPT.ARRIVE).flat(),
+  ];
+  for (const v of banks) for (const [text] of v) assert.doesNotMatch(text, /\?/, text);
+});
+
+test('the doctor line sits beside care, and the early lessons include pain with no injury', () => {
+  const words = PROGRAM.slice(0, 3).flatMap((d) => d.lesson.cards.flatMap((c) => c.text)).join(' ');
+  assert.match(words, /Keep any treatment you have/);
+  assert.match(words, /no injury at all/);
+  assert.doesNotMatch(words, /before practi[sc]ing with it/);
+});

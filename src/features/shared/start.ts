@@ -49,7 +49,9 @@ export function dayPlan(day: number, k: Known): PracticePlan {
 
 export function presetPlan(p: Preset, k: Known): PracticePlan {
   const theme = presetTheme(p);
-  return { type: p.type, minutes: p.minutes as SessionLength, voice: p.voiceId, theme, place: placeFor(theme, k), background: backgroundFor(k.prefs) };
+  // One voice for every practice: a flare at 2am should sound like the guide they know, and is
+  // more likely already cached (studio round 1). Presets' own voices are only a fallback.
+  return { type: p.type, minutes: p.minutes as SessionLength, voice: k.prefs.voiceId ?? GUIDE_VOICES[0].id, theme, place: placeFor(theme, k), background: backgroundFor(k.prefs) };
 }
 
 /** Open the session for a plan. `replace` when coming from a screen that should not be returned to (a lesson, Before). */

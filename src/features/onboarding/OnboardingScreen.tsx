@@ -37,12 +37,12 @@ const FOCUS: Array<{ id: SessionType; title: string; detail: string }> = [
 /** On the last screen: the any-time practice that fits what brought them, named once. */
 const FOCUS_TIP: Record<SessionType, string> = {
   notice: 'Any time, a 10-minute body scan is one tap away on Today.',
-  flare: 'When a flare comes, “A flare” on Today is three minutes, any time.',
-  sleep: 'At night, “Can’t sleep” on Today ends in rest, with no wake-up.',
-  fear: 'When worry is loud, “Worried” on Today goes gently.',
+  flare: 'When a flare comes, “in a flare” on Today is three minutes, any time.',
+  sleep: 'At night, “can’t sleep” on Today ends in rest, with no wake-up.',
+  fear: 'When worry is loud, “feeling worried” on Today goes gently.',
 };
 
-const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through', 'Working without breaks', 'Sport', 'Time with friends'];
+const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through the night', 'A full day’s work', 'Sport', 'Time with friends'];
 
 const TIMES = [
   { id: 'morning', label: 'Morning', hour: 8, minute: 0 },
@@ -139,10 +139,10 @@ export function OnboardingScreen() {
             </Photo>
             <View style={styles.text}>
               <Txt variant="display" accessibilityRole="header">
-                pain is real.{'\n'}and it can change.
+                pain is real.{'\n'}how you meet it can change.
               </Txt>
               <Txt variant="body" tone="secondary" style={{ marginTop: space.l }}>
-                A few quiet minutes a day, eyes closed. A calm voice helps you notice what you feel without bracing against it. Over {PROGRAM_DAYS} days, you learn to meet pain with less alarm.
+                Each day, a two-minute lesson, then a few minutes with your eyes closed while a calm voice guides you. Nothing to answer, nothing to get right.
               </Txt>
             </View>
           </Animated.View>
@@ -154,9 +154,9 @@ export function OnboardingScreen() {
               how it works
             </Txt>
             {[
-              ['Pain that lasts can keep the alarm on', 'Long-lasting pain often involves a nervous system that stays on guard, long after an injury.'],
-              ['Attention without alarm is a skill', 'Somatic tracking means noticing a sensation with curiosity instead of fear. Like any skill, it grows with practice.'],
-              ['A little, every day', 'Each day, a two-minute lesson and a guided practice of three to ten minutes. You just listen.'],
+              ['When pain lasts, the alarm can stay on', 'The nervous system can learn to stay on guard, sometimes after an injury, sometimes with no clear start.'],
+              ['Attention without alarm is a skill', 'This is called somatic tracking: noticing a sensation with curiosity rather than fear. Like any skill, it grows with use.'],
+              ['A little, every day', 'A two-minute lesson, then three to ten minutes of listening, eyes closed. Nothing to answer.'],
             ].map(([title, body], i) => (
               <View key={title} style={styles.point}>
                 <Txt variant="title2" tone="tertiary" style={{ width: 24 }}>
@@ -172,7 +172,7 @@ export function OnboardingScreen() {
             ))}
             <View style={styles.note}>
               <Txt variant="footnote" tone="secondary">
-                Attend is for pain you already know well. It doesn’t diagnose and doesn’t replace care. Anything new, changing or severe deserves a doctor’s look first.
+                Attend is for pain you already know. It doesn’t diagnose, and it sits beside any treatment you have. Anything new, or different from your usual, deserves a doctor’s look first.
               </Txt>
             </View>
           </Animated.View>
@@ -184,7 +184,7 @@ export function OnboardingScreen() {
               what brings you here?
             </Txt>
             <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
-              So the right practice is always within reach.
+              We’ll keep the right practice close.
             </Txt>
             <View style={{ gap: space.s, marginTop: space.xl }} accessibilityRole="radiogroup">
               {FOCUS.map((f) => {
@@ -220,7 +220,7 @@ export function OnboardingScreen() {
               where do you feel it most?
             </Txt>
             <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
-              The practice will rest there. Logging pain later can move it.
+              Your practice will rest there. You can change it any time.
             </Txt>
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => (
@@ -236,7 +236,7 @@ export function OnboardingScreen() {
               what would you like to get back to?
             </Txt>
             <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
-              Something pain has crowded out. The last week of the program works toward it.
+              Something pain has crowded out. Week 4 works toward it.
             </Txt>
             <View style={styles.chips}>
               {GOALS.map((g) => (
@@ -271,10 +271,10 @@ export function OnboardingScreen() {
         {step === 5 ? (
           <Animated.View key="5" entering={FadeIn.duration(600)}>
             <Txt variant="title" accessibilityRole="header">
-              when could you give it ten minutes?
+              when is a quiet moment in your day?
             </Txt>
             <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
-              The same time each day makes it easier. Many people like the evening, before bed.
+              The same time each day makes it easier. Many people like the evening.
             </Txt>
             <View style={styles.times} accessibilityRole="radiogroup">
               {TIMES.map((t) => {
@@ -304,7 +304,7 @@ export function OnboardingScreen() {
               <View style={{ flex: 1 }}>
                 <Txt variant="body">A gentle reminder</Txt>
                 <Txt variant="footnote" tone="tertiary">
-                  One a day. Never about missed days.
+                  One a day, at this time. Quieter if you take a break.
                 </Txt>
               </View>
               <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.practice }} accessibilityLabel="A gentle reminder" />
@@ -328,7 +328,7 @@ export function OnboardingScreen() {
                 {first.lesson.title}
               </Txt>
               <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
-                Two minutes to read, then {first.practice.minutes} minutes eyes closed. Headphones help. Sit or lie somewhere comfortable.
+                2 minutes to read, then {first.practice.minutes} with your eyes closed. Somewhere comfortable. Headphones help.
               </Txt>
               {focus ? (
                 <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
@@ -352,7 +352,8 @@ export function OnboardingScreen() {
           </>
         ) : (
           <PrimaryButton
-            label={(step === 2 && !focus) || (step === 3 && !where) || (step === 4 && !finalGoal) ? 'skip' : 'continue'}
+            // Always "continue": a filled "skip" was the loudest thing on screen. Nothing chosen is a skip.
+            label="continue"
             onPress={next}
           />
         )}

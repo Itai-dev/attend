@@ -72,7 +72,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // catch below left the defaults (onboarded: false) in place and the welcome ran on
       // every launch.
       if (!cancelled) setPrefsState(p);
-      if (!p.samplesSeeded) {
+      // Sample sessions are an old conversation-mode story; real installs start empty.
+      if (!p.samplesSeeded && __DEV__) {
         for (const s of buildSampleSessions()) await repository.saveSession(s, []);
         p = await repository.setPrefs({ samplesSeeded: true });
       }

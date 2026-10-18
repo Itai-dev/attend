@@ -60,7 +60,7 @@ test('progress draws only past enough days, counts plainly, and never compares',
   assert.equal(many.checkInDays, 6);
   // A safety pause is not practice.
   assert.equal(many.practiceDays, 1);
-  assert.match(many.summary, /checked in on 6 days, practised on 1 day/);
+  assert.match(many.summary, /checked in on 6 days, practiced on 1 day/);
   for (const text of [many.summary, PROGRESS_MEANING]) {
     assert.doesNotMatch(text, /better|worse|improv|declin|%|streak|than last/i);
   }

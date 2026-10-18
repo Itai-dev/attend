@@ -73,7 +73,7 @@ export const MILESTONE_COPY: Record<MilestoneId, { label: string; detail: string
   first: { label: 'First session', detail: 'You began.' },
   three_days: { label: '3 days', detail: 'Three days of practice.' },
   seven_days: { label: 'A full week', detail: 'Seven practice days since you began.' },
-  flare_met: { label: 'A flare met', detail: 'You practised through a flare.' },
+  flare_met: { label: 'A flare met', detail: 'You met a flare with a practice.' },
   first_moment: { label: 'A first step', detail: 'You saved a moment toward your goal.' },
   halfway: { label: 'Halfway', detail: 'Fourteen days of the program.' },
   program_done: { label: '28 days', detail: 'The whole program, done.' },

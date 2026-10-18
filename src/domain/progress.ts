@@ -57,7 +57,7 @@ export function buildProgress(checkIns: CheckIn[], sessions: Session[], opts: { 
   const summary =
     checkInDays === 0 && practiceDayCount === 0
       ? 'Nothing recorded yet.'
-      : `In the last ${weeks} weeks: checked in on ${plural(checkInDays, 'day')}, practised on ${plural(practiceDayCount, 'day')}.`;
+      : `In the last ${weeks} weeks: checked in on ${plural(checkInDays, 'day')}, practiced on ${plural(practiceDayCount, 'day')}.`;
   return { days, checkInDays, practiceDays: practiceDayCount, enough: checkInDays >= MIN_DAYS_FOR_PICTURE, summary };
 }
 
