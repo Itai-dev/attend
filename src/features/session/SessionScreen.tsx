@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
 import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
@@ -25,6 +25,9 @@ import { DevPanel } from './DevPanel';
  * The controls fade away after a few seconds, so a phone lying face-up in a dim room
  * is just the breathing form. A tap anywhere brings them back; that first tap only
  * shows them, so a hand reaching for the phone never pauses or ends by accident.
+ * The end control is the exception: a tap on it while faded shows the controls and arms the
+ * confirm in one go, so stopping is two taps, not three (round 3: three taps with closed eyes
+ * was too many for someone who needs to stop). While paused, end is one tap.
  * VoiceOver reaches pause and end at all times, faded or not.
  */
 
@@ -34,8 +37,9 @@ import { DevPanel } from './DevPanel';
  * could already hear.
  */
 export const STATUS_WORD: Partial<Record<SessionStatus, string>> = {
-  preparing: 'Preparing',
-  paused: 'Paused',
+  // Lowercase in source, not only on screen: VoiceOver reads the string, not the style.
+  preparing: 'preparing',
+  paused: 'paused',
 };
 
 /** Shown instead of "paused" when the guide's voice couldn't be had (SessionRunner pauses with 'error'). */
@@ -50,6 +54,8 @@ const RESTING_DIM = 0.14;
 const CONTROLS_FIRST_MS = 8000;
 const CONTROLS_AGAIN_MS = 6000;
 const CONTROLS_FADE_MS = 1600;
+/** How long "tap again to end" waits. 3 s was too short to find the button again by feel. */
+const CONFIRM_END_MS = 6000;
 
 export function breathMode(s: SessionStatus): BreathMode {
   if (s === 'speaking') return 'speaking';
@@ -119,7 +125,7 @@ export function SessionScreen() {
 
   useEffect(() => {
     if (!confirmEnd) return;
-    const t = setTimeout(() => setConfirmEnd(false), 3000);
+    const t = setTimeout(() => setConfirmEnd(false), CONFIRM_END_MS);
     return () => clearTimeout(t);
   }, [confirmEnd]);
 
@@ -185,7 +191,28 @@ export function SessionScreen() {
   );
 
   /**
-   * A press on a faded control only brings the controls back. With VoiceOver on, the person
+   * Fully faded, iOS hit-tests through the controls (a view below alpha 0.01 takes no touch),
+   * so a tap aimed at ✕ lands on the full-screen catcher instead. It checks where it landed:
+   * on the end control, it arms the confirm (which also brings the controls back).
+   */
+  const endRef = useRef<View>(null);
+  const END_SLOP = 12;
+  const onBackgroundPress = (e: GestureResponderEvent) => {
+    // While paused they are already held on screen; a tap must not start them fading.
+    if (keepControls) return;
+    const { pageX, pageY } = e.nativeEvent;
+    const node = endRef.current;
+    if (!node) return showControls(CONTROLS_AGAIN_MS);
+    node.measureInWindow((x, y, w, h) => {
+      const onEnd = w > 0 && pageX >= x - END_SLOP && pageX <= x + w + END_SLOP && pageY >= y - END_SLOP && pageY <= y + h + END_SLOP;
+      if (onEnd) setConfirmEnd(true);
+      else showControls(CONTROLS_AGAIN_MS);
+    });
+  };
+
+  /**
+   * A press on faded pause only brings the controls back (end arms its confirm instead, below).
+   * With VoiceOver on, the person
    * chose the control by name, so it acts at once.
    */
   const act = (fn: () => void) => () => {
@@ -234,10 +261,7 @@ export function SessionScreen() {
       {/* Anywhere on the screen: bring the controls back. Hidden from VoiceOver, which reaches the controls directly. */}
       <Pressable
         style={StyleSheet.absoluteFill}
-        onPress={() => {
-          // While paused they are already held on screen; a tap must not start them fading.
-          if (!keepControls) showControls(CONTROLS_AGAIN_MS);
-        }}
+        onPress={onBackgroundPress}
         accessible={false}
         importantForAccessibility="no"
         accessibilityElementsHidden
@@ -315,7 +339,7 @@ export function SessionScreen() {
           {confirmEnd ? (
             <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.confirm}>
               <Txt variant="footnote" tone="secondary">
-                Tap again to end
+                tap again to end
               </Txt>
             </Animated.View>
           ) : null}
@@ -329,20 +353,24 @@ export function SessionScreen() {
               tint={color.textSecondary}
               onPress={act(() => (paused ? vs.resume() : vs.pause()))}
             />
-            <IconButton
-              icon="xmark"
-              label={confirmEnd ? 'Confirm end session' : 'End session'}
-              variant="filled"
-              size={60}
-              iconSize={18}
-              tint={color.textSecondary}
-              onPress={act(() => {
-                if (confirmEnd) {
-                  setConfirmEnd(false);
-                  vs.end();
-                } else setConfirmEnd(true);
-              })}
-            />
+            <View ref={endRef} collapsable={false}>
+              <IconButton
+                icon="xmark"
+                label={confirmEnd ? 'Confirm end session' : 'End session'}
+                variant="filled"
+                size={60}
+                iconSize={18}
+                tint={color.textSecondary}
+                // Not wrapped in act(): a faded tap here reveals and arms at once (arming the confirm
+                // holds the controls on screen). Paused, the person has already stopped; one tap ends.
+                onPress={() => {
+                  if (paused || confirmEnd) {
+                    setConfirmEnd(false);
+                    vs.end();
+                  } else setConfirmEnd(true);
+                }}
+              />
+            </View>
           </View>
         </Animated.View>
       ) : null}

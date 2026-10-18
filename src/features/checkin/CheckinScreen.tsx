@@ -24,10 +24,6 @@ import { useColors, useStyles } from '@/design/ThemeProvider';
  */
 
 
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 export function CheckinScreen() {
   const color = useColors();
   const styles = useStyles(makeStyles);
@@ -73,7 +69,7 @@ export function CheckinScreen() {
             {pain === null ? '–' : pain}
           </Txt>
           <Txt variant="title2" tone="secondary">
-            {pain === null ? 'Choose a number' : painLabel(pain)}
+            {pain === null ? 'choose a number' : painLabel(pain)}
           </Txt>
         </View>
 
@@ -111,7 +107,7 @@ export function CheckinScreen() {
         <SectionLabel style={{ marginTop: space.xxl }}>Where, if you like</SectionLabel>
         <View style={styles.where}>
           {WHERE.map((r) => (
-            <Chip key={r} label={cap(REGIONS[r].label)} selected={places.includes(r)} onPress={() => toggle(r)} />
+            <Chip key={r} label={REGIONS[r].label} selected={places.includes(r)} onPress={() => toggle(r)} />
           ))}
         </View>
         <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>

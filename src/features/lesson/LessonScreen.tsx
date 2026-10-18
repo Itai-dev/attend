@@ -203,7 +203,7 @@ function LessonBody({ day, i, setI, first, listening, voiceState, failed, onList
             <Txt variant="footnote" tone="secondary" style={{ marginBottom: space.xs }}>
               {day.practice.minutes} min · find a comfortable place, then close your eyes
             </Txt>
-            <PrimaryButton label="begin the practice" accessibilityLabel={`Begin the practice. ${day.practice.minutes} minutes. Find a comfortable place, then close your eyes`} onPress={onFinish} />
+            <PrimaryButton label="begin practice" accessibilityLabel={`Begin practice. ${day.practice.minutes} minutes. Find a comfortable place, then close your eyes`} onPress={onFinish} />
           </>
         ) : (
           <PrimaryButton

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import { currentTz, dayKey, WHERE_REGIONS } from '@/domain/checkin';
 import { currentDay, EMPTY_PROGRAM, programDay, PROGRAM_DAYS } from '@/domain/program';
@@ -28,10 +29,12 @@ import { requestReminderPermission, scheduleReminders } from '@/voice/reminders'
  */
 
 const FOCUS: Array<{ id: SessionType; title: string; detail: string }> = [
-  { id: 'notice', title: 'Pain that’s always there', detail: 'Long-standing, mostly steady' },
-  { id: 'flare', title: 'Flares', detail: 'Pain that comes in waves' },
-  { id: 'sleep', title: 'Nights', detail: 'Pain that keeps me awake' },
-  { id: 'fear', title: 'Worry', detail: 'Not knowing what the pain means' },
+  { id: 'notice', title: 'pain that’s always there', detail: 'Long-standing, mostly steady' },
+  { id: 'flare', title: 'flares', detail: 'Pain that comes in waves' },
+  { id: 'sleep', title: 'nights', detail: 'Pain that keeps me awake' },
+  // A familiar pain, never "not knowing what it means": that invited exactly the person who
+  // needs a doctor rather than a practice (round 3, researcher).
+  { id: 'fear', title: 'worry', detail: 'Worry about a pain I know' },
 ];
 
 /** On the last screen: the any-time practice that fits what brought them, named once. */
@@ -39,22 +42,20 @@ const FOCUS_TIP: Record<SessionType, string> = {
   notice: 'Any time, a 10-minute body scan is one tap away on Today.',
   flare: 'When a flare comes, “in a flare” on Today is three minutes, any time.',
   sleep: 'At night, “can’t sleep” on Today ends in rest, with no wake-up.',
-  fear: 'When worry is loud, “feeling worried” on Today goes gently.',
+  fear: 'When worry about a familiar pain is loud, “feeling worried” on Today goes gently.',
 };
 
-const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through the night', 'A full day’s work', 'Sport', 'Time with friends'];
+// Stored in sentence case (Progress and Moments lowercase it into a sentence); shown lowercase,
+// because a chip is glanced at.
+const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through the night', 'A full day’s work', 'Sports', 'Time with friends'];
 
 const TIMES = [
-  { id: 'morning', label: 'Morning', hour: 8, minute: 0 },
-  { id: 'midday', label: 'Midday', hour: 13, minute: 0 },
-  { id: 'evening', label: 'Evening', hour: 20, minute: 30 },
+  { id: 'morning', label: 'morning', hour: 8, minute: 0 },
+  { id: 'midday', label: 'midday', hour: 13, minute: 0 },
+  { id: 'evening', label: 'evening', hour: 20, minute: 30 },
 ] as const;
 
 const STEPS = 7;
-
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 function hhmm(h: number, m: number) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -171,12 +172,17 @@ export function OnboardingScreen() {
               </View>
             ))}
             <View style={styles.note}>
+              {/* First, and at reading size: someone with new chest pain at 2am must find a path to
+                  emergency care before anything about the practice (round 3, researcher). */}
+              <Txt variant="callout" style={{ marginBottom: space.m }}>
+                New chest pain, a sudden severe headache, trouble breathing or new weakness: call your local emergency number now. This app can’t help with that.
+              </Txt>
               <Txt variant="footnote" tone="secondary">
                 Attend is for pain you already know. It doesn’t diagnose, and it sits beside any treatment you have. Anything new, or different from your usual, deserves a doctor’s look first.
               </Txt>
               {/* Attention to the body doesn't suit everyone (trauma, health anxiety: Goldberg 2021); stopping must read as part of the practice. */}
               <Txt variant="footnote" tone="secondary" style={{ marginTop: space.s }}>
-                Close attention to the body doesn’t suit everyone. If it brings up old memories, panic, or a far-away feeling, open your eyes, look around the room, and stop. Stopping is part of the practice.
+                Close attention to the body doesn’t suit everyone. If it brings up old memories, panic, or a far-away feeling, open your eyes, look around the room, and stop. Stopping is part of the practice. If you find yourself checking your body more between practices, take a break. That’s part of it too.
               </Txt>
             </View>
           </Animated.View>
@@ -228,9 +234,16 @@ export function OnboardingScreen() {
             </Txt>
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => (
-                <Chip key={r} label={cap(REGIONS[r].label)} selected={where === r} onPress={() => setWhere(where === r ? undefined : r)} />
+                <Chip key={r} label={REGIONS[r].label} selected={where === r} onPress={() => setWhere(where === r ? undefined : r)} />
               ))}
             </View>
+            {/* The area travels to a third-party voice service as part of the spoken lines; saying so
+                here is the consent App Review and the person are owed (round 3, go-to-market). */}
+            {hasRemote ? (
+              <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
+                The guide’s voice is made by a voice service, ElevenLabs. The area you choose is part of the lines it speaks, never with your name or an account.
+              </Txt>
+            ) : null}
           </Animated.View>
         ) : null}
 
@@ -246,7 +259,7 @@ export function OnboardingScreen() {
               {GOALS.map((g) => (
                 <Chip
                   key={g}
-                  label={g}
+                  label={g.toLowerCase()}
                   selected={!writing && goal === g}
                   onPress={() => {
                     setWriting(false);
@@ -254,7 +267,7 @@ export function OnboardingScreen() {
                   }}
                 />
               ))}
-              <Chip label="In my words…" selected={writing} onPress={() => setWriting(!writing)} />
+              <Chip label="in my words…" selected={writing} onPress={() => setWriting(!writing)} />
             </View>
             {writing ? (
               <TextInput
@@ -306,12 +319,12 @@ export function OnboardingScreen() {
             </View>
             <View style={styles.remind}>
               <View style={{ flex: 1 }}>
-                <Txt variant="body">A gentle reminder</Txt>
+                <Txt variant="body">a gentle reminder</Txt>
                 <Txt variant="footnote" tone="tertiary">
-                  One a day, at this time. Quieter if you take a break.
+                  One a day, at this time. Weekly after a few quiet days.
                 </Txt>
               </View>
-              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.practice }} accessibilityLabel="A gentle reminder" />
+              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.practice }} accessibilityLabel="a gentle reminder" />
             </View>
           </Animated.View>
         ) : null}
@@ -332,7 +345,7 @@ export function OnboardingScreen() {
                 {first.lesson.title}
               </Txt>
               <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
-                2 minutes to read, then {first.practice.minutes} with your eyes closed. Somewhere comfortable. Headphones help.
+                A 2-minute lesson, then {first.practice.minutes} minutes with your eyes closed. Somewhere comfortable. Headphones help.
               </Txt>
               {focus ? (
                 <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>

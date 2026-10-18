@@ -52,7 +52,7 @@ export function ListenScreen() {
     else resumeListening();
   };
 
-  const status = !live.id ? `${timer ? `${timer} minutes` : 'Until you stop'} · fades out gently` : !live.playing ? 'Paused' : timerLabel(live.timer, live.timerElapsedMs);
+  const status = !live.id ? `${timer ? `${timer} minutes` : 'until you stop'} · fades out gently` : !live.playing ? 'paused' : timerLabel(live.timer, live.timerElapsedMs);
 
   return (
     <View style={styles.root}>

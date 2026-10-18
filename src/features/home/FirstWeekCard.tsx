@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useData } from '@/data/store';
-import { firstWeekCard, NONE_REPLY, NOT_NOW, SIGN_EXTRAS, SIGNS, SIGNS_PROMPT, toggleSign, type SignAnswer } from '@/domain/firstWeek';
+import { firstWeekCard, NONE_REPLY, NOT_NOW, SIGN_EXTRAS, SIGNS, SIGNS_NOTE, SIGNS_PROMPT, toggleSign, type SignAnswer } from '@/domain/firstWeek';
 import { Chip, OutlineButton, QuietButton, Txt } from '@/design/components';
 import { space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
@@ -68,6 +68,14 @@ export function FirstWeekCard({ now, tz }: { now: number; tz: number }) {
             <Animated.View entering={FadeIn.duration(500)}>
               <Txt variant="callout" style={{ marginTop: space.m }}>
                 {NONE_REPLY}
+              </Txt>
+            </Animated.View>
+          ) : null}
+          {/* After any answer, so a ticked sign never reads as a result (round 3, researcher). */}
+          {picked.length ? (
+            <Animated.View entering={FadeIn.duration(500)}>
+              <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
+                {SIGNS_NOTE}
               </Txt>
             </Animated.View>
           ) : null}

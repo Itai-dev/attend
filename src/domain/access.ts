@@ -262,6 +262,8 @@ export const PAYWALL_LEGAL =
 /** Placeholders until the landing page's domain is chosen (docs/launch/store-listing.md). */
 export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 export const PRIVACY_URL = 'https://attend.example/privacy';
+/** Settings → About → contact. Placeholder until Itai sets the support address. */
+export const SUPPORT_EMAIL = 'support@attend.example';
 
 /** One calm line per outcome. Nothing urgent, nothing that blames. */
 export const PURCHASE_COPY = {

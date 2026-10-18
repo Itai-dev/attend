@@ -49,8 +49,11 @@ export const SIGN_EXTRAS: Array<{ id: 'none' | 'unsure'; label: string }> = [
 ];
 export const NOT_NOW = 'not now';
 
-/** The After screen's chips, in its order, as the card lists them. */
-const FEELING_ORDER: Array<{ value: SessionFeeling; label: string }> = [
+/**
+ * The After screen's chips, in its order: shown there, and listed by the card, from this one
+ * list so the two never drift. Labels are display only; the stored value is `value`.
+ */
+export const FEELING_ORDER: Array<{ value: SessionFeeling; label: string }> = [
   { value: 'settled', label: 'settled' },
   { value: 'curious', label: 'curious' },
   { value: 'restless', label: 'restless' },

@@ -1,11 +1,12 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { type ReactNode } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
+import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/domain/access';
 import { currentTz } from '@/domain/checkin';
 import { practiceStats } from '@/domain/engagement';
 import { backgroundFor, SOUNDSCAPES } from '@/domain/soundscapes';
@@ -33,6 +34,21 @@ function Group({ children }: { children: ReactNode }) {
   return <View style={styles.group}>{children}</View>;
 }
 
+/** A row that leaves the app: a page in the browser, or a new email. */
+function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
+  const styles = useStyles(makeStyles);
+  return (
+    <Pressable accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
+      <Txt variant="body" style={styles.label}>
+        {label}
+      </Txt>
+      <Txt variant="body" tone="tertiary" importantForAccessibility="no" accessibilityElementsHidden>
+        →
+      </Txt>
+    </Pressable>
+  );
+}
+
 function Choice({ label, detail, selected, disabled, onPress }: { label: string; detail?: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
   const styles = useStyles(makeStyles);
   return (
@@ -47,7 +63,9 @@ function Choice({ label, detail, selected, disabled, onPress }: { label: string;
       style={({ pressed }) => [styles.choice, { opacity: disabled ? 0.4 : pressed ? 0.6 : 1 }]}
     >
       <View style={{ flex: 1 }}>
-        <Txt variant="body">{label}</Txt>
+        <Txt variant="body" style={styles.label}>
+          {label}
+        </Txt>
         {detail ? (
           <Txt variant="footnote" tone="tertiary">
             {detail}
@@ -70,7 +88,9 @@ export function SettingsScreen() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: color.bg }} contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xxxl }}>
       <View style={styles.header}>
-        <Txt variant="title">Settings</Txt>
+        <Txt variant="title" accessibilityRole="header">
+          settings
+        </Txt>
         <QuietButton label="Done" tone="primary" onPress={() => router.back()} />
       </View>
 
@@ -78,16 +98,16 @@ export function SettingsScreen() {
       <Group>
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Txt variant="body">A gentle reminder</Txt>
+            <Txt variant="body">a gentle reminder</Txt>
             <Txt variant="footnote" tone="tertiary">
-              {remindersAvailable() ? 'One a day. Never about missed days.' : 'Needs the next app update.'}
+              {remindersAvailable() ? 'One a day, at this time. Weekly after a few quiet days.' : 'Needs the next app update.'}
             </Txt>
           </View>
           <Switch
             value={!!prefs.reminder?.enabled}
             disabled={!remindersAvailable()}
             trackColor={{ true: color.practice }}
-            accessibilityLabel="A gentle reminder"
+            accessibilityLabel="a gentle reminder"
             onValueChange={async (on) => {
               const base = prefs.reminder ?? { enabled: false, hour: 20, minute: 30 };
               const reminder = { ...base, enabled: on && (await requestReminderPermission()) };
@@ -102,9 +122,9 @@ export function SettingsScreen() {
             <View style={styles.textBlock}>
               <Segmented<string>
                 options={[
-                  { value: '8:0', label: 'Morning' },
-                  { value: '13:0', label: 'Midday' },
-                  { value: '20:30', label: 'Evening' },
+                  { value: '8:0', label: 'morning' },
+                  { value: '13:0', label: 'midday' },
+                  { value: '20:30', label: 'evening' },
                 ]}
                 value={`${prefs.reminder.hour}:${prefs.reminder.minute}`}
                 onChange={async (v) => {
@@ -162,7 +182,7 @@ export function SettingsScreen() {
           }
           style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
         >
-          <Txt variant="body" style={{ color: color.destructive }}>
+          <Txt variant="body" style={[styles.label, { color: color.destructive }]}>
             Delete all sessions
           </Txt>
           <Txt variant="footnote" tone="tertiary">
@@ -176,7 +196,9 @@ export function SettingsScreen() {
           <SectionLabel style={styles.section}>Sample sessions</SectionLabel>
           <Group>
             <Pressable accessibilityRole="button" onPress={() => (hasSamples ? deleteSamples() : addSamples())} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
-              <Txt variant="body">{hasSamples ? 'Remove sample sessions' : 'Show sample sessions'}</Txt>
+              <Txt variant="body" style={styles.label}>
+                {hasSamples ? 'Remove sample sessions' : 'Show sample sessions'}
+              </Txt>
             </Pressable>
           </Group>
         </>
@@ -187,7 +209,11 @@ export function SettingsScreen() {
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
             Attend is a practice for familiar, long-standing sensations, built around somatic tracking: noticing a sensation with curiosity rather than fear. It isn’t a diagnostic tool and doesn’t replace medical care. If a symptom is new,
-            changing quickly or severe, contact a medical professional.
+            changing quickly or severe, contact a medical professional. If it’s sudden or severe, call your local emergency number.
+          </Txt>
+          {/* Its own line, so it can be found at a glance (round 3, researcher: there was no crisis line). */}
+          <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+            If you’re thinking about ending your life, call or text 988 (US), or find a line at findahelpline.com.
           </Txt>
           <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
             Close attention to the body doesn’t suit everyone. If a practice brings up old memories, panic, or a far-away feeling, open your eyes, look around the room, and stop. If you notice yourself checking your body more between practices, try a shorter practice, or just listen to a sound for a while.
@@ -196,6 +222,12 @@ export function SettingsScreen() {
             Version {Constants.expoConfig?.version ?? '0.1.0'}
           </Txt>
         </View>
+        <Hairline />
+        <LinkRow label="privacy policy" onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})} />
+        <Hairline />
+        <LinkRow label="terms" onPress={() => Linking.openURL(TERMS_URL).catch(() => {})} />
+        <Hairline />
+        <LinkRow label="contact" onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})} />
       </Group>
 
       {__DEV__ ? <DeveloperSettings /> : null}
@@ -297,6 +329,8 @@ const makeStyles = (color: Palette) =>
   choice: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, paddingHorizontal: space.l, paddingVertical: space.s, gap: space.m },
   radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.4, borderColor: color.textTertiary },
   radioOn: { borderWidth: 5.5, borderColor: color.text },
+  // Row and choice labels are glanced at, so lowercase (AGENTS.md "App copy"); details stay sentence case.
+  label: { textTransform: 'lowercase' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: HIT + 8, paddingHorizontal: space.l },
   textBlock: { padding: space.l },
   note: { marginTop: space.s, paddingHorizontal: space.xs },

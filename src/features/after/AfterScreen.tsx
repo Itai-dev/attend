@@ -6,8 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { currentTz } from '@/domain/checkin';
 import { milestones, newlyEarned, practiceStats, weekLine, weekStrip } from '@/domain/engagement';
+import { FEELING_ORDER } from '@/domain/firstWeek';
 import { EMPTY_PROGRAM, PROGRAM_DAYS, programDay, type ProgramState } from '@/domain/program';
-import type { Session, SessionFeeling } from '@/domain/types';
+import type { Session } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, Txt } from '@/design/components';
 import { space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
@@ -22,15 +23,18 @@ import { WeekStrip } from '../shared/WeekStrip';
  * Totals live in Progress; three number tiles here turned a quiet moment into a report.
  */
 
-const FEELINGS: Array<{ value: SessionFeeling; label: string }> = [
-  { value: 'settled', label: 'Settled' },
-  { value: 'curious', label: 'Curious' },
-  { value: 'restless', label: 'Restless' },
-  { value: 'hard', label: 'Hard today' },
-];
+/** Lowercase chips (glanced at); the first-week card lists the same labels. */
+const FEELINGS = FEELING_ORDER;
 
-/** Said under the chips when the person picks "Hard today": a hard session is never a failed one. */
-const HARD_LINE = 'Hard sessions count the same. Showing up was the practice.';
+/**
+ * Said under the chips when the person picks "hard today": a hard session is never a failed one.
+ * "Hard ones count the same" read as "still counts" (copy review round 3). The second line gives
+ * a way out when practice keeps making it louder, without saying what the sensation means.
+ */
+const HARD_LINES = [
+  'A hard session is a whole session. Showing up was the practice.',
+  'If practice keeps making it louder, a shorter one, a sound, or a day off are part of it too.',
+];
 
 const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
 
@@ -116,9 +120,11 @@ export function AfterScreen({ session }: { session: Session }) {
           </View>
           {session.feeling === 'hard' ? (
             <Animated.View entering={FadeIn.duration(500)}>
-              <Txt variant="callout" style={{ marginTop: space.m }}>
-                {HARD_LINE}
-              </Txt>
+              {HARD_LINES.map((l, i) => (
+                <Txt key={l} variant="callout" tone={i === 0 ? 'primary' : 'secondary'} style={{ marginTop: i === 0 ? space.m : space.s }}>
+                  {l}
+                </Txt>
+              ))}
             </Animated.View>
           ) : null}
           <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s }}>
