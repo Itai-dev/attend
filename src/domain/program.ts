@@ -1,4 +1,4 @@
-import type { SessionType } from './types';
+import type { SessionOutcome, SessionType } from './types';
 
 /**
  * The 28-day program: one short lesson and one guided practice a day.
@@ -424,6 +424,38 @@ export function currentDay(state: ProgramState, today: string): { day: number; d
 export function completeDay(state: ProgramState, day: number, today: string): ProgramState {
   if (state.done[day]) return state;
   return { ...state, done: { ...state.done, [day]: today } };
+}
+
+/**
+ * A shorter day (studio round 2, replacing the 90-second rule): three active minutes of the
+ * day's practice complete the day. How often matters more than how long (RESEARCH.md), and
+ * "3 minutes completes the day" is the promise on Today for a low day.
+ */
+export const SHORT_DAY_MINUTES = 3;
+const SHORT_DAY_MS = SHORT_DAY_MINUTES * 60_000;
+
+/** What a finished practice needs to say about itself for the day to count. */
+export type PracticeRun = { outcome: SessionOutcome; startedAt: number; endedAt: number; activeMs?: number };
+
+/**
+ * A program day is done when its practice ran to its end (a 3-minute version included, which
+ * closes on its own a little before three minutes), or the person ended it after three active
+ * minutes. Paused time never counts (the engine's clock is active time). A safety or crisis
+ * pause never completes a day: the practice was stopped for something else.
+ */
+export function dayCompleted(run: PracticeRun): boolean {
+  if (run.outcome === 'completed') return true;
+  if (run.outcome !== 'ended_early') return false;
+  return (run.activeMs ?? run.endedAt - run.startedAt) >= SHORT_DAY_MS;
+}
+
+/**
+ * Record a finished practice against its program day, on the local day it STARTED. Counted on
+ * the day it ended, Day N begun at 23:55 was "done" tomorrow, and tomorrow said "Day N+1 opens
+ * tomorrow" (founder, 18 Oct 2026). `dayOf` turns a time into a local day key.
+ */
+export function completePractice(state: ProgramState, day: number, run: PracticeRun, dayOf: (at: number) => string): ProgramState {
+  return dayCompleted(run) ? completeDay(state, day, dayOf(run.startedAt)) : state;
 }
 
 export function markRead(state: ProgramState, day: number): ProgramState {

@@ -7,16 +7,17 @@ import { repository } from '../data/repository';
 import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
 import { currentTz, dayKey, latestPlace } from '../domain/checkin';
-import { completeDay, EMPTY_PROGRAM, type PracticeTheme } from '../domain/program';
+import { completePractice, EMPTY_PROGRAM, type PracticeTheme } from '../domain/program';
+import type { SpokenLine } from '../domain/lessonVoice';
 import { buildMemory } from '../domain/memory';
 import { backgroundFor, type BackgroundPref } from '../domain/soundscapes';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
-import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
+import { applyOpening, applyScript, ARRIVE, SCAN_BODY, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
 import type { SessionLength } from '../engine/phases';
-import { SessionEngine } from '../engine/SessionEngine';
+import { SessionEngine, type ScanBank } from '../engine/SessionEngine';
 import { SessionRunner, type PauseReason, type RunnerStatus } from '../engine/SessionRunner';
 import { WelcomeRunner, type WelcomeResult } from '../engine/WelcomeRunner';
 import type { GuideBrain } from '../engine/types';
@@ -24,13 +25,13 @@ import { Ambience } from './ambience';
 import { endSessionAudio } from './audioSession';
 import { KeepAlive } from './keepAlive';
 import { saveAgents, savedAgents, saveScript, savedScript } from './savedGuide';
-import { stopListening } from './listen';
+import { startListening, stopListening } from './listen';
 import { DevTextInput } from './input/DevTextInput';
 import { NoInput } from './input/NoInput';
 import { OnDeviceSpeechInput } from './input/OnDeviceSpeechInput';
 import { SimulatedParticipantInput } from './input/SimulatedParticipantInput';
 import { ElevenLabsSpeechOutput } from './output/ElevenLabsSpeechOutput';
-import type { SpeechInput, SpeechOutput, VoiceError } from './types';
+import { sleep, type SpeechInput, type SpeechOutput, type VoiceError } from './types';
 
 /**
  * VoiceSessionProvider — the one place the app touches a voice session.
@@ -59,6 +60,11 @@ type VoiceSessionValue = {
   /** 'guided' or 'conversation', once a session has started: only a conversation ever listens. */
   sessionMode?: SessionMode;
   completedSessionId?: string;
+  /**
+   * A sleep practice ended on its own: the voice is quiet, the sound (if any) carries on as a
+   * 30-minute listen, and the session screen stays dark instead of moving to After.
+   */
+  resting: boolean;
   /** Session time excluding pauses, read on demand by the timer. */
   activeMs(): number;
   level: SharedValue<number>;
@@ -74,11 +80,32 @@ type VoiceSessionValue = {
    * through (asked to, or listening isn't available here).
    */
   startWelcome(): Promise<WelcomeResult>;
+  /**
+   * Fixed lines in the guide's voice, with their silences: a lesson read aloud. Same voice and
+   * cache as the practice that follows (`type` and `voiceId` are that practice's). Resolves
+   * 'done' at the end, 'stopped' if stopSpeaking() cut in, 'failed' if the voice couldn't be
+   * had. Never while a session runs. Nothing here goes to a model.
+   */
+  speakLines(lines: SpokenLine[], opts?: SpeakLinesOptions): Promise<SpeakLinesResult>;
+  stopSpeaking(): void;
   pause(): void;
   resume(): void;
   end(): void;
   reset(): void;
 };
+
+export type SpeakLinesOptions = {
+  type?: SessionType;
+  voiceId?: string;
+  /** Speaking, or holding a line's silence: for the screen's breathing form. */
+  onState?: (s: 'speaking' | 'holding') => void;
+};
+export type SpeakLinesResult = 'done' | 'stopped' | 'failed';
+
+/** After a sleep practice the sound plays on as a listen this long, then fades (r2-copy §6). */
+const SLEEP_TAIL_MIN = 30;
+/** The session's sound and the listen's cross over this slowly, so the room never drops out. */
+const SLEEP_HANDOVER_FADE_MS = 4000;
 
 const Ctx = createContext<VoiceSessionValue | null>(null);
 
@@ -170,7 +197,7 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
   if (out instanceof ElevenLabsSpeechOutput) {
     await out.warm(opening).catch(() => {});
     // The scan follows straight after and is the same words every time: fetched once, then cached.
-    const scan = [...SCAN_BRIEF.flat(), ...SCAN_SHORT.flat(), ...SCAN_FULL.flat()].map(([text]) => text);
+    const scan = [...SCAN_BRIEF.flat(), ...SCAN_SHORT.flat(), ...SCAN_FULL.flat(), ...SCAN_BODY.flat()].map(([text]) => text);
     void out.warm([...new Set(scan)]).catch(() => {});
   }
   return agent;
@@ -231,6 +258,8 @@ export type StartOptions = {
   programDay?: number;
   /** The sound under this session, chosen on Before. Otherwise the one in Settings. */
   background?: BackgroundPref;
+  /** The body scan preset's own scan (SCAN_BODY). */
+  scan?: ScanBank;
 };
 
 function ambienceFor(pref: BackgroundPref): Ambience | undefined {
@@ -245,6 +274,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const [sessionType, setSessionType] = useState<SessionType | undefined>();
   const [sessionMode, setSessionMode] = useState<SessionMode | undefined>();
   const [completedSessionId, setCompleted] = useState<string | undefined>();
+  const [resting, setResting] = useState(false);
   const [labels, setLabels] = useState({ input: '', output: '', brain: '' });
   const [debug, setDebug] = useState<DebugEntry[]>([]);
   const [devInput, setDevInput] = useState<DevTextInput | undefined>();
@@ -254,13 +284,20 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
+  /** A session is being set up (before runner.current exists): the lesson's audio must not be released under it. */
+  const starting = useRef(false);
+  /** The lesson being read aloud, if one is. */
+  const speaking = useRef<AbortController | null>(null);
 
   const start = useCallback(
     async (type: SessionType, minutes?: SessionLength, voiceId?: string, opts: StartOptions = {}) => {
       if (runner.current) return;
+      speaking.current?.abort();
+      starting.current = true;
       const prefs = dataRef.current.prefs;
       setError(undefined);
       setCompleted(undefined);
+      setResting(false);
       setDebug([]);
       setSessionType(type);
       setStatus('preparing');
@@ -284,11 +321,13 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setDevInput(input instanceof DevTextInput ? input : undefined);
 
       if (!(await input.isAvailable())) {
+        starting.current = false;
         setStatus('unavailable');
         setError({ code: 'unavailable', message: 'Speech recognition is not available on this device.' });
         return;
       }
       if (!(await input.requestPermission())) {
+        starting.current = false;
         setStatus('unavailable');
         setError({ code: 'permission', message: 'Attend needs the microphone and speech recognition to hear you.' });
         return;
@@ -315,8 +354,12 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         place,
         theme: opts.theme,
         programDay: opts.programDay,
+        scan: opts.scan,
         keepTranscript: __DEV__ && prefs.dev.keepTranscripts,
       });
+      // Before sleep, the practice ends in rest: the phone may lock (no keep-awake), nothing
+      // buzzes, and the sound carries on after the voice (the hand-over after run()).
+      const sleepy = type === 'sleep';
       // A sound playing on its own (Just listen) gives way to the session's.
       stopListening(600, true);
       const ambience = ambienceFor(opts.background ?? backgroundFor(prefs));
@@ -331,7 +374,9 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
           setPausedBy(s.pausedBy);
           // The voice failed, not the person: the room stays as it was (at the silences' level)
           // instead of fading to nothing, while the screen says what happened.
-          ambience?.follow(s.status === 'paused' && s.pausedBy === 'error' ? 'holding' : s.status);
+          // Sleep: the voice going quiet at the end is not the room going quiet; the sound stays at
+          // the silences' level until it is handed to Just listen below.
+          ambience?.follow((s.status === 'paused' && s.pausedBy === 'error') || (sleepy && s.status === 'complete') ? 'holding' : s.status);
           if (s.status === 'speaking' || s.status === 'holding' || s.status === 'listening') keepAlive?.start();
           else if (s.status === 'paused') keepAlive?.pause();
           if (s.error) setError(s.error);
@@ -350,21 +395,37 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         onDebug: __DEV__ ? (e) => setDebug((prev) => [...prev.slice(-80), { ...e, at: Date.now() }]) : undefined,
       });
       runner.current = r;
-      activateKeepAwakeAsync('attend-session').catch(() => {});
+      starting.current = false;
+      if (!sleepy) activateKeepAwakeAsync('attend-session').catch(() => {});
+      /** The sound went on as a listen: it owns the audio session now, and releasing it would silence it. */
+      let handedOver = false;
 
       try {
         const { session, moments } = await r.run();
+        // A sleep practice that ran to its end (not one the person ended: they are awake, and
+        // After is where they asked to go). Only guided minutes are recorded: the session is
+        // already final, the sound's tail is not part of it.
+        if (sleepy && session.outcome === 'completed') {
+          setResting(true);
+          const bg = opts.background ?? backgroundFor(prefs);
+          if (bg !== 'none') {
+            await startListening(bg, SLEEP_TAIL_MIN).catch(() => {});
+            handedOver = true;
+          }
+        }
+        // Whether the session is kept at all (a few seconds opened by mistake is not); the day's
+        // own rule is dayCompleted.
         const meaningful =
           session.outcome !== 'ended_early' || session.bodyMapEnd.sensations.length > 0 || session.endedAt - session.startedAt > 90_000;
         if (draftTimer.current) clearTimeout(draftTimer.current);
         if (meaningful) {
           await dataRef.current.saveSession(session, moments);
-          // A program day is done when its practice ran its course or the person ended it after
-          // a real stretch; a safety pause never completes a day.
-          const counts = session.outcome === 'completed' || (session.outcome === 'ended_early' && session.endedAt - session.startedAt > 90_000);
-          if (opts.programDay && counts) {
+          // A program day is done when its practice ran its course or had three active minutes
+          // (dayCompleted), on the local day the practice began (completePractice).
+          if (opts.programDay) {
             const program = dataRef.current.prefs.program ?? EMPTY_PROGRAM;
-            await dataRef.current.setPrefs({ program: completeDay(program, opts.programDay, dayKey(Date.now(), currentTz())) });
+            const next = completePractice(program, opts.programDay, session, (at) => dayKey(at, currentTz(new Date(at))));
+            if (next !== program) await dataRef.current.setPrefs({ program: next });
           }
           setCompleted(session.id);
         } else {
@@ -376,16 +437,21 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         setStatus('error');
       } finally {
         runner.current = null;
-        deactivateKeepAwake('attend-session');
+        starting.current = false;
+        if (!sleepy) deactivateKeepAwake('attend-session');
         input.dispose();
         output.dispose();
+        // The listen is already playing (it keeps the app alive with the phone locked), so the
+        // silent keep-alive can go; the session's sound fades out under the listen's fade-in.
         keepAlive?.stop();
-        ambience?.stop();
+        ambience?.stop(handedOver ? SLEEP_HANDOVER_FADE_MS : undefined);
         // After the tone's fade-out: releasing the audio session stops every player at once.
-        // Skipped if another session has started by then.
-        setTimeout(() => {
-          if (!runner.current) endSessionAudio().catch(() => {});
-        }, ambience ? 1400 : 0);
+        // Skipped if another session has started by then, or the listen has the audio (it lets
+        // go itself when its timer ends).
+        if (!handedOver)
+          setTimeout(() => {
+            if (!runner.current && !starting.current && !speaking.current) endSessionAudio().catch(() => {});
+          }, ambience ? 1400 : 0);
         level.value = 0;
       }
     },
@@ -466,6 +532,57 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     void warmSession(type, knownVoice(voiceId) ?? knownVoice(dataRef.current.prefs.voiceId)).catch(() => {});
   }, []);
 
+  const speakLines = useCallback(async (lines: SpokenLine[], o: SpeakLinesOptions = {}): Promise<SpeakLinesResult> => {
+    if (runner.current || starting.current || speaking.current) return 'failed';
+    const ctl = new AbortController();
+    speaking.current = ctl;
+    const type = o.type ?? 'notice';
+    // The practice's voice, chosen the same way start() chooses it, so the lesson and the
+    // practice after it are one voice and fill one cache folder.
+    const voice = knownVoice(o.voiceId) ?? knownVoice(dataRef.current.prefs.voiceId);
+    // Also warms the practice's opening and scan, which follow straight after.
+    const agent = await Promise.race([
+      warmSession(type, voice),
+      new Promise<AgentSettings | undefined>((r) => setTimeout(() => r(lastAgent[type]), 1500)),
+    ]).catch(() => lastAgent[type]);
+    const output = chooseOutput(voice, agent);
+    const keepAlive = new KeepAlive();
+    try {
+      if (ctl.signal.aborted) return 'stopped';
+      if (!(await output.isAvailable())) return 'failed';
+      stopListening(600, true);
+      await Promise.race([output.begin?.(), sleep(2500)]).catch(() => {});
+      // Every line of the lesson at once, so the silences are the lesson's, not the network's.
+      if (output instanceof ElevenLabsSpeechOutput) void output.warm(lines.map(([t]) => t)).catch(() => {});
+      activateKeepAwakeAsync('attend-lesson').catch(() => {});
+      // A lesson heard with the phone locked: silences longer than a breath would let iOS suspend the app.
+      keepAlive.start();
+      for (const [text, pauseMs] of lines) {
+        if (ctl.signal.aborted) return 'stopped';
+        o.onState?.('speaking');
+        await output.speak(text, ctl.signal);
+        if (ctl.signal.aborted) return 'stopped';
+        o.onState?.('holding');
+        await sleep(pauseMs, ctl.signal);
+      }
+      return ctl.signal.aborted ? 'stopped' : 'done';
+    } catch {
+      return ctl.signal.aborted ? 'stopped' : 'failed';
+    } finally {
+      speaking.current = null;
+      output.dispose();
+      keepAlive.stop();
+      deactivateKeepAwake('attend-lesson');
+      // A finished lesson flows into the practice, which takes the audio session over; only if
+      // nothing follows is it released, so other apps' sound can come back.
+      setTimeout(() => {
+        if (!runner.current && !starting.current && !speaking.current) endSessionAudio().catch(() => {});
+      }, 3000);
+    }
+  }, []);
+
+  const stopSpeaking = useCallback(() => speaking.current?.abort(), []);
+
   const value = useMemo<VoiceSessionValue>(
     () => ({
       status,
@@ -474,6 +591,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       sessionType,
       sessionMode,
       completedSessionId,
+      resting,
       activeMs: () => runner.current?.activeMs ?? 0,
       level,
       labels,
@@ -482,6 +600,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       start,
       warm,
       startWelcome,
+      speakLines,
+      stopSpeaking,
       pause: () => runner.current?.pause('button'),
       resume: () => {
         setError(undefined);
@@ -491,12 +611,13 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       reset: () => {
         setStatus('idle');
         setCompleted(undefined);
+        setResting(false);
         setError(undefined);
         setSessionType(undefined);
         setSessionMode(undefined);
       },
     }),
-    [status, error, pausedBy, sessionType, sessionMode, completedSessionId, level, labels, debug, devInput, start, warm, startWelcome],
+    [status, error, pausedBy, sessionType, sessionMode, completedSessionId, resting, level, labels, debug, devInput, start, warm, startWelcome, speakLines, stopSpeaking],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

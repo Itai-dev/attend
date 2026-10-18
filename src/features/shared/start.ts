@@ -3,7 +3,7 @@ import type { Prefs } from '@/data/types';
 import { GUIDE_VOICES } from '@/config';
 import { latestPlace, type CheckIn } from '@/domain/checkin';
 import { presetTheme, type Preset } from '@/domain/presets';
-import { programDay, type PracticeTheme } from '@/domain/program';
+import { programDay, SHORT_DAY_MINUTES, type PracticeTheme } from '@/domain/program';
 import { backgroundFor, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
 import type { SessionLength } from '@/engine/phases';
@@ -24,6 +24,8 @@ export type PracticePlan = {
   day?: number;
   place: Place | null;
   background: BackgroundPref;
+  /** The body scan preset's own scan. Never set for a program day, whatever its theme. */
+  scan?: 'body';
 };
 
 type Known = { prefs: Prefs; checkIns: CheckIn[] };
@@ -51,7 +53,24 @@ export function presetPlan(p: Preset, k: Known): PracticePlan {
   const theme = presetTheme(p);
   // One voice for every practice: a flare at 2am should sound like the guide they know, and is
   // more likely already cached (studio round 1). Presets' own voices are only a fallback.
-  return { type: p.type, minutes: p.minutes as SessionLength, voice: k.prefs.voiceId ?? GUIDE_VOICES[0].id, theme, place: placeFor(theme, k), background: backgroundFor(k.prefs) };
+  return {
+    type: p.type,
+    minutes: p.minutes as SessionLength,
+    voice: k.prefs.voiceId ?? GUIDE_VOICES[0].id,
+    theme,
+    place: placeFor(theme, k),
+    background: backgroundFor(k.prefs),
+    ...(p.scan ? { scan: p.scan } : {}),
+  };
+}
+
+/**
+ * "Short on energy? 3 minutes completes the day": the day's own practice, its theme and voice,
+ * at three minutes. A scripted short version (the brief scan, the theme's lines) rather than a
+ * long practice cut off, and it completes the day by running to its end (dayCompleted).
+ */
+export function shortDayPlan(day: number, k: Known): PracticePlan {
+  return { ...dayPlan(day, k), minutes: SHORT_DAY_MINUTES };
 }
 
 /** Open the session for a plan. `replace` when coming from a screen that should not be returned to (a lesson, Before). */
@@ -64,6 +83,7 @@ export function startPractice(plan: PracticePlan, how: 'push' | 'replace' = 'pus
     ...(plan.day ? { day: String(plan.day) } : {}),
     place: plan.place ? JSON.stringify(plan.place) : 'none',
     background: plan.background,
+    ...(plan.scan ? { scan: plan.scan } : {}),
   };
   if (how === 'replace') router.replace({ pathname: '/session', params });
   else router.push({ pathname: '/session', params });

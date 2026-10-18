@@ -61,7 +61,18 @@ export type EngineOptions = {
   theme?: PracticeTheme;
   /** The program day this session is. Recorded, never read by the guide. */
   programDay?: number;
+  /**
+   * Guided: 'body' is the body scan practice (the scan-10 preset), which scans with SCAN_BODY.
+   * An option rather than read from the theme: program Days 14, 21 and 28 are theme 'open'
+   * too, and must keep their own scan and theme lines.
+   */
+  scan?: ScanBank;
 };
+
+/** Which scan bank a session uses, beyond the one its length gives it. */
+export type ScanBank = 'body';
+/** SCAN_BODY runs about nine minutes; a shorter session gets the usual scan for its length rather than a scan cut off by the close. */
+const BODY_SCAN_MIN_MS = 10 * 60_000;
 
 export type IngestOutcome = { command?: Command };
 
@@ -108,6 +119,7 @@ export class SessionEngine {
   readonly place?: Place;
   readonly theme?: PracticeTheme;
   readonly programDay?: number;
+  readonly scan?: ScanBank;
 
   private readonly now: () => number;
   private readonly newId: (prefix?: string) => string;
@@ -159,6 +171,7 @@ export class SessionEngine {
     this.place = this.mode === 'guided' ? opts.place : undefined;
     this.theme = this.mode === 'guided' ? opts.theme : undefined;
     this.programDay = opts.programDay;
+    this.scan = this.mode === 'guided' && opts.scan === 'body' && this.plan.targetMs >= BODY_SCAN_MIN_MS ? 'body' : undefined;
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
   }
@@ -211,6 +224,7 @@ export class SessionEngine {
       mode: this.mode,
       place: this.place,
       theme: this.theme,
+      scan: this.scan,
       plan: this.plan,
       phase: this._phase,
       phaseTurn: this.phaseTurn,
@@ -491,6 +505,8 @@ export class SessionEngine {
       outcome: draft.outcome,
       signals: draft.signals,
       createdAt,
+      // endedAt is start + practised time (finalize, toDraft), so this is the practised time.
+      activeMs: Math.max(0, endedAt - draft.startedAt),
       ...(draft.mode ? { mode: draft.mode } : {}),
       ...(draft.place ? { place: draft.place } : {}),
       ...(draft.programDay ? { programDay: draft.programDay } : {}),
@@ -738,6 +754,9 @@ export class SessionEngine {
   /** The session closes on time, gently, whatever phase it is in. */
   private timeGuard() {
     if (isClosing(this._phase) || this._phase === 'ARRIVE' || this._phase === 'SAFETY_CHECK') return;
+    // The body scan practice is the scan: every step is heard, through to the whole body, and the
+    // close follows it. On a slower voice it runs a little long rather than ending at the neck.
+    if (this._phase === 'SCAN' && this.scan === 'body') return;
     const elapsed = this.elapsedMs;
     const target = this.plan.targetMs;
     const early: Phase[] = ['NOTICE', 'LOCATE', 'EXPLORE', 'OBSERVE'];

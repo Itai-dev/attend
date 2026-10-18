@@ -103,10 +103,11 @@ export class Ambience {
     this.release = undefined;
   }
 
-  stop() {
+  /** Fade out and let go. A longer fade crosses into whatever plays next (sleep hands its sound to Just listen). */
+  stop(fadeMs = FADE_MS) {
     this.status = 'idle';
     this.unduck();
-    this.fadeTo(0, FADE_MS, () => {
+    this.fadeTo(0, fadeMs, () => {
       try {
         this.player?.remove();
       } catch {}

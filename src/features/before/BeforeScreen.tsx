@@ -58,7 +58,7 @@ export function BeforeScreen() {
     const preset = presetById(params.preset);
     if (preset) {
       const theme: PracticeTheme = presetTheme(preset);
-      return { title: preset.title, kicker: 'any time', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: preset.voiceId, day: undefined };
+      return { title: preset.title, kicker: 'any time', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: preset.voiceId, day: undefined, scan: preset.scan };
     }
     const d = programDay(Number(params.day) || 1);
     return {
@@ -69,6 +69,7 @@ export function BeforeScreen() {
       minutes: d.practice.minutes as SessionLength,
       voice: prefs.voiceId ?? GUIDE_VOICES[0].id,
       day: d.day,
+      scan: undefined,
     };
   }, [params.day, params.preset, prefs.voiceId]);
 
@@ -87,7 +88,8 @@ export function BeforeScreen() {
     if (plan.day && voice !== prefs.voiceId) setPrefs({ voiceId: voice });
     // The sound is a standing choice, the same under every session until changed.
     if (background !== backgroundFor(prefs)) setPrefs({ background });
-    startPractice({ type: plan.type, minutes, voice, theme: plan.theme, day: plan.day, place, background }, 'replace');
+    // The body scan keeps its own scan; the engine falls back to the usual one if a shorter length was chosen here.
+    startPractice({ type: plan.type, minutes, voice, theme: plan.theme, day: plan.day, place, background, scan: plan.scan }, 'replace');
   };
 
   return (

@@ -58,6 +58,8 @@ export type GuideScript = {
   SCAN_BRIEF: Line[][];
   SCAN_SHORT: Line[][];
   SCAN_FULL: Line[][];
+  /** The body scan practice (the scan-10 preset) only: sixteen steps, feet to scalp, then the whole body. */
+  SCAN_BODY: Line[][];
   SCAN_NOTICE: string[];
   SCAN_USUAL: string[];
   LOCATE_USUAL: string[];
@@ -200,6 +202,28 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Now the neck, the jaw, the face.', 7000],
       ['And the top of your head.', 9000],
     ],
+  ],
+  // The body scan practice (the scan-10 preset), and nothing else: program days, including the
+  // open-theme Days 14, 21 and 28, keep SCAN_FULL and their theme. Sixteen steps that name only
+  // parts of the body, never {place} or a sensation, so it suits anyone, with or without a place.
+  // About 9 minutes with the test voice; the session's time guard then closes it.
+  SCAN_BODY: [
+    [["Let's take a slow look through the body, from the feet up.", 4000], ['Nothing to find, and nothing to change. Just attention, moving.', 8000]],
+    [['Start with your feet.', 4000], ['The soles. The heels. The toes.', 12000], ['Notice where they rest, and what holds them.', 14000]],
+    [['Now let attention rise into the ankles.', 6000], ['The shins, the calves, the backs of the knees.', 16000]],
+    [['Up into the thighs.', 5000], ['Their weight, resting on whatever is under you.', 14000], ['If attention wanders, that is part of it. Bring it back to where you were.', 12000]],
+    [['Now the hips, and the pelvis.', 6000], ['The places where you are sitting, or lying. Where the body is held.', 18000]],
+    [['Let attention come to the belly.', 6000], ['The breath moving here, however it moves.', 18000]],
+    [['If a place is loud, let attention pass over it, like weather.', 8000], ['It can be there. Attention keeps moving.', 10000]],
+    [['Now the lower back.', 6000], ['Either side of the spine. Wherever the back meets support.', 18000]],
+    [['Let attention climb the spine, into the upper back.', 8000], ['The shoulder blades. The space between them.', 16000]],
+    [['Now the chest.', 5000], ['The ribs, widening and settling with each breath.', 14000], ['The breastbone, at the center.', 12000]],
+    [['Now let attention find your hands.', 6000], ['The palms. The backs of the hands. Each finger.', 14000], ['Up through the wrists, the forearms, the elbows, the upper arms.', 14000]],
+    [['Into the shoulders.', 6000], ['Wherever they sit, they can stay just as they are.', 16000]],
+    [['Now the neck.', 5000], ['The back of the neck, the sides, the throat.', 16000]],
+    [['The jaw.', 5000], ['The hinge, just in front of the ears.', 12000], ['The cheeks. The eyes, resting behind the lids. The forehead.', 16000]],
+    [['And the top of the head.', 6000], ['The scalp. The back of the head, where it rests.', 16000]],
+    [['Now let attention widen, until it holds the whole body at once.', 12000], ['Feet to scalp. The body as a whole, breathing.', 18000], ['Nothing to do here but be with it.', 24000]],
   ],
   // After the scan. Asked only if nothing was remembered from earlier sessions.
   SCAN_NOTICE: [

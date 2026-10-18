@@ -181,6 +181,12 @@ export type Session = {
   place?: Place;
   /** The program day this session was, if it was one. */
   programDay?: number;
+  /**
+   * Practised time, pauses taken out. Today endedAt is also start + this (every screen reads
+   * minutes as endedAt − startedAt); kept on its own so endedAt can become the wall-clock end
+   * later without losing it. Absent on sessions saved before 18 Oct 2026.
+   */
+  activeMs?: number;
   /** Tapped after the session, optional. */
   feeling?: SessionFeeling;
   /** Seeded demo data. Shown with a label and removable in one tap. */

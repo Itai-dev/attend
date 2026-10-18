@@ -1,4 +1,4 @@
-import { SessionEngine } from '../src/engine/SessionEngine';
+import { SessionEngine, type ScanBank } from '../src/engine/SessionEngine';
 import { LocalGuideBrain } from '../src/engine/guide/LocalGuideBrain';
 import type { AskKind, GuideBrain } from '../src/engine/types';
 import type { Place, SessionMode, SessionType } from '../src/domain/types';
@@ -15,10 +15,10 @@ export type Script = Partial<Record<AskKind | 'default', string | string[] | nul
  */
 export async function runSession(
   script: Script,
-  opts: { type?: SessionType; minutes?: SessionLength; brain?: GuideBrain; seed?: number; maxTurns?: number; memory?: SessionMemory; mode?: SessionMode; place?: Place; theme?: PracticeTheme } = {},
+  opts: { type?: SessionType; minutes?: SessionLength; brain?: GuideBrain; seed?: number; maxTurns?: number; memory?: SessionMemory; mode?: SessionMode; place?: Place; theme?: PracticeTheme; scan?: ScanBank } = {},
 ) {
   let t = 1_000_000;
-  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', minutes: opts.minutes, now: () => t, seed: opts.seed ?? 3, memory: opts.memory, mode: opts.mode, place: opts.place, theme: opts.theme });
+  const engine = new SessionEngine({ sessionType: opts.type ?? 'notice', minutes: opts.minutes, now: () => t, seed: opts.seed ?? 3, memory: opts.memory, mode: opts.mode, place: opts.place, theme: opts.theme, scan: opts.scan });
   const brain = opts.brain ?? new LocalGuideBrain();
   const spoken: string[] = [];
   /** Each turn as heard, questions marked with their kind: for reading a session back. */

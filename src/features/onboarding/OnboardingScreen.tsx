@@ -105,7 +105,7 @@ export function OnboardingScreen() {
       program,
     });
     const last = sessions.filter((s) => !s.isSample).map((s) => s.startedAt);
-    await scheduleReminders(reminder, last.length ? Math.max(...last) : undefined);
+    await scheduleReminders(reminder, last.length ? Math.max(...last) : undefined, program);
     router.replace('/');
     // The first day starts now, from its lesson; Today is underneath when it ends.
     if (begin) setTimeout(() => router.push({ pathname: '/lesson/[day]', params: { day: String(day) } }), 350);

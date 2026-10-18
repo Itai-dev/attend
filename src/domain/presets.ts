@@ -24,6 +24,8 @@ export type Preset = {
   voiceName: string;
   /** What the guide works with. Defaults from the type (presetTheme). */
   theme?: PracticeTheme;
+  /** The body scan's own sixteen-step scan (SCAN_BODY). Only the body scan has it; see SessionEngine's `scan`. */
+  scan?: 'body';
 };
 
 export const PRESET_CATEGORIES: Array<{ id: PresetCategory; title: string; detail: string }> = [
@@ -45,7 +47,7 @@ const DANIEL = { voiceId: 'onwK4e9ZLuTAKqWW03F9', voiceName: 'Daniel' };
 export const PRESETS: Preset[] = [
   { id: 'notice-5', title: 'Meet a familiar sensation', blurb: 'Find it, describe it, watch it for a while.', category: 'familiar', type: 'notice', minutes: 5, ...RIVER },
   { id: 'notice-3', title: 'A short check-in', blurb: 'A few minutes with whatever is asking for attention.', category: 'familiar', type: 'notice', minutes: 3, ...ALICE },
-  { id: 'scan-10', title: 'Body scan', blurb: 'A slow sweep from the feet up, resting on the body as a whole.', category: 'familiar', type: 'notice', minutes: 10, theme: 'open', ...RIVER },
+  { id: 'scan-10', title: 'Body scan', blurb: 'A slow sweep from the feet up, resting on the body as a whole.', category: 'familiar', type: 'notice', minutes: 10, theme: 'open', scan: 'body', ...RIVER },
   { id: 'notice-10', title: 'Stay with it longer', blurb: 'More time to watch how it moves and shifts.', category: 'familiar', type: 'notice', minutes: 10, ...GEORGE },
   { id: 'flare-5', title: 'During a flare', blurb: 'Slower lines and more room between them.', category: 'flare', type: 'flare', minutes: 5, ...MATILDA },
   { id: 'flare-3', title: 'A flare, briefly', blurb: 'Something short for when it’s loud.', category: 'flare', type: 'flare', minutes: 3, ...SARAH },

@@ -1,5 +1,6 @@
 import type { EngineDraft } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
+import type { SignsReply } from '../domain/firstWeek';
 import type { Moment } from '../domain/engagement';
 import type { ProgramState } from '../domain/program';
 import type { BackgroundPref, ListenTimer, SoundscapeId } from '../domain/soundscapes';
@@ -72,6 +73,14 @@ export type Prefs = {
   appearance?: 'auto' | 'light' | 'dark';
   /** The last Just listen: which sound and how long, offered again next time. */
   listen?: { id: SoundscapeId; timer: ListenTimer };
+  /** When the "your first week" card on Today was put away with done. Unset: not yet. */
+  firstWeekDone?: number;
+  /**
+   * The Day 7 card's optional question: which of Day 4's signs the person has noticed. Three
+   * states: unset (never asked), `skipped` ("not now", or done without an answer), or the
+   * answer. Asked once, and it feeds nothing (domain/firstWeek.ts).
+   */
+  signs?: SignsReply;
   /** Developer settings. Ignored outside development builds. */
   dev: {
     inputMode: InputModePref;

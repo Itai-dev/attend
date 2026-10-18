@@ -47,6 +47,8 @@ function RootStack() {
         <Stack.Screen name="before" options={{ presentation: 'modal' }} />
         <Stack.Screen name="moment" options={{ presentation: 'modal' }} />
         <Stack.Screen name="listen" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+        {/* Attend Plus: behind PLUS_ENABLED (domain/access.ts); nothing links here while it is off. */}
+        <Stack.Screen name="plus" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       </Stack>
     </NavThemeProvider>
   );

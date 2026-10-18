@@ -87,6 +87,8 @@ export type GuideContext = {
   place?: Place;
   /** Guided: the program day's theme, spoken before the general guidance. */
   theme?: PracticeTheme;
+  /** Guided: 'body' is the body scan practice, which scans with SCAN_BODY instead of its length's scan. */
+  scan?: 'body';
   plan: SessionPlan;
   phase: Phase;
   /** Questions already asked in this phase. */

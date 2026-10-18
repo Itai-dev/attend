@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import type { SessionType } from '@/domain/types';
 import { currentTz, dayKey } from '@/domain/checkin';
 import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
+import { showFirstWeek } from '@/domain/firstWeek';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { NEED_IT, presetById } from '@/domain/presets';
 import { soundscape, timerLabel } from '@/domain/soundscapes';
@@ -17,8 +18,9 @@ import { useColors, useStyles } from '@/design/ThemeProvider';
 import { pauseListening, resumeListening, useListen } from '@/voice/listen';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { dayPlan, presetPlan, startPractice } from '../shared/start';
+import { dayPlan, presetPlan, shortDayPlan, startPractice } from '../shared/start';
 import { WeekStrip } from '../shared/WeekStrip';
+import { FirstWeekCard } from './FirstWeekCard';
 
 /**
  * Today answers one question: what do I do now? One practice for the day, begun with one
@@ -42,9 +44,10 @@ export function HomeScreen() {
   const listen = useListen();
   const { sessions, checkIns, prefs } = useData();
   const tz = currentTz();
-  const now = Date.now();
+  const now = useNow();
+  const todayKey = dayKey(now, tz);
   const program = prefs.program ?? EMPTY_PROGRAM;
-  const { day, doneToday, finished } = currentDay(program, dayKey(now, tz));
+  const { day, doneToday, finished } = currentDay(program, todayKey);
   const today = programDay(day);
   const read = program.read.includes(day);
   const strip = useMemo(() => weekStrip(sessions, now, tz), [sessions, now, tz]);
@@ -52,11 +55,12 @@ export function HomeScreen() {
   const checkedInToday = checkIns.some((c) => !c.isSample && dayKey(c.at, tz) === dayKey(now, tz));
   const known = { prefs, checkIns };
 
-  // Keep the reminder in step with the latest practice: daily while practising, weekly after
-  // four quiet days (voice/reminders.ts). Rescheduling is idempotent.
+  // Keep the reminders in step with the latest practice and the program: dated one-offs, daily
+  // for four days after a practice, then weekly (voice/reminders.ts). A new day re-plans too, so
+  // the reminder copy names the right day. Rescheduling with nothing changed is a no-op.
   useEffect(() => {
-    scheduleReminders(prefs.reminder, stats.lastPractice);
-  }, [prefs.reminder, stats.lastPractice]);
+    scheduleReminders(prefs.reminder, stats.lastPractice, prefs.program);
+  }, [prefs.reminder, stats.lastPractice, prefs.program, todayKey]);
 
   const { warm } = useVoiceSession();
   // Ready the practice while the person reads Today, so Begin goes straight to the guide's first words.
@@ -67,6 +71,15 @@ export function HomeScreen() {
     if (!read) router.push({ pathname: '/lesson/[day]', params: { day: String(day) } });
     else startPractice(dayPlan(day, known));
   };
+
+  // The short day (r2-copy §5): 3 active minutes of the same practice complete the day. Straight
+  // into the practice: the lesson is never a gate, and a low-energy day shouldn't start with reading.
+  const short = !doneToday && today.practice.minutes > 3;
+  const beginShort = () => {
+    haptic('soft');
+    startPractice(shortDayPlan(day, known));
+  };
+  const firstWeek = showFirstWeek(program, prefs.firstWeekDone, todayKey) ? <FirstWeekCard now={now} tz={tz} /> : null;
 
   const lead = prefs.focus ? FOCUS_NEED[prefs.focus] : undefined;
   const needs = lead ? [...NEED_IT.filter((n) => n.id === lead), ...NEED_IT.filter((n) => n.id !== lead)] : NEED_IT;
@@ -178,6 +191,22 @@ export function HomeScreen() {
         ) : (
           <>
             <PrimaryButton label={read ? 'begin practice' : `begin day ${day}`} onPress={begin} style={{ marginTop: space.l }} />
+            {short ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Short on energy? 3 minutes completes the day. Begins now."
+                onPress={beginShort}
+                hitSlop={4}
+                style={({ pressed }) => [styles.shortRow, { opacity: pressed ? 0.55 : 1 }]}
+              >
+                <Txt variant="callout" tone="secondary" style={{ flex: 1 }}>
+                  short on energy? 3 minutes completes the day.
+                </Txt>
+                <Txt variant="callout" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
+                  →
+                </Txt>
+              </Pressable>
+            ) : null}
             {/* Day 1 has nothing to adjust yet: the welcome just chose length and voice. */}
             {day > 1 ? (
               <QuietButton
@@ -191,6 +220,8 @@ export function HomeScreen() {
       </Animated.View>
 
       {/* Once today's practice is done, the next thing someone might want is a practice for a moment. */}
+      {firstWeek}
+
       {doneToday ? (
         <>
           {needIt}
@@ -214,6 +245,28 @@ export function HomeScreen() {
       ) : null}
     </ScrollView>
   );
+}
+
+/**
+ * The time Today reads its day from. Held in state and refreshed when the app comes back to
+ * the foreground, and at local midnight while it stays open: an app left open overnight
+ * otherwise shows yesterday's day, done, until something else re-renders it.
+ */
+function useNow(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setNow(Date.now());
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 1, 0);
+    const t = setTimeout(() => setNow(Date.now()), midnight.getTime() - now);
+    return () => clearTimeout(t);
+  }, [now]);
+  return now;
 }
 
 /** While a sound plays on its own: what it is, how long is left, pause in place. */
@@ -274,6 +327,7 @@ const makeStyles = (color: Palette) =>
       borderColor: color.hairline,
     },
     needLast: { borderBottomWidth: StyleSheet.hairlineWidth },
+    shortRow: { flexDirection: 'row', alignItems: 'center', gap: space.s, minHeight: HIT, marginTop: space.xs },
     playing: { flexDirection: 'row', alignItems: 'center', gap: space.m, padding: space.s, paddingRight: space.l },
     playBtn: { width: 40, height: 40, borderRadius: 3, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   });

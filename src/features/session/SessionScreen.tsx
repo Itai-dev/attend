@@ -12,6 +12,7 @@ import { haptic, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/co
 import { space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_LENGTHS } from '@/engine/phases';
+import { stopListening } from '@/voice/listen';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import { BreathingField, type BreathMode } from '@/viz/BreathingField';
 import { DevPanel } from './DevPanel';
@@ -40,6 +41,11 @@ export const STATUS_WORD: Partial<Record<SessionStatus, string>> = {
 /** Shown instead of "paused" when the guide's voice couldn't be had (SessionRunner pauses with 'error'). */
 export const VOICE_FAILED_LINE = 'The guide’s voice couldn’t load. Check your connection, then resume.';
 
+/** After a sleep practice: the one word on a near-black screen, if the phone is woken. */
+export const RESTING_WORD = 'resting';
+/** The breathing form after a sleep practice: there, barely, for someone who wakes the phone. */
+const RESTING_DIM = 0.14;
+
 /** How long the controls stay after the session starts or a tap, and how slowly they go. */
 const CONTROLS_FIRST_MS = 8000;
 const CONTROLS_AGAIN_MS = 6000;
@@ -56,7 +62,7 @@ export function breathMode(s: SessionStatus): BreathMode {
 export function SessionScreen() {
   const color = useColors();
   const styles = useStyles(makeStyles);
-  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string; background?: string }>();
+  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string; background?: string; scan?: string }>();
   const type = (['notice', 'flare', 'sleep', 'fear'].includes(params.type ?? '') ? params.type : 'notice') as SessionType;
   const minutes = SESSION_LENGTHS.find((m) => String(m) === params.minutes);
   const vs = useVoiceSession();
@@ -86,6 +92,7 @@ export function SessionScreen() {
       programDay: params.day ? Number(params.day) || undefined : undefined,
       place,
       background: params.background === 'none' || soundscape(params.background) ? (params.background as BackgroundPref) : undefined,
+      scan: params.scan === 'body' ? 'body' : undefined,
     });
     const t = setTimeout(() => setHint(false), 6000);
     return () => {
@@ -101,6 +108,9 @@ export function SessionScreen() {
   useEffect(() => {
     if (!sawThisSession.current || vs.completedSessionId === undefined) return;
     if (vs.completedSessionId) {
+      // A sleep practice ends in rest: no buzz, no After screen. The screen stays dark (below)
+      // and the sound, handed to Just listen, fades on its own.
+      if (vs.resting) return;
       // One soft tap in the hand or on the floor: the practice is over, before the screen changes.
       haptic('soft');
       router.replace({ pathname: '/recap/[id]', params: { id: vs.completedSessionId } });
@@ -186,6 +196,34 @@ export function SessionScreen() {
     fn();
     if (!keepControls) showControls(CONTROLS_AGAIN_MS);
   };
+
+  if (vs.resting) {
+    return (
+      <View style={styles.root}>
+        <StatusBar hidden />
+        <BreathingField width={width} height={height} mode="holding" dim={RESTING_DIM} style={StyleSheet.absoluteFill} />
+        <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
+          <Txt variant="caption" tone="tertiary" style={[styles.status, { opacity: 0.6 }]}>
+            {RESTING_WORD}
+          </Txt>
+        </View>
+        <View style={[styles.controls, { paddingBottom: insets.bottom + space.xl }]}>
+          <QuietButton
+            label="stop"
+            accessibilityLabel="Stop the sound and close"
+            tone="secondary"
+            style={{ opacity: 0.55 }}
+            onPress={() => {
+              // Woken, and done: the sound fades and the room is given back.
+              stopListening();
+              vs.reset();
+              router.back();
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>

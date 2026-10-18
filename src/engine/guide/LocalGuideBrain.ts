@@ -176,6 +176,7 @@ function answerLines(ctx: GuideContext): GuideLine[] {
 
 /** The scan's steps for this session's depth, spoken in order. */
 function scanSteps(ctx: GuideContext): L.Line[][] {
+  if (ctx.scan === 'body') return L.SCAN_BODY;
   if (ctx.plan.scan === 'brief') return [pickLines(L.SCAN_BRIEF, ctx)];
   return ctx.plan.scan === 'full' ? L.SCAN_FULL : L.SCAN_SHORT;
 }
@@ -215,7 +216,10 @@ function phaseTurn(ctx: GuideContext): GuideTurn {
       const steps = scanSteps(ctx);
       const step = steps[Math.min(ctx.phaseStep, steps.length - 1)];
       const last = ctx.phaseStep >= steps.length - 1;
-      return turn({ lines: [...prefix, ...lines(step, ctx)], expectsResponse: false, stay: !last, advance: last });
+      // SCAN_BODY's silences are written for its ten minutes; scaled up like the other banks
+      // (×1.4 at ten minutes) the scan outran the session and the close cut off the whole body.
+      const spoken = ctx.scan === 'body' ? step.map(([text, ms]) => ({ text: fill(text, ctx), pauseAfterMs: ms, key: text })) : lines(step, ctx);
+      return turn({ lines: [...prefix, ...spoken], expectsResponse: false, stay: !last, advance: last });
     }
 
     case 'NOTICE': {

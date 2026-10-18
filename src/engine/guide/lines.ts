@@ -26,6 +26,8 @@ export let ARRIVE = GUIDE_SCRIPT.ARRIVE;
 export let SCAN_BRIEF = GUIDE_SCRIPT.SCAN_BRIEF;
 export let SCAN_SHORT = GUIDE_SCRIPT.SCAN_SHORT;
 export let SCAN_FULL = GUIDE_SCRIPT.SCAN_FULL;
+/** A remote or saved script from before the body scan has no SCAN_BODY: applyScript keeps the bundled one. */
+export let SCAN_BODY = GUIDE_SCRIPT.SCAN_BODY;
 export let SCAN_NOTICE = GUIDE_SCRIPT.SCAN_NOTICE;
 export let SCAN_USUAL = GUIDE_SCRIPT.SCAN_USUAL;
 export let LOCATE_USUAL = GUIDE_SCRIPT.LOCATE_USUAL;
@@ -80,6 +82,7 @@ function setAll(s: GuideScript) {
   SCAN_BRIEF = s.SCAN_BRIEF;
   SCAN_SHORT = s.SCAN_SHORT;
   SCAN_FULL = s.SCAN_FULL;
+  SCAN_BODY = s.SCAN_BODY ?? GUIDE_SCRIPT.SCAN_BODY;
   SCAN_NOTICE = s.SCAN_NOTICE;
   SCAN_USUAL = s.SCAN_USUAL;
   LOCATE_USUAL = s.LOCATE_USUAL;

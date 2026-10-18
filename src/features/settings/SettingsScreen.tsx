@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
+import { currentTz } from '@/domain/checkin';
+import { practiceStats } from '@/domain/engagement';
 import { backgroundFor, SOUNDSCAPES } from '@/domain/soundscapes';
 import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
 import { HIT, radius, space, type Palette } from '@/design/theme';
@@ -90,7 +92,7 @@ export function SettingsScreen() {
               const base = prefs.reminder ?? { enabled: false, hour: 20, minute: 30 };
               const reminder = { ...base, enabled: on && (await requestReminderPermission()) };
               await setPrefs({ reminder });
-              await scheduleReminders(reminder, undefined);
+              await scheduleReminders(reminder, practiceStats(sessions, Date.now(), currentTz()).lastPractice, prefs.program);
             }}
           />
         </View>
@@ -109,7 +111,7 @@ export function SettingsScreen() {
                   const [hour, minute] = v.split(':').map(Number);
                   const reminder = { enabled: true, hour, minute };
                   await setPrefs({ reminder });
-                  await scheduleReminders(reminder, undefined);
+                  await scheduleReminders(reminder, practiceStats(sessions, Date.now(), currentTz()).lastPractice, prefs.program);
                 }}
               />
             </View>
