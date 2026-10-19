@@ -231,3 +231,59 @@ copy and readiness for App Review. UX screenshots the whole product as one and p
 - Decide whether the body area may be sent at all. The real fix is a downloaded voice pack, so
   nothing personal leaves the phone.
 
+**Built in round 3** (pushed, 148/148 tests):
+- **Safety:**
+  - a test checks every line the guide can speak for questions, across 30 seeds
+  - safety lines are fixed in the app
+  - emergency wording in the welcome, the worry arrival and Settings
+  - a crisis line (988) in Settings
+  - "you can open your eyes, or stop, at any time" in every arrival
+  - a doctor line in the first session ever
+  - a gentler body scan
+  - distress practices are never paywalled
+  - reminder titles say only "day N"
+  - a balanced signs question with "not a diagnosis"
+- **Ending a practice:** a tap on the faded end button reveals the controls and arms the
+  confirm, the confirm window is 6 s, and ending while paused takes one tap.
+- **Review readiness:**
+  - honest microphone and speech strings
+  - Health in the privacy manifest
+  - Settings rows for privacy, terms and contact (placeholder URLs)
+  - a voice-service disclosure on the welcome's "where" step
+  - a privacy policy draft
+- **Copy:** one case rule throughout, American English, no "missed", no 432 Hz, one paywall
+  heading per way in.
+- **UX polish:** readable tertiary text, a soft fade under photo labels, the chart scale fixed,
+  square controls, contact sheets in `docs/studio/r3-*.png`.
+- **Launch:** `docs/launch/testflight.md`, the playbook from this branch to an external beta.
+  Outreach no longer ties a free year to testing (TestFlight forbids paying testers).
+
+## Where the loop stopped
+
+The session hit its usage limit at about 22:07 UTC, during round 4. Round 3 was complete and
+pushed. Round 4 had only started: the TestFlight playbook was written, but the planned
+simulated first-week test with the personas never ran.
+
+## Summary of the studio night
+
+| | Before | After |
+|---|---|---|
+| Voice | Silent on any failure, paused on lock, cache lost on relaunch | Says why, resumes fast, plays locked, cached offline after one play |
+| Safety | Guide could ask "not a problem?"; doctor lines editable remotely; no emergency path | Never asks; fixed safety lines; emergency, crisis and doctor wording where it's needed |
+| Day 1 | Read, then a settings screen, then practice | Read or listen, then straight into practice; 3 minutes completes a day |
+| Today | Card over the photo, practice tiles like sounds, dashed "missed" days | Day on the photo, practice rows, no missed marks, a Day 7 "first week" card |
+| Sleep | Lit completion screen, sound stopped | Dark screen, sound carries on 30 minutes |
+| Reminders | Repeating daily forever, lesson titles on the lock screen | Dated, step down to weekly by themselves, "day N" only |
+| Business | Paywall after onboarding (plan) | Day 8 gate built behind a flag; flare, sleep and worry always free; founding prices proposed |
+| Launch | A plan | Store listing, landing page, outreach, privacy policy, paywall copy, TestFlight playbook |
+
+**Needs Itai** (details in `docs/launch/testflight.md`):
+- Prices: $39.99/yr with 7 days free, $7.99/mo, $99 lifetime.
+- A support email, and the privacy page hosted at a URL.
+- The app token on Vercel and EAS, and ElevenLabs credits.
+- The Paid Applications Agreement.
+- Whether the body area may go to the voice service, or wait for a downloaded voice pack.
+- Whether weekly reminders stop after four go unanswered.
+
+**Needs an iPhone:** everything listed in `docs/ON-DEVICE.md`: the lock screen, offline play,
+the sleep tail, fading controls and VoiceOver.
