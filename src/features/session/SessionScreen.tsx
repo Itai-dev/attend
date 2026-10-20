@@ -326,10 +326,8 @@ export function SessionScreen() {
 
       {hint && !blocked && !voiceFailed ? (
         <Animated.View entering={FadeIn.duration(1200).delay(400)} exiting={FadeOut.duration(1600)} style={styles.hint} pointerEvents="none">
+          {/* No mention of the phone (20 Oct 2026): the practice is about the room and the body. */}
           <Txt variant="title2" align="center" style={{ fontWeight: '300' }}>
-            Put the phone down.
-          </Txt>
-          <Txt variant="title2" align="center" tone="secondary" style={{ fontWeight: '300' }}>
             Close your eyes.
           </Txt>
         </Animated.View>

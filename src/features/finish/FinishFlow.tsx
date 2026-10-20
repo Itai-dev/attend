@@ -248,7 +248,7 @@ function MomentScreen({
       <Foot>
         <Animated.View entering={appear(500, 1000)}>
           <Txt variant="caption" style={styles.kicker}>
-            {finish.day ? `week ${programDay(finish.day).week} · ${WEEKS[programDay(finish.day).week].name.toLowerCase()}` : 'today'}
+            {finish.day ? `day ${finish.day} of 28` : 'today'}
           </Txt>
           <Txt variant="display" accessibilityRole="header" style={styles.onImage}>
             {finish.title}

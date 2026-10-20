@@ -36,7 +36,8 @@ even when it looks like an improvement.
 silence; it never asks, and the session never listens. Answering questions mid-practice
 pulled people out of it. Once a session starts it must be completable with the eyes
 closed: no tap to continue, no body-part picker, no reading. The session screen shows a
-breathing form, one quiet status word, pause and end. Never a transcript, never text of
+breathing form that follows the guide's voice, one quiet status word, the time left (a
+hairline ring and a dim "6:12", never a colour or a sound; 20 Oct 2026), pause and end. Never a transcript, never text of
 what the guide says. The conversational engine is kept behind `mode: 'conversation'`;
 the app runs `mode: 'guided'`.
 
@@ -92,9 +93,11 @@ sessions use no microphone. Speech, where it is used (the welcome), is recognise
 device and audio is never stored. No analytics. Changing what leaves the phone means
 updating the privacy copy in Settings and the README first.
 
-**Sounds are atmosphere, not treatment (18 Oct 2026).** Rain, forest, water and the tone
-(`domain/soundscapes.ts`) play under a session or on their own from the Sounds tab. No copy says
-they heal, relax the nervous system or lower pain. Listening on its own is not practice: it
+**Sounds are atmosphere, not treatment (18 Oct 2026).** Soft tones named by their pitch,
+174 to 639 Hz (`domain/soundscapes.ts`; nature recordings paused 20 Oct 2026), play under a
+session or on their own from the Sounds tab. Under a practice the tone is matched to it unless
+the person chose one. The numbers carry a mythology (RESEARCH.md §7): the names are the
+numbers, and no copy says they heal, relax the nervous system or lower pain. Listening on its own is not practice: it
 never counts toward days, minutes or milestones, and nothing about it is recorded. Once a
 listen starts it needs nothing — it fades out on its own timer.
 

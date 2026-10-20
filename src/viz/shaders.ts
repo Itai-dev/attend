@@ -297,7 +297,7 @@ float rimShape(float ang, float t, float seed, float voice) {
           + sin(5.0 * ang + t * 0.15 + seed * 2.3) * 0.009;
   float travel = sin(6.0 * ang - t * 1.25 + seed) * 0.6 + sin(9.0 * ang + t * 1.6 + seed * 3.1) * 0.4;
   float fine = fbm3(c * 2.4 + float2(t * 0.5, seed)) - 0.5;
-  return lobes * 0.24 + h + voice * (travel * 0.02 + fine * 0.06);
+  return lobes * 0.24 + h + voice * (travel * 0.035 + fine * 0.09);
 }
 
 half4 main(float2 fragCoord) {
@@ -312,7 +312,7 @@ half4 main(float2 fragCoord) {
   float3 col = float3(0.0);
   if (r < 0.5) {
     float ang = atan(p.y, p.x);
-    float base = 0.165 * (1.0 + mix(0.035, 0.07, uMotion) * breath + 0.05 * uListen + 0.085 * v);
+    float base = 0.165 * (1.0 + mix(0.035, 0.07, uMotion) * breath + 0.05 * uListen + 0.15 * v);
 
     // Three layers, each its own outline turning at its own pace.
     float R1 = base * 1.32 * (1.0 + rimShape(ang + t * 0.018, t * 0.8, 11.0, v * 0.7));
