@@ -66,6 +66,12 @@ export interface SpeechOutput {
   /** A short sound that says "your turn", played after a question and before listening. Never rejects. */
   cue?(signal: AbortSignal): Promise<void>;
   stop(): void;
+  /**
+   * The guide's level 0..1 as a line plays, for the session's form; 0 when a line ends or stops.
+   * Optional, and an output that can't measure simply never calls back above 0: the form then
+   * makes its own envelope while the guide speaks.
+   */
+  onLevel?(cb: (level: number) => void): () => void;
   begin?(): Promise<void>;
   end?(): Promise<void>;
   dispose(): void;

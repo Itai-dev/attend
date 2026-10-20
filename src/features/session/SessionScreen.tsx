@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
 import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,13 +14,17 @@ import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_LENGTHS } from '@/engine/phases';
 import { stopListening } from '@/voice/listen';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
-import { BreathingField, type BreathMode } from '@/viz/BreathingField';
+import { BreathingField, type BreathMode, type TimeRing } from '@/viz/BreathingField';
 import { DevPanel } from './DevPanel';
+import { SessionClock } from './SessionClock';
 
 /**
  * The session. The person's eyes are closed; this screen should feel almost
- * unnecessary. A breathing form, a quiet word only when one is needed, pause and
- * end. No transcript, no questions written out, no body diagram, no clock.
+ * unnecessary. A breathing form, a quiet word only when one is needed, the time left, pause and
+ * end. No transcript, no questions written out, no body diagram.
+ *
+ * The form follows the guide's voice (20 Oct 2026): it swells and ripples with the words and
+ * settles into its breath in the silences (BreathingField, `vs.voice`).
  *
  * The controls fade away after a few seconds, so a phone lying face-up in a dim room
  * is just the breathing form. A tap anywhere brings them back; that first tap only
@@ -30,20 +34,25 @@ import { DevPanel } from './DevPanel';
  * was too many for someone who needs to stop). While paused, end is one tap.
  * VoiceOver reaches pause and end at all times, faded or not.
  *
- * While the controls are showing, a quiet "about N min left" sits under the status word (round 5:
- * the session showed no sign it was running). Only then: a person who reached for the phone gets
- * an answer, and the faded screen stays a breathing form with no clock to watch.
+ * The time left is always there, quietly (20 Oct 2026, the founder: "a timer in the session";
+ * it replaces round 5's "about N min left", which showed only with the controls): a hairline ring
+ * around the form that fills with practised time, and a small "6:12" under the status word.
+ * Pauses don't count. Dim at rest, full while the controls show, never animated, never a colour
+ * that changes near the end, never a sound (SessionClock). Not on the resting screen.
  *
- * Under pause and end, with them and only with them, a quiet "sound · ocean ›" (20 Oct 2026: "an
+ * Under pause and end, with them and only with them, a quiet "sound · 432 Hz ›" (20 Oct 2026: "an
  * option to change the background or remove the background sound"). It opens a small list of
  * the sounds and "no sound"; a choice crosses over in about two seconds while the guide carries
  * on. It is for this practice only — practice settings is where it is kept — so trying a sound
  * mid-practice never changes the next one behind the person's back.
  */
 
-/** The control's words: "sound · ocean", "sound · none". */
+/**
+ * The control's words: "sound · 432 Hz", "sound · none". The sound's name as written, not
+ * lowercased: tones are named by their pitch, and "432 hz" is a misspelt unit.
+ */
 export function soundControlLabel(b: Background): string {
-  return `sound · ${b === 'none' ? 'none' : (soundscape(b)?.name ?? '').toLowerCase()}`;
+  return `sound · ${b === 'none' ? 'none' : (soundscape(b)?.name ?? '')}`;
 }
 
 /**
@@ -64,17 +73,6 @@ export const VOICE_FAILED_LINE = 'The guide’s voice couldn’t load. Check you
 export const RESTING_WORD = 'resting';
 /** The breathing form after a sleep practice: there, barely, for someone who wakes the phone. */
 const RESTING_DIM = 0.14;
-
-/**
- * "about 4 min left", from the engine's planned length and the time practised (pauses excluded).
- * Rounded up, and never below "about a minute": the close can run a little past the plan, and a
- * countdown at zero would read as something gone wrong.
- */
-export function timeLeftLine(targetMs: number, activeMs: number): string | undefined {
-  if (targetMs <= 0) return undefined;
-  const min = Math.ceil((targetMs - activeMs) / 60_000);
-  return min <= 1 ? 'about a minute left' : `about ${min} min left`;
-}
 
 /** How long the controls stay after the session starts or a tap, and how slowly they go. */
 const CONTROLS_FIRST_MS = 8000;
@@ -192,18 +190,17 @@ export function SessionScreen() {
     return () => sub.remove();
   }, []);
 
-  // Re-reads the time left: on each reveal, and every 15 s while the controls stay up.
-  const [, refreshTimeLeft] = useReducer((n: number) => n + 1, 0);
-  useEffect(() => {
-    if (!shown) return;
-    const t = setInterval(refreshTimeLeft, 15_000);
-    return () => clearInterval(t);
-  }, [shown]);
+  // The time ring: SessionClock writes progress and presence; the controls' opacity lifts it.
+  const ringProgress = useSharedValue(0);
+  const ringPresence = useSharedValue(0);
+  const ring = useMemo<TimeRing>(
+    () => ({ progress: ringProgress, presence: ringPresence, lift: controlsOpacity }),
+    [ringProgress, ringPresence, controlsOpacity],
+  );
 
   const showControls = useCallback(
     (forMs: number) => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      refreshTimeLeft();
       setShown(true);
       controlsOpacity.value = withTiming(1, { duration: 300 });
       hideTimer.current = setTimeout(() => {
@@ -266,7 +263,6 @@ export function SessionScreen() {
 
   // Hidden while preparing (nothing has started) and in a blocked or resting session.
   const running = vs.status !== 'preparing' && vs.status !== 'idle' && !blocked;
-  const timeLeft = running ? timeLeftLine(vs.targetMs(), vs.activeMs()) : undefined;
 
   if (vs.resting) {
     return (
@@ -300,7 +296,7 @@ export function SessionScreen() {
     <View style={styles.root}>
       <StatusBar hidden />
       {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
-      <BreathingField width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
+      <BreathingField width={width} height={height} mode={breathMode(vs.status)} voice={vs.voice} ring={ring} style={StyleSheet.absoluteFill} />
 
       {/* Anywhere on the screen: bring the controls back. Hidden from VoiceOver, which reaches the controls directly. */}
       <Pressable
@@ -315,14 +311,7 @@ export function SessionScreen() {
         <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="polite">
           {word ?? ' '}
         </Txt>
-        {/* Fades with the controls. Not a live region: VoiceOver reads it when it reaches it, never as it changes. */}
-        {timeLeft ? (
-          <Animated.View style={controlsStyle}>
-            <Txt variant="caption" tone="tertiary" style={styles.left}>
-              {timeLeft}
-            </Txt>
-          </Animated.View>
-        ) : null}
+        <SessionClock running={running} targetMs={vs.targetMs} activeMs={vs.activeMs} progress={ringProgress} presence={ringPresence} emphasis={controlsOpacity} />
       </View>
 
       {voiceFailed ? (
@@ -484,9 +473,9 @@ const makeStyles = (color: Palette) =>
   root: { flex: 1, backgroundColor: color.bg },
   top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
   status: { letterSpacing: 0.4, textTransform: 'lowercase', fontSize: 13 },
-  left: { fontSize: 13, opacity: 0.8 },
-  hint: { position: 'absolute', left: space.xl, right: space.xl, top: '62%', gap: 2 },
-  notice: { position: 'absolute', left: space.xl, right: space.xl, top: '62%' },
+  // Below the time ring (radius 0.385 of the width around the centre), not across its hairline.
+  hint: { position: 'absolute', left: space.xl, right: space.xl, top: '71%', gap: 2 },
+  notice: { position: 'absolute', left: space.xl, right: space.xl, top: '71%' },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
   buttons: { flexDirection: 'row', gap: space.xxl },
   confirm: { marginBottom: space.m },

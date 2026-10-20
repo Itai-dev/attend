@@ -10,12 +10,19 @@
  * aesthetic metaphors for what the person said, not a picture of tissue,
  * nerves or brain activity.
  *
- * BREATH: the session visual. One organic form that breathes at about five
- * and a half breaths a minute, warms slightly while the guide speaks and
- * opens, listening, when it is the person's turn.
+ * BREATH: the session visual. A soft form whose outline is never quite still:
+ * broad lobes from noise sampled around a circle (no seam), a few slow
+ * harmonics, the whole turning very slowly; three translucent layers (a
+ * haze, the body, a brighter core) for depth. It breathes at about five and
+ * a half breaths a minute; while the guide speaks it swells and ripples with
+ * the loudness of the words (`uVoice`, an envelope from voiceEnvelope.ts),
+ * and in the silences it settles back into the breath. Optionally a hairline
+ * ring around it fills with the practice's time (`uProg`).
  *
- * Both take `uMotion` (0 = Reduce Motion: a still frame) and draw their own
- * background so the canvas is opaque and cheap to composite.
+ * Both take `uMotion` (0 = Reduce Motion). BODY is then a still frame; BREATH
+ * keeps only a slower, shallower breath (the founder's ask, 20 Oct 2026) — no
+ * morphing, no turning, no voice. Both draw their own background so the
+ * canvas is opaque and cheap to composite.
  */
 
 export const BODY_SKSL = `
@@ -239,8 +246,12 @@ uniform float uMotion;
 uniform float uSpeak;
 uniform float uListen;
 uniform float uLevel;
+uniform float uVoice;
 uniform float uDim;
 uniform float3 uBg;
+uniform float uRing;
+uniform float uRingLift;
+uniform float uProg;
 
 float hash(float2 p) {
   return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
@@ -264,46 +275,108 @@ float fbm(float2 p) {
   return v;
 }
 
+float fbm3(float2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 3; i++) {
+    v += a * noise(p);
+    p = p * 2.0 + float2(5.2, 1.3);
+    a *= 0.5;
+  }
+  return v;
+}
+
+// How far the outline leans out or in at angle ang, as a fraction of the radius. Noise is read
+// on a circle, so the outline closes without a seam. 'voice' (0..1) adds finer ripples that
+// travel along the outline while the guide speaks.
+float rimShape(float ang, float t, float seed, float voice) {
+  float2 c = float2(cos(ang), sin(ang));
+  float lobes = fbm3(c * 1.15 + float2(seed, seed * 0.7) + float2(t * 0.045, -t * 0.03)) - 0.5;
+  float h = sin(2.0 * ang + t * 0.11 + seed) * 0.028
+          + sin(3.0 * ang - t * 0.07 + seed * 1.7) * 0.02
+          + sin(5.0 * ang + t * 0.15 + seed * 2.3) * 0.009;
+  float travel = sin(6.0 * ang - t * 1.25 + seed) * 0.6 + sin(9.0 * ang + t * 1.6 + seed * 3.1) * 0.4;
+  float fine = fbm3(c * 2.4 + float2(t * 0.5, seed)) - 0.5;
+  return lobes * 0.24 + h + voice * (travel * 0.02 + fine * 0.06);
+}
+
 half4 main(float2 fragCoord) {
   float s = min(uRes.x, uRes.y);
   float2 p = (fragCoord - uRes * 0.5) / s;
+  float r = length(p);
+  // Shape time stops under Reduce Motion; the breath keeps its own, slower and shallower.
   float t = uTime * uMotion;
+  float breath = sin(uTime * 6.2831853 / mix(14.0, 11.0, uMotion));
+  float v = clamp(uVoice, 0.0, 1.0) * uMotion;
 
-  float breath = sin(t * 6.2831853 / 11.0);
-  float ang = atan(p.y, p.x);
-  float2 ring = float2(cos(ang), sin(ang));
-  float warp = fbm(ring * 1.3 + float2(t * 0.05, -t * 0.035));
-  float ripple = sin(ang * 5.0 + t * 1.8) * 0.01 * uSpeak + sin(ang * 3.0 - t * 1.1) * 0.022 * uLevel * uListen;
-  float R = 0.18 * (1.0 + 0.075 * breath + 0.05 * uListen) * (0.87 + 0.26 * warp) + ripple + 0.025 * uLevel * uListen;
+  float3 col = float3(0.0);
+  if (r < 0.5) {
+    float ang = atan(p.y, p.x);
+    float base = 0.165 * (1.0 + mix(0.035, 0.07, uMotion) * breath + 0.05 * uListen + 0.085 * v);
 
-  float d = length(p) - R;
-  float body = smoothstep(0.06, -0.09, d);
-  float rr = length(p) / R;
-  float core = exp(-rr * rr * 1.25);
-  float rim = exp(-abs(d) * 36.0);
-  float halo = exp(-max(d, 0.0) * 6.5);
+    // Three layers, each its own outline turning at its own pace.
+    float R1 = base * 1.32 * (1.0 + rimShape(ang + t * 0.018, t * 0.8, 11.0, v * 0.7));
+    float R2 = base * (1.0 + rimShape(ang - t * 0.026, t, 3.0, v));
+    float R3 = base * 0.56 * (1.0 + rimShape(ang + t * 0.04, t * 1.2, 7.0, v * 1.3));
+    float d1 = r - R1;
+    float d2 = r - R2;
+    // The core sits a little above centre and drifts, so the layers never line up.
+    float2 cOff = float2(sin(t * 0.13), cos(t * 0.11)) * 0.012 + float2(0.0, -0.018);
+    float d3 = length(p - cOff) - R3;
+    float haze = smoothstep(0.09, -0.06, d1);
+    float body = smoothstep(0.014, -0.03, d2);
+    float core = smoothstep(0.06, -0.08, d3);
+    float glow = exp(-max(d2, 0.0) * 8.0);
+    float edge = exp(-abs(d2 + 0.004) * 90.0);
+    // Toward its own outline the body is brighter, like light caught in the edge of a drop.
+    float fres = smoothstep(0.45, 1.0, r / max(R2, 0.001));
 
-  // Mist (design/theme.ts, after the photographs): a pale sea-grey at rest, warming a little
-  // while the guide speaks, cooler while it listens.
-  float3 sage = float3(0.74, 0.84, 0.85);
-  float3 apricot = float3(0.98, 0.85, 0.7);
-  float3 sea = float3(0.68, 0.79, 0.9);
-  float3 moon = float3(0.95, 0.93, 0.88);
-  float3 tint = mix(sage, apricot, uSpeak * 0.5);
-  tint = mix(tint, sea, uListen * 0.6);
+    // Mist, from design/theme.ts at night: sea-teal (practice), slate-sky (sound), stone. A little
+    // warmth while the guide speaks, cooler while it listens. No red, and nothing turns "bad".
+    float3 teal = float3(0.52, 0.76, 0.78);
+    float3 sky = float3(0.6, 0.72, 0.86);
+    float3 stone = float3(0.94, 0.93, 0.89);
+    float3 warm = float3(0.9, 0.8, 0.64);
+    float3 tint = mix(teal, warm, uSpeak * 0.16 + v * 0.1);
+    tint = mix(tint, sky, uListen * 0.5);
 
-  float n1 = fbm(p * 4.2 + float2(t * 0.05, -t * 0.03));
-  float n2 = fbm(p * 7.5 - float2(t * 0.04, t * 0.06));
-  float3 inner = mix(tint, apricot, smoothstep(0.45, 0.85, n1) * 0.3);
-  inner = mix(inner, sea, smoothstep(0.5, 0.9, n2) * 0.22 * (1.0 - uSpeak));
+    // Inside: a slow drift of light, a little brighter toward the top, as if lit from above.
+    float n1 = 0.5;
+    float n2 = 0.5;
+    if (d1 < 0.1) {
+      n1 = fbm(p * 4.0 + float2(t * 0.05, -t * 0.03));
+      n2 = fbm(p * 7.0 - float2(t * 0.04, t * 0.06));
+    }
+    float lit = 0.85 + 0.15 * clamp(-p.y / max(R2, 0.001), -1.0, 1.0);
+    float3 inner = mix(tint, sky, smoothstep(0.5, 0.9, n2) * 0.35);
+    inner = mix(inner, stone, smoothstep(0.55, 0.9, n1) * 0.25);
 
-  float3 col = inner * core * (0.34 + 0.32 * n1) * body + tint * halo * 0.14 + moon * rim * 0.08;
-  col *= (0.6 + 0.4 * (0.5 + 0.5 * breath) * uMotion + 0.4 * (1.0 - uMotion)) * uDim;
-  col *= smoothstep(0.5, 0.26, length(p));
+    col += mix(sky, teal, 0.5) * haze * 0.085;
+    col += inner * body * (0.12 + 0.12 * n1 + 0.2 * fres) * lit;
+    col += mix(stone, tint, 0.35) * core * (0.13 + 0.07 * n2 + 0.1 * v);
+    col += tint * glow * 0.12 + stone * edge * (0.06 + 0.06 * v);
+    col *= (0.66 + 0.34 * (0.5 + 0.5 * breath)) * (1.0 + 0.2 * v) * uDim;
+    col *= smoothstep(0.5, 0.3, r);
+  }
 
   col = float3(1.0) - exp(-col * 1.35);
-  float grain = (hash(fragCoord + fract(t * 0.37)) - 0.5) * 0.014;
+  float grain = (hash(fragCoord + fract(uTime * 0.37 * uMotion)) - 0.5) * 0.014;
   col = uBg + col * (1.0 - uBg) + grain;
+
+  // The practice's time: a hairline ring that fills clockwise from the top. Stone, never a colour
+  // that changes near the end; dim, brighter only while the controls are showing.
+  if (uRing > 0.0) {
+    float RR = 0.385;
+    float px = 1.0 / s;
+    float line = 1.0 - smoothstep(0.55 * px, 1.5 * px, abs(r - RR));
+    if (line > 0.0) {
+      float fa = atan(p.x, -p.y) / 6.2831853;
+      if (fa < 0.0) fa += 1.0;
+      float on = smoothstep(-0.75, 0.75, (uProg - fa) * 6.2831853 * RR * s);
+      float a = line * uRing * mix(0.07, mix(0.3, 0.5, uRingLift), on);
+      col = mix(col, float3(0.86, 0.85, 0.82), a);
+    }
+  }
   return half4(col, 1.0);
 }
 `;

@@ -2,6 +2,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import type { GuideVoice } from '../viz/BreathingField';
 import { apiHeaders, config, GUIDE_VOICES, hasRemote } from '../config';
 import { repository } from '../data/repository';
 import { useData } from '../data/store';
@@ -76,9 +77,16 @@ type VoiceSessionValue = {
   setBackground(pref: BackgroundPref): void;
   /** Session time excluding pauses, read on demand by the timer. */
   activeMs(): number;
-  /** The session's planned length in ms (the engine's plan), or 0 before one starts. Read-only: for "about N min left". */
+  /** The session's planned length in ms (the engine's plan), or 0 before one starts. Read-only: for the session clock (domain/sessionClock.ts). */
   targetMs(): number;
+  /** The person's microphone level (conversation mode). */
   level: SharedValue<number>;
+  /**
+   * The guide's voice as it plays, for the session's form: a measured level and whether one has
+   * been measured this session. Written from the audio callbacks straight into shared values, so
+   * nothing re-renders at audio rate. Stable for the provider's life.
+   */
+  voice: GuideVoice;
   labels: { input: string; output: string; brain: string };
   debug: DebugEntry[];
   devInput?: DevTextInput;
@@ -292,6 +300,30 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const [debug, setDebug] = useState<DebugEntry[]>([]);
   const [devInput, setDevInput] = useState<DevTextInput | undefined>();
   const level = useSharedValue(0);
+  const voiceLevel = useSharedValue(0);
+  const voiceMeasured = useSharedValue(0);
+  const voice = useMemo<GuideVoice>(() => ({ level: voiceLevel, measured: voiceMeasured }), [voiceLevel, voiceMeasured]);
+  /**
+   * Follow an output's level into `voice`. "Measured" is sticky for the session: once one level
+   * above silence has arrived, sampling works here, and a gap between lines must not hand the
+   * form back to the made-up envelope (it twitched at every line's end while status caught up).
+   */
+  const followVoice = useCallback(
+    (output: SpeechOutput) => {
+      voiceLevel.value = 0;
+      voiceMeasured.value = 0;
+      const off = output.onLevel?.((l) => {
+        voiceLevel.value = l;
+        if (l > 0 && voiceMeasured.value < 1) voiceMeasured.value = 1;
+      });
+      return () => {
+        off?.();
+        voiceLevel.value = 0;
+        voiceMeasured.value = 0;
+      };
+    },
+    [voiceLevel, voiceMeasured],
+  );
   // A session or the spoken welcome: both pause, resume and end the same way.
   const runner = useRef<SessionRunner | WelcomeRunner | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -425,6 +457,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       });
       runner.current = r;
       starting.current = false;
+      const unfollowVoice = followVoice(output);
       if (!sleepy) activateKeepAwakeAsync('attend-session').catch(() => {});
       /** The sound went on as a listen: it owns the audio session now, and releasing it would silence it. */
       let handedOver = false;
@@ -469,6 +502,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         runner.current = null;
         starting.current = false;
         if (!sleepy) deactivateKeepAwake('attend-session');
+        unfollowVoice();
         input.dispose();
         output.dispose();
         // The listen is already playing (it keeps the app alive with the phone locked), so the
@@ -489,7 +523,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         level.value = 0;
       }
     },
-    [level],
+    [level, followVoice],
   );
 
   const setBackground = useCallback((pref: BackgroundPref) => {
@@ -525,7 +559,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     }
     const welcomeVoice = GUIDE_VOICES[0];
     stopListening(600, true);
-    // The welcome is not a practice: "matched" gets the fallback sound (rain).
+    // The welcome is not a practice: "matched" gets the fallback sound (DEFAULT_BACKGROUND, the middle tone).
     const sound = ambienceFor(resolveBackground(backgroundFor(prefs)));
     const r = new WelcomeRunner({
       input,
@@ -597,6 +631,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     ]).catch(() => lastAgent[type]);
     const output = chooseOutput(voice, agent);
     const keepAlive = new KeepAlive();
+    // The lesson is the same voice: its form can follow it too.
+    const unfollowVoice = followVoice(output);
     try {
       if (ctl.signal.aborted) return 'stopped';
       if (!(await output.isAvailable())) return 'failed';
@@ -620,6 +656,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       return ctl.signal.aborted ? 'stopped' : 'failed';
     } finally {
       speaking.current = null;
+      unfollowVoice();
       output.dispose();
       keepAlive.stop();
       deactivateKeepAwake('attend-lesson');
@@ -629,7 +666,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         if (!runner.current && !starting.current && !speaking.current) endSessionAudio().catch(() => {});
       }, 3000);
     }
-  }, []);
+  }, [followVoice]);
 
   const stopSpeaking = useCallback(() => speaking.current?.abort(), []);
 
@@ -647,6 +684,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       activeMs: () => runner.current?.activeMs ?? 0,
       targetMs: () => (runner.current instanceof SessionRunner ? runner.current.engine.plan.targetMs : 0),
       level,
+      voice,
       labels,
       debug,
       devInput,
@@ -670,7 +708,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         setSessionMode(undefined);
       },
     }),
-    [status, error, pausedBy, sessionType, sessionMode, completedSessionId, resting, background, setBackground, level, labels, debug, devInput, start, warm, startWelcome, speakLines, stopSpeaking],
+    [status, error, pausedBy, sessionType, sessionMode, completedSessionId, resting, background, setBackground, level, voice, labels, debug, devInput, start, warm, startWelcome, speakLines, stopSpeaking],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

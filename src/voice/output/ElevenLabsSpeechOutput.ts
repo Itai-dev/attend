@@ -1,5 +1,7 @@
-import { createAudioPlayer, type AudioPlayer, type AudioSource, type AudioStatus } from 'expo-audio';
+import { createAudioPlayer, type AudioPlayer, type AudioSample, type AudioSource, type AudioStatus } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
+import { levelOfFrames } from '../../viz/voiceEnvelope';
 import { beginSessionAudio } from '../audioSession';
 import type { SpeakOptions, SpeechOutput, VoiceError } from '../types';
 
@@ -25,6 +27,14 @@ import type { SpeakOptions, SpeechOutput, VoiceError } from '../types';
  *
  * Only the guide's own lines go to the server. A line may echo a single word
  * the person used ("Notice that tightness."), never their sentences.
+ *
+ * The line's loudness, as it plays, is offered to the session's form (`onLevel`, 20 Oct 2026):
+ * expo-audio's sampling hands over each block of decoded PCM (`audioSampleUpdate`, an
+ * MTAudioProcessingTap on the AVPlayer item on iOS) and it becomes one 0..1 level (RMS in
+ * decibels, voiceEnvelope.ts). The samples are read and dropped in the same moment: nothing
+ * is kept, and it is the guide's audio, never the person's. iOS only: Android's sampling is a
+ * Visualizer that needs the microphone permission, which a guided session never asks for; on
+ * web it would route the line through Web Audio. Elsewhere the form makes its own envelope.
  */
 
 export type ElevenLabsConfig = {
@@ -64,6 +74,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
   private dir: Directory | null = null;
   private inflight = new Map<string, Promise<string | null>>();
   private current?: AudioPlayer;
+  private levelListeners = new Set<(level: number) => void>();
   failures = 0;
 
   constructor(private readonly cfg: ElevenLabsConfig) {}
@@ -194,6 +205,42 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     return d ? `${d} ${text}` : text;
   }
 
+  /**
+   * The playing line's level, 0..1, about ten times a second where it can be measured (iOS);
+   * 0 when a line ends or stops. Nothing is called where it can't be measured.
+   */
+  onLevel(cb: (level: number) => void): () => void {
+    this.levelListeners.add(cb);
+    return () => this.levelListeners.delete(cb);
+  }
+
+  private emitLevel(level: number) {
+    for (const cb of this.levelListeners) {
+      try {
+        cb(level);
+      } catch {}
+    }
+  }
+
+  /**
+   * Turn on sampling for a line's player. Returns the subscription, or undefined where there is
+   * none (not iOS, nobody listening, a build whose expo-audio lacks it). Never throws: the line
+   * plays the same either way.
+   */
+  private sample(player: AudioPlayer): { remove(): void } | undefined {
+    if (Platform.OS !== 'ios' || !this.levelListeners.size) return undefined;
+    try {
+      if (!player.isAudioSamplingSupported || typeof player.setAudioSamplingEnabled !== 'function') return undefined;
+      // Before play(): the tap goes in when the item is ready, so the first syllable is measured too.
+      player.setAudioSamplingEnabled(true);
+      return player.addListener('audioSampleUpdate', (s: AudioSample) => {
+        if (s?.channels?.length) this.emitLevel(levelOfFrames(s.channels));
+      });
+    } catch {
+      return undefined;
+    }
+  }
+
   prepare(texts: string[]) {
     for (const t of texts.slice(0, PREFETCH)) void this.fetchLine(t);
   }
@@ -206,7 +253,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       this.failures++;
       throw unavailable('The guide voice could not be reached.');
     }
-    return this.play({ uri }, signal);
+    return this.play({ uri }, signal, undefined, true);
   }
 
   /**
@@ -219,7 +266,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     await this.play(require('../../../assets/audio/turn-cue.wav'), signal, 0.5).catch(() => {});
   }
 
-  private play(source: AudioSource, signal: AbortSignal, volume?: number): Promise<void> {
+  private play(source: AudioSource, signal: AbortSignal, volume?: number, measure = false): Promise<void> {
     let player: AudioPlayer;
     try {
       // keepAudioSessionActive: by default expo-audio switches the audio session off ~100 ms after a
@@ -231,6 +278,8 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       return Promise.reject(unavailable('The guide voice could not be played.'));
     }
     this.current = player;
+    // The guide's lines only; the turn cue is a bell, not the voice.
+    const sampling = measure ? this.sample(player) : undefined;
     return new Promise<void>((resolve, reject) => {
       let settled = false;
       const startedAt = Date.now();
@@ -254,6 +303,11 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
         settled = true;
         clearInterval(watchdog);
         sub.remove();
+        if (sampling) {
+          sampling.remove();
+          // The voice has stopped: the form settles instead of holding the last syllable.
+          this.emitLevel(0);
+        }
         signal.removeEventListener('abort', onAbort);
         try {
           player.remove();
@@ -270,9 +324,11 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     try {
       this.current?.pause();
     } catch {}
+    this.emitLevel(0);
   }
 
   dispose() {
     this.stop();
+    this.levelListeners.clear();
   }
 }
