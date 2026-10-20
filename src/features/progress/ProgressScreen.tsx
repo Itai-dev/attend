@@ -1,15 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useData } from '@/data/store';
 import { currentTz, dayKey, formatPain, PAIN_MAX, type CheckIn } from '@/domain/checkin';
-import { milestones, practiceStats } from '@/domain/engagement';
+import { milestones, nextMilestone, practiceStats } from '@/domain/engagement';
+import { postcards, postcardWeeks } from '@/domain/finish';
 import { EMPTY_PROGRAM } from '@/domain/program';
 import { buildProgress, PROGRESS_MEANING, whenToLookText, type Progress } from '@/domain/progress';
 import { REGIONS } from '@/domain/regions';
 import { Card, Hairline, Icon, OutlineButton, SectionLabel, SettingsGear, TitledScroll, Txt } from '@/design/components';
 import { HIT, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
+import { PostcardRows } from '../finish/Postcards';
 import { sessionDate } from '../shared/format';
 import { ProgramPath } from '../shared/ProgramPath';
 
@@ -105,8 +107,15 @@ export function ProgressScreen() {
   const marks = useMemo(() => milestones({ sessions, program, moments: prefs.moments?.length ?? 0, tz }), [sessions, program, prefs.moments, tz]);
   // What's been earned, and the one that comes next. A full row of greyed-out stars read as a
   // list of things not yet done; one next star is something to walk toward.
-  const nextMark = marks.find((m) => !m.earned);
+  // Quiet firsts (a return, a first night) are never offered as "next": a break is not a goal.
+  const nextMark = nextMilestone(marks);
   const shownMarks = [...marks.filter((m) => m.earned), ...(nextMark ? [nextMark] : [])];
+  // The places collection: a postcard for each program day done (domain/finish.ts), up to the week
+  // in progress. Derived from the 28 days, so it has no storage of its own.
+  const cards = useMemo(() => postcards(program), [program]);
+  const placeWeeks = postcardWeeks(program);
+  const earnedPlaces = cards.filter((c) => c.earned).length;
+  const { width } = useWindowDimensions();
   // A zero is a count of nothing: "0 lessons" beside "3 practice days" reads as a gap to fill.
   const tiles = (
     [
@@ -228,6 +237,13 @@ export function ProgressScreen() {
           </Card>
         </>
       ) : null}
+
+      <SectionLabel style={{ marginTop: space.xxxl }}>places</SectionLabel>
+      <PostcardRows cards={cards.filter((c) => placeWeeks.includes(Math.ceil(c.day / 7) as 1 | 2 | 3 | 4))} width={Math.min(width, 560) - space.xl * 2} />
+      <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
+        {earnedPlaces ? 'A place for each day of the program you practice.' : 'Each day of the program you practice adds a place here.'}
+        {placeWeeks.length < 4 ? ` More arrive with week ${placeWeeks.length + 1}.` : ''}
+      </Txt>
 
       <SectionLabel style={{ marginTop: space.xxxl }}>your 28 days</SectionLabel>
       <ProgramPath program={program} todayKey={dayKey(Date.now(), tz)} />
