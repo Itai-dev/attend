@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useData } from '@/data/store';
 import { backgroundFor, DEFAULT_LISTEN_TIMER, SOUNDSCAPES, soundscape, timerLabel, type SoundscapeId } from '@/domain/soundscapes';
-import { haptic, Icon, TitledScroll, Txt } from '@/design/components';
+import { haptic, Icon, SettingsGear, TitledScroll, Txt } from '@/design/components';
 import { Photo, PhotoFade } from '@/design/Photo';
 import { radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
@@ -10,8 +10,10 @@ import { startListening, useListen } from '@/voice/listen';
 
 /**
  * Sounds: one tap plays. No choosing a timer first — the last one used (twenty minutes the
- * first time) applies, and the player that opens can change it. For sleep, a loud evening,
- * or a few quiet minutes. Atmosphere only: never counted as practice, nothing recorded.
+ * first time) applies, shown on every tile, and the player that opens can change it. For sleep,
+ * a loud evening, or a few quiet minutes. Atmosphere only: never counted as practice, nothing
+ * recorded. The sound under a practice is set in Settings (and practice settings); the row at
+ * the foot links there rather than being a third place to set it.
  */
 export function SoundsScreen() {
   const color = useColors();
@@ -21,6 +23,9 @@ export function SoundsScreen() {
   const live = useListen();
   const under = soundscape(backgroundFor(prefs));
   const tile = (width - space.xl * 2 - space.m) / 2;
+  // The remembered timer, on every tile, so a tap's outcome is known before it's made.
+  const timer = prefs.listen?.timer ?? DEFAULT_LISTEN_TIMER;
+  const meta = timer ? `${timer} min · fades out` : 'until you stop';
 
   const play = (id: SoundscapeId) => {
     haptic('soft');
@@ -31,9 +36,10 @@ export function SoundsScreen() {
   };
 
   return (
-    <TitledScroll title="sounds">
+    <TitledScroll title="sounds" right={<SettingsGear />}>
+      {/* Round 5: "can't sleep" started a voice when Tom wanted rain. Here there is no voice. */}
       <Txt variant="callout" tone="secondary" style={{ marginTop: -space.m, marginBottom: space.xl }}>
-        Tap one to play. It carries on with the screen locked, then fades out by itself.
+        No voice, just the place. Plays with the screen locked and fades out on its own.
       </Txt>
       <View style={styles.grid}>
         {SOUNDSCAPES.map((s) => {
@@ -42,7 +48,7 @@ export function SoundsScreen() {
             <Pressable
               key={s.id}
               accessibilityRole="button"
-              accessibilityLabel={on ? `${s.name}, playing. Open` : `${s.name}. ${s.line}. Plays now`}
+              accessibilityLabel={on ? `${s.name}, playing. Open` : `${s.name}. ${s.line}. Plays now, ${meta}`}
               onPress={() => (on ? router.push('/listen') : play(s.id))}
               style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
             >
@@ -64,15 +70,32 @@ export function SoundsScreen() {
                   <Txt variant="footnote" numberOfLines={2} style={[styles.onImage, styles.shadow, { opacity: 0.9 }]}>
                     {s.line}
                   </Txt>
+                  {/* Playing, the badge above says how long is left instead. */}
+                  {on ? null : (
+                    <Txt variant="caption" style={[styles.onImage, styles.shadow, { opacity: 0.75, marginTop: 2 }]}>
+                      {meta}
+                    </Txt>
+                  )}
                 </View>
               </Photo>
             </Pressable>
           );
         })}
       </View>
-      <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.xl }}>
-        {under ? `${under.name} plays under your practice. Change it in Settings.` : 'Your practice plays with the voice only. Add a sound under it in Settings.'}
-      </Txt>
+      {/* The sound under a practice is a different thing from these: one row, to the one place it's set. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Sound under practice: ${under ? under.name : 'voice only'}. Change in Settings`}
+        onPress={() => router.push({ pathname: '/settings', params: { open: 'sound' } })}
+        style={({ pressed }) => [styles.underRow, { opacity: pressed ? 0.6 : 1 }]}
+      >
+        <Txt variant="callout" style={{ textTransform: 'lowercase' }}>
+          sound under practice
+        </Txt>
+        <Txt variant="callout" tone="secondary" style={{ textTransform: 'lowercase' }}>
+          {under ? under.name : 'voice only'} ›
+        </Txt>
+      </Pressable>
     </TitledScroll>
   );
 }
@@ -80,6 +103,18 @@ export function SoundsScreen() {
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.m },
+    underRow: {
+      marginTop: space.xl,
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: space.l,
+      borderRadius: radius.m,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: color.hairline,
+      backgroundColor: color.surface,
+    },
     tileText: { position: 'absolute', left: space.m, right: space.m, bottom: space.m, gap: 2 },
     onImage: { color: color.onImage },
     shadow: { textShadowColor: 'rgba(5,8,9,0.3)', textShadowRadius: 12, textShadowOffset: { width: 0, height: 1 } },

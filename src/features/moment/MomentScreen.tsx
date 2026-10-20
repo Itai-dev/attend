@@ -35,7 +35,7 @@ export function MomentScreen() {
       </View>
       <View style={{ paddingHorizontal: space.xl, flex: 1 }}>
         <Txt variant="title" accessibilityRole="header">
-          save a moment
+          note a small win
         </Txt>
         <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
           {prefs.goal

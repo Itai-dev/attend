@@ -64,15 +64,40 @@ export function presetTheme(p: Preset): PracticeTheme {
 }
 
 /**
- * Today's "when you need it": the four moments people open the app for outside the daily
- * practice. One tap each, nothing to choose.
+ * Today's "right now": the four moments people open the app for outside the daily practice.
+ * One tap each, nothing to choose. `detail` is the length (access.presetDetail adds "Plus" to
+ * it where a practice is locked); `kind` says what starts, because Tom tapped "can't sleep"
+ * wanting rain and got a voice (studio round 5). Every one of these is a voice.
  */
-export const NEED_IT: Array<{ id: string; label: string; detail: string }> = [
-  { id: 'flare-3', label: 'in a flare', detail: '3 min' },
-  { id: 'sleep-10', label: 'can’t sleep', detail: '10 min' },
-  { id: 'scan-10', label: 'body scan', detail: '10 min' },
-  { id: 'worry-5', label: 'feeling worried', detail: '5 min' },
+export const NEED_IT: Array<{ id: string; label: string; detail: string; kind: string }> = [
+  { id: 'flare-3', label: 'in a flare', detail: '3 min', kind: 'voice-guided' },
+  { id: 'sleep-10', label: 'can’t sleep', detail: '10 min', kind: 'guided into sleep' },
+  { id: 'scan-10', label: 'body scan', detail: '10 min', kind: 'voice-guided' },
+  { id: 'worry-5', label: 'feeling worried', detail: '5 min', kind: 'voice-guided' },
 ];
+
+/** The line under a moment on Today: what starts, and how long. */
+export function needItSubtitle(n: (typeof NEED_IT)[number]): string {
+  return `${n.kind} · ${n.detail}`;
+}
+
+/** 21:00 to 05:00, local: when "can't sleep" is the moment someone most likely opened the app for. */
+export function isNight(hour: number): boolean {
+  return hour >= 21 || hour < 5;
+}
+
+/** What the welcome's "what brings you here" puts first among the moments. */
+export const FOCUS_NEED: Record<SessionType, string> = { flare: 'flare-3', sleep: 'sleep-10', notice: 'scan-10', fear: 'worry-5' };
+
+/**
+ * The moments in Today's order: at night "can't sleep" leads whatever brought the person here
+ * (Tom, 23:40, round 5); then the welcome's focus; then the rest in their usual order.
+ */
+export function needItOrder(focus: SessionType | undefined, hour: number): typeof NEED_IT {
+  const lead = [isNight(hour) ? 'sleep-10' : undefined, focus ? FOCUS_NEED[focus] : undefined].filter((x): x is string => !!x);
+  const rank = (id: string) => (lead.includes(id) ? lead.indexOf(id) : lead.length + NEED_IT.findIndex((n) => n.id === id));
+  return [...NEED_IT].sort((a, b) => rank(a.id) - rank(b.id));
+}
 
 export function presetById(id: string | undefined): Preset | undefined {
   return PRESETS.find((p) => p.id === id);

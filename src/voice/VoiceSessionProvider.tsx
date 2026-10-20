@@ -67,6 +67,8 @@ type VoiceSessionValue = {
   resting: boolean;
   /** Session time excluding pauses, read on demand by the timer. */
   activeMs(): number;
+  /** The session's planned length in ms (the engine's plan), or 0 before one starts. Read-only: for "about N min left". */
+  targetMs(): number;
   level: SharedValue<number>;
   labels: { input: string; output: string; brain: string };
   debug: DebugEntry[];
@@ -594,6 +596,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       completedSessionId,
       resting,
       activeMs: () => runner.current?.activeMs ?? 0,
+      targetMs: () => (runner.current instanceof SessionRunner ? runner.current.engine.plan.targetMs : 0),
       level,
       labels,
       debug,

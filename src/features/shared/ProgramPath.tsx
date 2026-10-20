@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { currentDay, PROGRAM, WEEKS, type ProgramState } from '@/domain/program';
+import { currentDay, PROGRAM, type ProgramState } from '@/domain/program';
 import { Txt } from '@/design/components';
 import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useStyles } from '@/design/ThemeProvider';
@@ -27,7 +27,7 @@ export function ProgramPath({ program, todayKey }: { program: ProgramState; toda
         return (
           <View key={w} style={{ gap: space.s, opacity: open ? 1 : 0.6 }}>
             <Txt variant="footnote" tone={open ? 'secondary' : 'tertiary'} style={{ fontWeight: '500', textTransform: 'lowercase' }}>
-              week {w} · {WEEKS[w].name}
+              week {w}
             </Txt>
             <View style={styles.days}>
               {days.map((d) => {
@@ -56,7 +56,7 @@ export function ProgramPath({ program, todayKey }: { program: ProgramState; toda
       })}
       {early ? (
         <Txt variant="footnote" tone="tertiary" style={{ textTransform: 'lowercase' }}>
-          then: {([2, 3, 4] as const).map((w) => WEEKS[w].name).join(' · ')}
+          then 21 more days, weeks 2 to 4
         </Txt>
       ) : null}
       {anyDone ? (

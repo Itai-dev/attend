@@ -1,24 +1,28 @@
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
-import { type ReactNode } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hasRemote } from '@/config';
+import { GUIDE_VOICES, hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
 import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/domain/access';
 import { currentTz } from '@/domain/checkin';
 import { practiceStats } from '@/domain/engagement';
-import { backgroundFor, SOUNDSCAPES } from '@/domain/soundscapes';
-import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
+import { backgroundFor, soundscape, SOUNDSCAPES } from '@/domain/soundscapes';
+import { ChoiceRow as Choice, DisclosureRow, Hairline, QuietButton, RowGroup as Group, SectionLabel, Segmented, Txt } from '@/design/components';
 import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { speechModule } from '@/voice/speechModule';
+import { previewVoice, stopPreview } from '@/voice/voicePreview';
+import { clock12 } from '../shared/format';
 
 /**
- * Settings, kept short. Background sound, privacy, samples, what this is not — and, in
- * development builds only, the switches for testing without a microphone.
+ * Settings, kept short. The guide's voice and the sound under practice first (the same prefs
+ * practice settings saves), then the reminder and its time, appearance, privacy, what this is
+ * not — and, in development builds only, the switches for testing without a microphone.
+ * Every choice saves on tap; there is nothing to confirm.
  */
 
 function confirm(title: string, message: string, action: string, run: () => void) {
@@ -27,11 +31,6 @@ function confirm(title: string, message: string, action: string, run: () => void
     { text: 'Cancel', style: 'cancel' },
     { text: action, style: 'destructive', onPress: run },
   ]);
-}
-
-function Group({ children }: { children: ReactNode }) {
-  const styles = useStyles(makeStyles);
-  return <View style={styles.group}>{children}</View>;
 }
 
 /** A row that leaves the app: a page in the browser, or a new email. */
@@ -49,33 +48,18 @@ function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-function Choice({ label, detail, selected, disabled, onPress }: { label: string; detail?: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
-  const styles = useStyles(makeStyles);
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected, disabled }}
-      disabled={disabled}
-      onPress={() => {
-        haptic('select');
-        onPress();
-      }}
-      style={({ pressed }) => [styles.choice, { opacity: disabled ? 0.4 : pressed ? 0.6 : 1 }]}
-    >
-      <View style={{ flex: 1 }}>
-        <Txt variant="body" style={styles.label}>
-          {label}
-        </Txt>
-        {detail ? (
-          <Txt variant="footnote" tone="tertiary">
-            {detail}
-          </Txt>
-        ) : null}
-      </View>
-      <View style={[styles.radio, selected && styles.radioOn]} />
-    </Pressable>
-  );
-}
+// Shared with the welcome, so a time reads the same on both (studio round 5).
+export { clock12 };
+
+/** The reminder times on offer. A time set elsewhere (the welcome) still shows on the row. */
+const REMINDER_TIMES = [
+  { name: 'morning', hour: 8, minute: 0 },
+  { name: 'midday', hour: 13, minute: 0 },
+  { name: 'evening', hour: 20, minute: 30 },
+  { name: 'night', hour: 22, minute: 0 },
+] as const;
+
+type Open = 'voice' | 'sound' | 'time' | null;
 
 export function SettingsScreen() {
   const color = useColors();
@@ -84,6 +68,22 @@ export function SettingsScreen() {
   const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
   const realCount = sessions.filter((s) => !s.isSample).length;
   const background = backgroundFor(prefs);
+  // Sounds' "sound under practice ›" opens Settings with that list already open.
+  const params = useLocalSearchParams<{ open?: string }>();
+  const [open, setOpen] = useState<Open>(params.open === 'sound' || params.open === 'voice' ? params.open : null);
+  const toggle = (k: Open) => setOpen(open === k ? null : k);
+  useEffect(() => stopPreview, []);
+
+  const voice = GUIDE_VOICES.find((v) => v.id === prefs.voiceId) ?? GUIDE_VOICES[0];
+  const soundName = background === 'none' ? 'voice only' : (soundscape(background)?.name ?? '').toLowerCase();
+  const reminder = prefs.reminder;
+  const time = reminder ? clock12(reminder.hour, reminder.minute) : clock12(20, 30);
+
+  const setReminderTime = async (hour: number, minute: number) => {
+    const next = { enabled: true, hour, minute };
+    await setPrefs({ reminder: next });
+    await scheduleReminders(next, practiceStats(sessions, Date.now(), currentTz()).lastPractice, prefs.program);
+  };
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: color.bg }} contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xxxl }}>
@@ -94,17 +94,57 @@ export function SettingsScreen() {
         <QuietButton label="Done" tone="primary" onPress={() => router.back()} />
       </View>
 
-      <SectionLabel>Daily reminder</SectionLabel>
+      {/* First, because it's what people came looking for (round 5: the guide's voice couldn't be found). */}
+      <SectionLabel>Practice</SectionLabel>
+      <Group>
+        <DisclosureRow label="guide voice" value={voice.name.toLowerCase()} open={open === 'voice'} onPress={() => toggle('voice')} />
+        {open === 'voice'
+          ? GUIDE_VOICES.map((v) => (
+              <View key={v.id}>
+                <Hairline />
+                <Choice
+                  label={v.name}
+                  detail={v.detail}
+                  selected={v.id === voice.id}
+                  onPress={() => {
+                    setPrefs({ voiceId: v.id });
+                    if (hasRemote) previewVoice(v.id);
+                  }}
+                />
+              </View>
+            ))
+          : null}
+        <Hairline />
+        <DisclosureRow label="sound under practice" value={soundName} open={open === 'sound'} onPress={() => toggle('sound')} />
+        {open === 'sound' ? (
+          <>
+            {SOUNDSCAPES.map((sc) => (
+              <View key={sc.id}>
+                <Hairline />
+                <Choice label={sc.name} detail={sc.line} selected={background === sc.id} onPress={() => setPrefs({ background: sc.id })} />
+              </View>
+            ))}
+            <Hairline />
+            <Choice label="Voice only" detail="Only the guide’s voice" selected={background === 'none'} onPress={() => setPrefs({ background: 'none' })} />
+          </>
+        ) : null}
+      </Group>
+
+      <SectionLabel style={styles.section}>Daily reminder</SectionLabel>
       <Group>
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <Txt variant="body">a gentle reminder</Txt>
             <Txt variant="footnote" tone="tertiary">
-              {remindersAvailable() ? 'One a day, at this time. Weekly after a few quiet days.' : 'Needs the next app update.'}
+              {!remindersAvailable()
+                ? 'Needs the next app update.'
+                : reminder?.enabled
+                  ? `Every day at ${time}. Weekly after a few quiet days.`
+                  : 'One a day, at a time you choose. Weekly after a few quiet days.'}
             </Txt>
           </View>
           <Switch
-            value={!!prefs.reminder?.enabled}
+            value={!!reminder?.enabled}
             disabled={!remindersAvailable()}
             trackColor={{ true: color.practice }}
             accessibilityLabel="a gentle reminder"
@@ -116,25 +156,23 @@ export function SettingsScreen() {
             }}
           />
         </View>
-        {prefs.reminder?.enabled ? (
+        {reminder?.enabled ? (
           <>
             <Hairline />
-            <View style={styles.textBlock}>
-              <Segmented<string>
-                options={[
-                  { value: '8:0', label: 'morning' },
-                  { value: '13:0', label: 'midday' },
-                  { value: '20:30', label: 'evening' },
-                ]}
-                value={`${prefs.reminder.hour}:${prefs.reminder.minute}`}
-                onChange={async (v) => {
-                  const [hour, minute] = v.split(':').map(Number);
-                  const reminder = { enabled: true, hour, minute };
-                  await setPrefs({ reminder });
-                  await scheduleReminders(reminder, practiceStats(sessions, Date.now(), currentTz()).lastPractice, prefs.program);
-                }}
-              />
-            </View>
+            <DisclosureRow label="time" value={time} open={open === 'time'} onPress={() => toggle('time')} />
+            {open === 'time'
+              ? REMINDER_TIMES.map((t) => (
+                  <View key={t.name}>
+                    <Hairline />
+                    <Choice
+                      label={t.name}
+                      detail={clock12(t.hour, t.minute)}
+                      selected={reminder.hour === t.hour && reminder.minute === t.minute}
+                      onPress={() => setReminderTime(t.hour, t.minute)}
+                    />
+                  </View>
+                ))
+              : null}
           </>
         ) : null}
       </Group>
@@ -146,17 +184,6 @@ export function SettingsScreen() {
         <Choice label="Light" selected={prefs.appearance === 'light'} onPress={() => setPrefs({ appearance: 'light' })} />
         <Hairline />
         <Choice label="Dark" detail="Sessions are always dark" selected={prefs.appearance === 'dark'} onPress={() => setPrefs({ appearance: 'dark' })} />
-      </Group>
-
-      <SectionLabel style={styles.section}>Sound under sessions</SectionLabel>
-      <Group>
-        {SOUNDSCAPES.map((sc) => (
-          <View key={sc.id}>
-            <Choice label={sc.name} detail={sc.line} selected={background === sc.id} onPress={() => setPrefs({ background: sc.id })} />
-            <Hairline />
-          </View>
-        ))}
-        <Choice label="Voice only" detail="Only the guide’s voice" selected={background === 'none'} onPress={() => setPrefs({ background: 'none' })} />
       </Group>
 
       <SectionLabel style={styles.section}>Privacy</SectionLabel>
@@ -323,16 +350,6 @@ const makeStyles = (color: Palette) =>
   StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xl },
   section: { marginTop: space.xxl },
-  group: {
-    borderRadius: radius.m,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
-    overflow: 'hidden',
-  },
-  choice: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, paddingHorizontal: space.l, paddingVertical: space.s, gap: space.m },
-  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.4, borderColor: color.textTertiary },
-  radioOn: { borderWidth: 5.5, borderColor: color.text },
   // Row and choice labels are glanced at, so lowercase (AGENTS.md "App copy"); details stay sentence case.
   label: { textTransform: 'lowercase' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: HIT + 8, paddingHorizontal: space.l },

@@ -53,6 +53,20 @@ export type Prefs = {
   focus?: SessionType;
   /** Last length picked on Home, offered again next time. */
   sessionMinutes?: 3 | 5 | 7 | 10;
+  /**
+   * Today's practice settings (studio round 5): a length and where attention rests, chosen on
+   * the practice settings screen for today's practice only. `date` is the local YYYY-MM-DD it was
+   * chosen on; on any other day it is ignored, so tomorrow's practice is the program's own again
+   * rather than a 3-minute choice made in a flare. `place: null` is the whole body; absent, the
+   * usual source (latest check-in, then the welcome). Read by dayPlan() (features/shared/start.ts).
+   */
+  practiceToday?: { date: string; minutes?: 3 | 5 | 7 | 10; place?: Place | null };
+  /**
+   * How the person last chose to take a lesson: read, or listen in the guide's voice. Remembered
+   * so a listener isn't offered "next" every day (studio round 5). Unset: listen comes first at
+   * night or for someone who came for sleep (listenFirst()), read otherwise.
+   */
+  lessonMode?: 'read' | 'listen';
   /** The 28-day program: which days are done, which lessons read. */
   program?: ProgramState;
   /** What the person wants to get back to, from onboarding, in their words or a chip's. */

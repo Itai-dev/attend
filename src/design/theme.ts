@@ -21,7 +21,7 @@ export type Palette = {
   text: string;
   textSecondary: string;
   textTertiary: string;
-  /** The one filled control per screen: ink by day, paper at night. */
+  /** The one filled control per screen: ink by day, a warm stone grey at night. */
   accent: string;
   onAccent: string;
   focusRing: string;
@@ -76,7 +76,11 @@ export const dark: Palette = {
   text: '#F3F3F0',
   textSecondary: 'rgba(243,243,240,0.66)',
   textTertiary: 'rgba(243,243,240,0.5)',
-  accent: '#F3F3F0',
+  // Not paper-white: at night a near-white bar was the brightest thing in a dim room, and
+  // people in dark mode called it a glare (Round 5). A warm stone grey, still clearly the one
+  // filled control: its ink label is 10.8:1, and a button's 62% detail line is 4.6:1 (WCAG AA
+  // 4.5 for small type). Don't go darker without rechecking that detail line.
+  accent: '#C2BCB2',
   onAccent: '#050606',
   focusRing: '#A3CACC',
   practice: '#A3CACC',
@@ -86,7 +90,8 @@ export const dark: Palette = {
   sky: '#AFC6DA',
   skySoft: 'rgba(175,198,218,0.11)',
   onImage: '#FFFFFF',
-  scrim: 'rgba(0,0,0,0.35)',
+  // A touch deeper than by day's: a photograph shouldn't be the bright patch on a night screen.
+  scrim: 'rgba(0,0,0,0.44)',
   destructive: '#FFB4A8',
 };
 

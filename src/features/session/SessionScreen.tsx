@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { AccessibilityInfo, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
 import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,10 @@ import { DevPanel } from './DevPanel';
  * confirm in one go, so stopping is two taps, not three (round 3: three taps with closed eyes
  * was too many for someone who needs to stop). While paused, end is one tap.
  * VoiceOver reaches pause and end at all times, faded or not.
+ *
+ * While the controls are showing, a quiet "about N min left" sits under the status word (round 5:
+ * the session showed no sign it was running). Only then: a person who reached for the phone gets
+ * an answer, and the faded screen stays a breathing form with no clock to watch.
  */
 
 /**
@@ -49,6 +53,17 @@ export const VOICE_FAILED_LINE = 'The guide’s voice couldn’t load. Check you
 export const RESTING_WORD = 'resting';
 /** The breathing form after a sleep practice: there, barely, for someone who wakes the phone. */
 const RESTING_DIM = 0.14;
+
+/**
+ * "about 4 min left", from the engine's planned length and the time practised (pauses excluded).
+ * Rounded up, and never below "about a minute": the close can run a little past the plan, and a
+ * countdown at zero would read as something gone wrong.
+ */
+export function timeLeftLine(targetMs: number, activeMs: number): string | undefined {
+  if (targetMs <= 0) return undefined;
+  const min = Math.ceil((targetMs - activeMs) / 60_000);
+  return min <= 1 ? 'about a minute left' : `about ${min} min left`;
+}
 
 /** How long the controls stay after the session starts or a tap, and how slowly they go. */
 const CONTROLS_FIRST_MS = 8000;
@@ -161,9 +176,18 @@ export function SessionScreen() {
     return () => sub.remove();
   }, []);
 
+  // Re-reads the time left: on each reveal, and every 15 s while the controls stay up.
+  const [, refreshTimeLeft] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (!shown) return;
+    const t = setInterval(refreshTimeLeft, 15_000);
+    return () => clearInterval(t);
+  }, [shown]);
+
   const showControls = useCallback(
     (forMs: number) => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
+      refreshTimeLeft();
       setShown(true);
       controlsOpacity.value = withTiming(1, { duration: 300 });
       hideTimer.current = setTimeout(() => {
@@ -224,6 +248,10 @@ export function SessionScreen() {
     if (!keepControls) showControls(CONTROLS_AGAIN_MS);
   };
 
+  // Hidden while preparing (nothing has started) and in a blocked or resting session.
+  const running = vs.status !== 'preparing' && vs.status !== 'idle' && !blocked;
+  const timeLeft = running ? timeLeftLine(vs.targetMs(), vs.activeMs()) : undefined;
+
   if (vs.resting) {
     return (
       <View style={styles.root}>
@@ -271,6 +299,14 @@ export function SessionScreen() {
         <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="polite">
           {word ?? ' '}
         </Txt>
+        {/* Fades with the controls. Not a live region: VoiceOver reads it when it reaches it, never as it changes. */}
+        {timeLeft ? (
+          <Animated.View style={controlsStyle}>
+            <Txt variant="caption" tone="tertiary" style={styles.left}>
+              {timeLeft}
+            </Txt>
+          </Animated.View>
+        ) : null}
       </View>
 
       {voiceFailed ? (
@@ -385,6 +421,7 @@ const makeStyles = (color: Palette) =>
   root: { flex: 1, backgroundColor: color.bg },
   top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
   status: { letterSpacing: 0.4, textTransform: 'lowercase', fontSize: 13 },
+  left: { fontSize: 13, opacity: 0.8 },
   hint: { position: 'absolute', left: space.xl, right: space.xl, top: '62%', gap: 2 },
   notice: { position: 'absolute', left: space.xl, right: space.xl, top: '62%' },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },

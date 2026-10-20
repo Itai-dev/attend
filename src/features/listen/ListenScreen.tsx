@@ -5,9 +5,9 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { LISTEN_TIMERS, soundscape, SOUNDSCAPES, timerLabel, type ListenTimer, type SoundscapeId } from '@/domain/soundscapes';
-import { haptic, IconButton, OutlineButton, PrimaryButton, Segmented, Txt } from '@/design/components';
-import { HIT, radius, space, type Palette } from '@/design/theme';
-import { useColors, useStyles } from '@/design/ThemeProvider';
+import { haptic, IconButton, Segmented, Txt } from '@/design/components';
+import { radius, space, type Palette } from '@/design/theme';
+import { ForceDark, useColors, useStyles } from '@/design/ThemeProvider';
 import { pauseListening, resumeListening, setListenTimer, startListening, stopListening, useListen } from '@/voice/listen';
 import { Photo } from '@/design/Photo';
 
@@ -17,11 +17,35 @@ import { Photo } from '@/design/Photo';
  * fades out on its own. It keeps playing if this screen is closed or the phone is locked.
  *
  * It is not practice: nothing here counts toward the program, and nothing is recorded.
+ *
+ * Round 5: play, pause and stop are icons, not "pause →" and "stop →" (an arrow says "this goes
+ * somewhere"), and from 21:00 to 05:00 the screen is dark and the photograph dimmed, for someone
+ * reaching for a sound in a dark room.
  */
 
 const TIMER_OPTIONS = LISTEN_TIMERS.map((m) => ({ value: String(m), label: m ? `${m}` : '∞' }));
 
+/** Night, for this screen: when a bright photograph is the last thing someone wants to see. */
+export function isNight(hour: number): boolean {
+  return hour >= 21 || hour < 5;
+}
+
+/** Laid over the photograph at night, on top of its usual scrim: the place is still there, barely. */
+const NIGHT_SCRIM = 'rgba(0,0,0,0.58)';
+
 export function ListenScreen() {
+  // Decided once on open, like the lesson: the screen doesn't change under someone at 20:59.
+  const [night] = useState(() => isNight(new Date().getHours()));
+  return night ? (
+    <ForceDark>
+      <ListenBody night />
+    </ForceDark>
+  ) : (
+    <ListenBody night={false} />
+  );
+}
+
+function ListenBody({ night }: { night: boolean }) {
   const color = useColors();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -61,6 +85,7 @@ export function ListenScreen() {
         <Animated.View key={current.id} entering={FadeIn.duration(700)}>
           <Photo scene={current.id} width={width} height={heroH} drift>
             <View style={[StyleSheet.absoluteFill, { backgroundColor: color.scrim }]} />
+            {night ? <View style={[StyleSheet.absoluteFill, { backgroundColor: NIGHT_SCRIM }]} /> : null}
             <View style={styles.heroText}>
               <Txt variant="footnote" style={[styles.onImage, { fontWeight: '500', opacity: 0.9 }]}>
                 just listen
@@ -93,7 +118,7 @@ export function ListenScreen() {
                 onPress={() => pick(s.id)}
                 style={({ pressed }) => [styles.sound, { opacity: pressed ? 0.7 : 1 }]}
               >
-                <Photo scene={s.id} width={THUMB_W} height={THUMB_H} radius={radius.s} style={on ? styles.thumbOn : undefined} />
+                <Photo scene={s.id} width={THUMB_W} height={THUMB_H} radius={radius.s} style={[on ? styles.thumbOn : undefined, night && !on ? { opacity: 0.6 } : undefined]} />
                 <Txt variant="footnote" tone={on ? 'primary' : 'secondary'} numberOfLines={1} style={{ marginTop: space.s, fontWeight: on ? '600' : '400', textTransform: 'lowercase' }}>
                   {s.name}
                 </Txt>
@@ -120,13 +145,29 @@ export function ListenScreen() {
             />
           </View>
 
-          <PrimaryButton
-            label={playing ? 'pause' : live.id ? 'resume' : 'play'}
-            detail={status}
-            accessibilityLabel={playing ? 'Pause' : live.id ? 'Resume' : `Play ${current.name}`}
-            onPress={toggle}
-            style={{ marginTop: space.xl }}
-          />
+          <View style={styles.controls}>
+            <Txt variant="footnote" tone="secondary" align="center" accessibilityLiveRegion="polite">
+              {status}
+            </Txt>
+            <View style={styles.controlRow}>
+              {/* Stop sits left of play, a spacer balances it on the right, so play stays centred. */}
+              {live.id ? (
+                <IconButton icon="stop.fill" label="Stop the sound" variant="filled" size={52} iconSize={16} tint={color.textSecondary} onPress={() => stopListening()} />
+              ) : (
+                <View style={styles.side} />
+              )}
+              <IconButton
+                icon={playing ? 'pause.fill' : 'play.fill'}
+                label={playing ? 'Pause' : live.id ? 'Resume' : `Play ${current.name}`}
+                size={72}
+                iconSize={26}
+                tint={color.onAccent}
+                style={{ backgroundColor: color.accent }}
+                onPress={toggle}
+              />
+              <View style={styles.side} />
+            </View>
+          </View>
 
           <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
             Keeps playing with the screen locked. Just for listening; nothing is tracked.
@@ -136,14 +177,6 @@ export function ListenScreen() {
 
       <View style={[styles.top, { paddingTop: insets.top + space.s }]}>
         <IconButton icon="chevron.down" label="Close. The sound keeps playing" onPress={() => router.back()} tint={color.onImage} style={styles.close} />
-        {live.id ? (
-          <OutlineButton
-            label="stop"
-            tone="onImage"
-            accessibilityLabel="Stop the sound"
-            onPress={() => stopListening()}
-          />
-        ) : null}
       </View>
     </View>
   );
@@ -164,4 +197,7 @@ const makeStyles = (color: Palette) =>
     thumbOn: { borderWidth: 2, borderColor: color.text },
     body: { paddingHorizontal: space.xl },
     timerRow: { gap: space.s },
+    controls: { marginTop: space.xl, alignItems: 'center', gap: space.m },
+    controlRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xl },
+    side: { width: 52, height: 52 },
   });

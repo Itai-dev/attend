@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { type ReactNode } from 'react';
 import {
@@ -260,6 +261,90 @@ export function IconButton({
   );
 }
 
+/**
+ * The way to Settings, the same on every tab (studio round 5: the gear was only on Today, so the
+ * guide's voice "couldn't be found"). Drop it into a TitledScroll's `right`.
+ */
+export function SettingsGear({ tint, style }: { tint?: string; style?: StyleProp<ViewStyle> }) {
+  const color = useColors();
+  return <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={tint ?? color.textSecondary} style={[{ marginRight: -space.s }, style]} />;
+}
+
+/** A rounded group of rows, as in Settings and practice settings. */
+export function RowGroup({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const styles = useStyles(makeStyles);
+  return <View style={[styles.group, style]}>{children}</View>;
+}
+
+/**
+ * A setting and its current value, which opens its choices below it: "guide voice   River ›".
+ * The value is always visible, so nothing about a practice is hidden behind a tap.
+ */
+export function DisclosureRow({ label, value, open, onPress, accessibilityLabel }: { label: string; value: string; open?: boolean; onPress?: () => void; accessibilityLabel?: string }) {
+  const styles = useStyles(makeStyles);
+  const body = (
+    <>
+      <Txt variant="body" style={styles.rowLabel}>
+        {label}
+      </Txt>
+      <Txt variant="body" tone="secondary" style={{ flexShrink: 1, textAlign: 'right' }} numberOfLines={1}>
+        {value}
+        {onPress ? (open ? '  ⌄' : '  ›') : ''}
+      </Txt>
+    </>
+  );
+  if (!onPress) {
+    return (
+      <View style={styles.row} accessible accessibilityLabel={accessibilityLabel ?? `${label}: ${value}`}>
+        {body}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? `${label}: ${value}`}
+      accessibilityState={{ expanded: !!open }}
+      onPress={() => {
+        haptic('select');
+        onPress();
+      }}
+      style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      {body}
+    </Pressable>
+  );
+}
+
+/** One of a list of choices, with a radio: a voice, a sound, a time. Saved on tap. */
+export function ChoiceRow({ label, detail, selected, disabled, onPress }: { label: string; detail?: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
+  const styles = useStyles(makeStyles);
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, disabled }}
+      disabled={disabled}
+      onPress={() => {
+        haptic('select');
+        onPress();
+      }}
+      style={({ pressed }) => [styles.choice, { opacity: disabled ? 0.4 : pressed ? 0.6 : 1 }]}
+    >
+      <View style={{ flex: 1 }}>
+        <Txt variant="body" style={styles.rowLabel}>
+          {label}
+        </Txt>
+        {detail ? (
+          <Txt variant="footnote" tone="tertiary">
+            {detail}
+          </Txt>
+        ) : null}
+      </View>
+      <View style={[styles.radio, selected && styles.radioOn]} />
+    </Pressable>
+  );
+}
+
 /** A screen with a large title that scrolls with its content, iOS-style. */
 export function TitledScroll({
   title,
@@ -508,6 +593,19 @@ const makeStyles = (color: Palette) =>
     borderColor: color.hairline,
     overflow: 'hidden',
   },
+  group: {
+    borderRadius: radius.m,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.hairline,
+    overflow: 'hidden',
+  },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.m, minHeight: HIT + 12, paddingHorizontal: space.l },
+  choice: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, paddingHorizontal: space.l, paddingVertical: space.s, gap: space.m },
+  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.4, borderColor: color.textTertiary },
+  radioOn: { borderWidth: 5.5, borderColor: color.text },
+  // Row and choice labels are glanced at, so lowercase (AGENTS.md "App copy"); details stay sentence case.
+  rowLabel: { textTransform: 'lowercase' },
   badge: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.hairline,

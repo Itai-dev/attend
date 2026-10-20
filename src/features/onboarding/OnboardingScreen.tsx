@@ -7,6 +7,7 @@ import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import { currentTz, dayKey, WHERE_REGIONS } from '@/domain/checkin';
 import { currentDay, EMPTY_PROGRAM, programDay, PROGRAM_DAYS } from '@/domain/program';
+import { FOCUS_NEED, isNight, presetById } from '@/domain/presets';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion, SessionType } from '@/domain/types';
 import { Chip, haptic, PrimaryButton, QuietButton, Txt, Wordmark } from '@/design/components';
@@ -14,6 +15,8 @@ import { Photo } from '@/design/Photo';
 import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
+import { clock12 } from '../shared/format';
+import { presetPlan, startPractice } from '../shared/start';
 
 /**
  * The welcome, after the best of Calm and Headspace: one idea or one question per screen,
@@ -25,7 +28,8 @@ import { requestReminderPermission, scheduleReminders } from '@/voice/reminders'
  * Every question can be skipped. It asks for a goal, never a pain score: the pain record is
  * separate from practice and starts from Today, when the person chooses. The goal matters
  * most — it is what Week 4 brings the practice back to (docs/RESEARCH.md §4). "What brings
- * you" puts the matching any-time practice first on Today.
+ * you" puts the matching any-time practice first on Today, and at night, for someone who came
+ * about sleep, the last screen offers that practice now and keeps Day 1 for tomorrow.
  */
 
 const FOCUS: Array<{ id: SessionType; title: string; detail: string }> = [
@@ -57,16 +61,22 @@ const TIMES = [
 
 const STEPS = 7;
 
-function hhmm(h: number, m: number) {
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
+// The 28 days are named here, before the goal question refers to their last week (round 5).
+const HOW_IT_WORKS = [
+  'When pain lasts, the body’s alarm can stay on.',
+  'Noticing a sensation with curiosity rather than fear is a skill. It’s called somatic tracking, and it grows with use.',
+  '28 days, a few minutes each: a short lesson, then a practice with your eyes closed. You can stop any time.',
+];
+
+const SAFETY_LINE = 'For pain you already know. Anything new or severe: see a doctor; in an emergency, call your local number.';
+
 
 export function OnboardingScreen() {
   const color = useColors();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const { prefs, sessions, setPrefs } = useData();
+  const { prefs, sessions, checkIns, setPrefs } = useData();
   const [step, setStep] = useState(0);
   const [focus, setFocus] = useState<SessionType | undefined>(prefs.focus);
   const [where, setWhere] = useState<BodyRegion | undefined>(prefs.place?.region);
@@ -94,22 +104,22 @@ export function OnboardingScreen() {
     next();
   };
 
-  const finish = async (begin: boolean) => {
+  // Someone who came about nights, finishing the welcome at night, is offered the sleep practice
+  // now and Day 1 tomorrow: Tom picked "nights" at 23:40 and was handed a lesson (round 5).
+  const sleepNow = focus === 'sleep' && isNight(new Date().getHours());
+  const sleepPreset = presetById(FOCUS_NEED.sleep)!;
+
+  const finish = async (then: 'lesson' | 'sleep' | 'none') => {
     const t = TIMES.find((x) => x.id === time)!;
     const reminder = { enabled: reminderOn, hour: t.hour, minute: t.minute };
-    await setPrefs({
-      onboarded: true,
-      focus,
-      goal: finalGoal,
-      place: where && where !== 'whole_body' ? { region: where } : undefined,
-      reminder,
-      program,
-    });
+    const place = where && where !== 'whole_body' ? { region: where } : undefined;
+    await setPrefs({ onboarded: true, focus, goal: finalGoal, place, reminder, program });
     const last = sessions.filter((s) => !s.isSample).map((s) => s.startedAt);
     await scheduleReminders(reminder, last.length ? Math.max(...last) : undefined, program);
     router.replace('/');
-    // The first day starts now, from its lesson; Today is underneath when it ends.
-    if (begin) setTimeout(() => router.push({ pathname: '/lesson/[day]', params: { day: String(day) } }), 350);
+    // The practice starts now; Today is underneath when it ends.
+    if (then === 'lesson') setTimeout(() => router.push({ pathname: '/lesson/[day]', params: { day: String(day) } }), 350);
+    if (then === 'sleep') setTimeout(() => startPractice(presetPlan(sleepPreset, { prefs: { ...prefs, focus, place }, checkIns })), 350);
   };
 
   const photoStep = step === 0 || step === STEPS - 1;
@@ -154,37 +164,20 @@ export function OnboardingScreen() {
             <Txt variant="title" accessibilityRole="header">
               how it works
             </Txt>
-            {[
-              ['When pain lasts, the alarm can stay on', 'The nervous system can learn to stay on guard, sometimes after an injury, sometimes with no clear start.'],
-              ['Attention without alarm is a skill', 'This is called somatic tracking: noticing a sensation with curiosity rather than fear. Like any skill, it grows with use.'],
-              ['A little, every day', 'A two-minute lesson, then three to ten minutes of listening, eyes closed. Nothing to answer.'],
-            ].map(([title, body], i) => (
-              <View key={title} style={styles.point}>
-                <Txt variant="title2" tone="tertiary" style={{ width: 24 }}>
-                  {String(i + 1)}
+            {/* Three short lines, not three paragraphs: the first minute was a wall of text (round 5). */}
+            <View style={{ gap: space.l }}>
+              {HOW_IT_WORKS.map((line) => (
+                <Txt key={line} variant="body">
+                  {line}
                 </Txt>
-                <View style={{ flex: 1, gap: space.xs }}>
-                  <Txt variant="headline">{title}</Txt>
-                  <Txt variant="callout" tone="secondary">
-                    {body}
-                  </Txt>
-                </View>
-              </View>
-            ))}
-            <View style={styles.note}>
-              {/* First, and at reading size: someone with new chest pain at 2am must find a path to
-                  emergency care before anything about the practice (round 3, researcher). */}
-              <Txt variant="callout" style={{ marginBottom: space.m }}>
-                New chest pain, a sudden severe headache, trouble breathing or new weakness: call your local emergency number now. This app can’t help with that.
-              </Txt>
-              <Txt variant="footnote" tone="secondary">
-                Attend is for pain you already know. It doesn’t diagnose, and it sits beside any treatment you have. Anything new, or different from your usual, deserves a doctor’s look first.
-              </Txt>
-              {/* Attention to the body doesn't suit everyone (trauma, health anxiety: Goldberg 2021); stopping must read as part of the practice. */}
-              <Txt variant="footnote" tone="secondary" style={{ marginTop: space.s }}>
-                Close attention to the body doesn’t suit everyone. If it brings up old memories, panic, or a far-away feeling, open your eyes, look around the room, and stop. Stopping is part of the practice. If you find yourself checking your body more between practices, take a break. That’s part of it too.
-              </Txt>
+              ))}
             </View>
+            {/* One line, in normal weight. The longer note (emergencies, a crisis line, when to
+                stop) is in Settings → About; here, its loudest words were "chest pain… call
+                emergency", and the first minute alarmed the people it was meant to settle (round 5). */}
+            <Txt variant="callout" tone="secondary" style={styles.safety}>
+              {SAFETY_LINE}
+            </Txt>
           </Animated.View>
         ) : null}
 
@@ -230,7 +223,7 @@ export function OnboardingScreen() {
               where do you feel it most?
             </Txt>
             <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
-              Your practice will rest there. You can change it any time.
+              Pick the main one. You can change it any time.
             </Txt>
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => (
@@ -253,7 +246,7 @@ export function OnboardingScreen() {
               what would you like to get back to?
             </Txt>
             <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
-              Something pain has crowded out. Week 4 works toward it.
+              Something pain has crowded out. The last week of the 28 days works toward it.
             </Txt>
             <View style={styles.chips}>
               {GOALS.map((g) => (
@@ -311,7 +304,7 @@ export function OnboardingScreen() {
                       {t.label}
                     </Txt>
                     <Txt variant="footnote" tone={on ? 'inverse' : 'tertiary'}>
-                      {hhmm(t.hour, t.minute)}
+                      {clock12(t.hour, t.minute)}
                     </Txt>
                   </Pressable>
                 );
@@ -336,18 +329,34 @@ export function OnboardingScreen() {
             </Photo>
             <View style={styles.text}>
               <Txt variant="footnote" style={{ color: color.practice, fontWeight: '600' }}>
-                day {day} of {PROGRAM_DAYS}
+                {sleepNow ? 'tonight' : `day ${day} of ${PROGRAM_DAYS}`}
               </Txt>
-              <Txt variant="display" accessibilityRole="header" style={{ marginTop: space.xs }}>
-                {day === 1 ? 'your first day\nis ready.' : 'welcome back.'}
-              </Txt>
-              <Txt variant="body" style={{ marginTop: space.l }}>
-                {first.lesson.title}
-              </Txt>
-              <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
-                A 2-minute lesson, then {first.practice.minutes} minutes with your eyes closed. Somewhere comfortable. Headphones help.
-              </Txt>
-              {focus ? (
+              {sleepNow ? (
+                <>
+                  <Txt variant="display" accessibilityRole="header" style={{ marginTop: space.xs }}>
+                    {`sleep first.\nday ${day} tomorrow.`}
+                  </Txt>
+                  <Txt variant="body" style={{ marginTop: space.l }}>
+                    “can’t sleep” is ten minutes with your eyes closed, guided into sleep. It ends without a wake-up.
+                  </Txt>
+                  <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+                    Day {day}, “{first.lesson.title.toLowerCase()},” is a 2-minute lesson, then {first.practice.minutes} minutes of practice.
+                  </Txt>
+                </>
+              ) : (
+                <>
+                  <Txt variant="display" accessibilityRole="header" style={{ marginTop: space.xs }}>
+                    {day === 1 ? 'your first day\nis ready.' : 'welcome back.'}
+                  </Txt>
+                  <Txt variant="body" style={{ marginTop: space.l }}>
+                    {first.lesson.title}
+                  </Txt>
+                  <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
+                    A 2-minute lesson, then {first.practice.minutes} minutes with your eyes closed. Somewhere comfortable. Headphones help.
+                  </Txt>
+                </>
+              )}
+              {focus && !sleepNow ? (
                 <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
                   {FOCUS_TIP[focus]}
                 </Txt>
@@ -364,8 +373,20 @@ export function OnboardingScreen() {
           <PrimaryButton label="continue" onPress={confirmTime} />
         ) : step === STEPS - 1 ? (
           <>
-            <PrimaryButton label={`begin day ${day}`} detail="Starts with the short lesson" onPress={() => finish(true)} />
-            <QuietButton label="Not now" style={{ alignSelf: 'center' }} onPress={() => finish(false)} />
+            {sleepNow ? (
+              <>
+                <PrimaryButton label="can’t sleep · 10 min, starts now" onPress={() => finish('sleep')} />
+                <View style={styles.pair}>
+                  <QuietButton label={`or begin day ${day} now`} onPress={() => finish('lesson')} />
+                  <QuietButton label="not now" onPress={() => finish('none')} />
+                </View>
+              </>
+            ) : (
+              <>
+                <PrimaryButton label={`begin day ${day}`} detail="Starts with the short lesson" onPress={() => finish('lesson')} />
+                <QuietButton label="not now" style={{ alignSelf: 'center' }} onPress={() => finish('none')} />
+              </>
+            )}
           </>
         ) : (
           <PrimaryButton
@@ -387,8 +408,7 @@ const makeStyles = (color: Palette) =>
     bar: { flex: 1, height: 2, borderRadius: 1, backgroundColor: color.hairline },
     content: { flexGrow: 1, padding: space.xl, paddingTop: space.xxl },
     text: { paddingHorizontal: space.xl, paddingTop: space.xl },
-    point: { flexDirection: 'row', gap: space.m },
-    note: { padding: space.l, borderRadius: radius.m, backgroundColor: color.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
+    safety: { paddingTop: space.l, borderTopWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
     option: {
       minHeight: HIT + 24,
       justifyContent: 'center',
@@ -436,4 +456,5 @@ const makeStyles = (color: Palette) =>
       borderColor: color.hairline,
     },
     footer: { paddingHorizontal: space.xl, gap: space.s },
+    pair: { flexDirection: 'row', justifyContent: 'space-between' },
   });

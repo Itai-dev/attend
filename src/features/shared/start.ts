@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import type { Prefs } from '@/data/types';
 import { GUIDE_VOICES } from '@/config';
-import { latestPlace, type CheckIn } from '@/domain/checkin';
+import { currentTz, dayKey, latestPlace, type CheckIn } from '@/domain/checkin';
 import { presetTheme, type Preset } from '@/domain/presets';
 import { programDay, SHORT_DAY_MINUTES, type PracticeTheme } from '@/domain/program';
 import { backgroundFor, type BackgroundPref } from '@/domain/soundscapes';
@@ -12,8 +12,8 @@ import type { SessionLength } from '@/engine/phases';
  * Starting a practice in one tap. Everything a session needs is decided from what the app
  * already knows — the day's practice or the preset, the voice chosen before, the sound in
  * Settings, where it hurts from the latest check-in — so nothing is asked once the person
- * has decided to begin. The Before screen stays reachable ("adjust") for anyone who wants
- * to change a detail.
+ * has decided to begin. Practice settings (/before) is where a detail is changed; it saves and
+ * returns, and dayPlan() reads what it saved.
  */
 
 export type PracticePlan = {
@@ -36,15 +36,26 @@ function placeFor(theme: PracticeTheme, k: Known): Place | null {
   return latestPlace(k.checkIns) ?? k.prefs.place ?? null;
 }
 
+/**
+ * Today's choices from practice settings (prefs.practiceToday), or nothing if they were made on
+ * another day: a length picked in a flare shouldn't follow the person into next week.
+ */
+export function todaysChoices(prefs: Prefs, now = Date.now()): NonNullable<Prefs['practiceToday']> | undefined {
+  const t = prefs.practiceToday;
+  return t && t.date === dayKey(now, currentTz(new Date(now))) ? t : undefined;
+}
+
 export function dayPlan(day: number, k: Known): PracticePlan {
   const d = programDay(day);
+  const today = todaysChoices(k.prefs);
   return {
     type: d.practice.sessionType,
-    minutes: d.practice.minutes as SessionLength,
+    minutes: (today?.minutes ?? d.practice.minutes) as SessionLength,
     voice: k.prefs.voiceId ?? GUIDE_VOICES[0].id,
     theme: d.practice.theme,
     day: d.day,
-    place: placeFor(d.practice.theme, k),
+    // A whole-body day stays whole-body; otherwise a focus chosen today wins over the usual source.
+    place: d.practice.theme !== 'open' && today?.place !== undefined ? today.place : placeFor(d.practice.theme, k),
     background: backgroundFor(k.prefs),
   };
 }

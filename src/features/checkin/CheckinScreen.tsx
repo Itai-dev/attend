@@ -1,9 +1,9 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import { currentTz, PAIN_END_HIGH, PAIN_END_LOW, PAIN_MAX, painLabel, WHERE_REGIONS as WHERE } from '@/domain/checkin';
+import { currentTz, latestPlace, PAIN_END_HIGH, PAIN_END_LOW, PAIN_MAX, painLabel, WHERE_REGIONS as WHERE } from '@/domain/checkin';
 import { newId } from '@/domain/ids';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion, Place } from '@/domain/types';
@@ -20,7 +20,11 @@ import { useColors, useStyles } from '@/design/ThemeProvider';
  * every session into a test the pain can fail.
  *
  * The places are Attend's own regions, so the place a check-in names is the place a guided
- * session rests on, in the same words.
+ * session focuses on, in the same words.
+ *
+ * Round 5: the save button sat below the fold, and a check-in saved with no sign it had. Save
+ * now stays in a footer that never scrolls away, and saving returns to where it was opened
+ * (Today, or Progress) with `saved=1`, which that screen shows as a quiet "saved".
  */
 
 
@@ -28,9 +32,17 @@ export function CheckinScreen() {
   const color = useColors();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const { saveCheckIn } = useData();
+  const { saveCheckIn, checkIns, prefs } = useData();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const [pain, setPain] = useState<number | null>(null);
-  const [places, setPlaces] = useState<BodyRegion[]>([]);
+  // Where it hurt is usually where it hurt last time: the latest check-in's one place, or the
+  // one named in the welcome. Pre-selected, never hidden: it's on screen to change or clear,
+  // and only what is selected when Save is pressed is recorded.
+  const [places, setPlaces] = useState<BodyRegion[]>(() => {
+    const own = checkIns.filter((c) => !c.isSample);
+    const region = (latestPlace(own) ?? prefs.place)?.region;
+    return region && WHERE.includes(region) ? [region] : [];
+  });
   const [saving, setSaving] = useState(false);
 
   const toggle = (r: BodyRegion) => {
@@ -50,12 +62,13 @@ export function CheckinScreen() {
       places: chosen,
     });
     haptic('soft');
-    router.back();
+    // Back to the screen it was opened from, past the modal, with the word that it saved.
+    router.dismissTo({ pathname: from === 'progress' ? '/progress' : '/', params: { saved: '1' } });
   };
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + space.xxxl, paddingHorizontal: space.xl }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: space.xl, paddingHorizontal: space.xl }}>
         <View style={styles.top}>
           <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
         </View>
@@ -111,20 +124,23 @@ export function CheckinScreen() {
           ))}
         </View>
         <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
-          When you name one place, your next session rests there.
+          Name one place and your next practice focuses there.
         </Txt>
+      </ScrollView>
 
+      {/* Never scrolls away: the one thing to do once a number is chosen is always in reach. */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + space.l }]}>
         <PrimaryButton
-          label="Save"
-          style={{ marginTop: space.xxl, opacity: pain === null ? 0.4 : 1 }}
+          label="save"
+          style={{ opacity: pain === null ? 0.4 : 1 }}
           disabled={pain === null || saving}
           accessibilityState={{ disabled: pain === null || saving }}
           onPress={save}
         />
-        <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>
+        <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.m }}>
           Stays on this iPhone. Only you see it.
         </Txt>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -149,7 +165,16 @@ const makeStyles = (color: Palette) =>
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.hairline,
   },
-  stepOn: { backgroundColor: color.text, borderColor: color.text },
+  // The accent, not the ink: the chosen number is the screen's filled control, and at night
+  // the accent is the softer grey rather than a white square.
+  stepOn: { backgroundColor: color.accent, borderColor: color.accent },
   ends: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.m },
   where: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s },
+  footer: {
+    paddingHorizontal: space.xl,
+    paddingTop: space.l,
+    backgroundColor: color.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.hairline,
+  },
 });

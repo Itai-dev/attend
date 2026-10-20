@@ -1,13 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { lessonLines, listenFirst } from '@/domain/lessonVoice';
-import { EMPTY_PROGRAM, markRead, programDay, WEEKS, type ProgramDay } from '@/domain/program';
-import { haptic, IconButton, OutlineButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
+import { EMPTY_PROGRAM, markRead, programDay, type ProgramDay } from '@/domain/program';
+import { haptic, Icon, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { radius, space, type Palette } from '@/design/theme';
 import { ForceDark, useColors, useStyles } from '@/design/ThemeProvider';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
@@ -19,10 +19,14 @@ import { dayPlan, startPractice } from '../shared/start';
  * Education alone barely changes pain; paired with practice it does better
  * (docs/RESEARCH.md §2), so the last card's button is the practice, not "done".
  *
- * Listening and reading are equal ways in (studio round 2): the first card offers both. Listen
- * plays the lesson in the guide's voice (domain/lessonVoice.ts), then flows into the practice
- * on the same dark screen, so the eyes can close at the start of the lesson and stay closed.
- * From 21:00, or for someone who came for sleep, listen comes first and the screen is dark.
+ * Reading and listening are both ways in. Listen plays the lesson in the guide's voice
+ * (domain/lessonVoice.ts), then flows into the practice on the same dark screen, so the eyes can
+ * close at the start of the lesson and stay closed. Round 5 found two equal buttons on the first
+ * card read as a puzzle ("read →" looked like "read more"), so "next" is the one big button and
+ * "listen instead" a small link. The choice is remembered (prefs.lessonMode): someone who
+ * listened yesterday opens today's lesson listening, with "read instead". Until a choice is
+ * made, listen leads (the big button, "read instead" small) from 21:00 or for someone who came
+ * for sleep, and the screen is dark.
  */
 
 /** Said on the card when the voice couldn't be had: reading is the way in now, nothing failed. */
@@ -34,8 +38,12 @@ export function LessonScreen() {
   const { prefs, setPrefs, checkIns } = useData();
   const vs = useVoiceSession();
   // Decided once, when the lesson opens: the screen doesn't change under someone reading at 20:59.
-  const [first] = useState(() => listenFirst(new Date().getHours(), prefs.focus));
+  // A remembered choice wins; the night default is only for someone who hasn't chosen yet.
+  const [first] = useState(() => (prefs.lessonMode ? prefs.lessonMode === 'listen' : listenFirst(new Date().getHours(), prefs.focus)));
   const [listening, setListening] = useState(false);
+  // "read instead" on a listen-first card: from then on this lesson is read.
+  const [readChosen, setReadChosen] = useState(false);
+  const opened = useRef(false);
   const [voiceState, setVoiceState] = useState<'speaking' | 'holding'>('holding');
   const [failed, setFailed] = useState(false);
   const [i, setI] = useState(0);
@@ -52,6 +60,9 @@ export function LessonScreen() {
   );
 
   const plan = () => dayPlan(day.day, { prefs, checkIns });
+  const remember = (lessonMode: 'read' | 'listen') => {
+    if (prefs.lessonMode !== lessonMode) setPrefs({ lessonMode });
+  };
 
   const finish = async () => {
     haptic('soft');
@@ -62,6 +73,7 @@ export function LessonScreen() {
   };
 
   const listen = async () => {
+    remember('listen');
     setFailed(false);
     setListening(true);
     const p = plan();
@@ -79,19 +91,31 @@ export function LessonScreen() {
   };
 
   const readInstead = () => {
+    remember('read');
+    setReadChosen(true);
     vs.stopSpeaking();
     setListening(false);
   };
+
+  // Someone who chose listening before opens straight into it: the remembered choice, not a
+  // button to find again. Once, on open; "read instead" is there from the first second.
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    if (prefs.lessonMode === 'listen') listen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const body = (
     <LessonBody
       day={day}
       i={i}
       setI={setI}
-      first={first}
+      listenLead={first && !readChosen}
       listening={listening}
       voiceState={voiceState}
       failed={failed}
+      minutes={plan().minutes}
       onListen={listen}
       onReadInstead={readInstead}
       onFinish={finish}
@@ -106,16 +130,19 @@ type BodyProps = {
   day: ProgramDay;
   i: number;
   setI: (i: number) => void;
-  first: boolean;
+  /** The first card's big button is "listen" (night, or a sleeper, before any choice) rather than "next". */
+  listenLead: boolean;
   listening: boolean;
   voiceState: 'speaking' | 'holding';
   failed: boolean;
+  /** Today's length, with any choice from practice settings. */
+  minutes: number;
   onListen: () => void;
   onReadInstead: () => void;
   onFinish: () => void;
 };
 
-function LessonBody({ day, i, setI, first, listening, voiceState, failed, onListen, onReadInstead, onFinish }: BodyProps) {
+function LessonBody({ day, i, setI, listenLead, listening, voiceState, failed, minutes, onListen, onReadInstead, onFinish }: BodyProps) {
   const color = useColors();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -123,7 +150,8 @@ function LessonBody({ day, i, setI, first, listening, voiceState, failed, onList
   const cards = day.lesson.cards;
   const card = cards[i];
   const last = i === cards.length - 1;
-  const kicker = `day ${day.day} · week ${day.week} · ${WEEKS[day.week].name.toLowerCase()}`;
+  // One name per day (round 5): the lesson title is the day's name; the week's name left the kicker.
+  const kicker = `day ${day.day} · week ${day.week}`;
 
   if (listening) {
     return (
@@ -144,9 +172,6 @@ function LessonBody({ day, i, setI, first, listening, voiceState, failed, onList
       </View>
     );
   }
-
-  const listenButton = <OutlineButton key="listen" label="listen" accessibilityLabel="Listen to the lesson, then the practice" onPress={onListen} style={styles.choice} />;
-  const readButton = <OutlineButton key="read" label="read" accessibilityLabel="Read the lesson" onPress={() => setI(1)} style={styles.choice} />;
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.m, paddingBottom: insets.bottom + space.l }]}>
@@ -193,17 +218,46 @@ function LessonBody({ day, i, setI, first, listening, voiceState, failed, onList
       </ScrollView>
 
       <View style={styles.footer}>
-        {i === 0 && !failed ? (
-          // Two equal ways in, the same control side by side; at night, listen is the first.
-          <View style={styles.choices}>{first ? [listenButton, readButton] : [readButton, listenButton]}</View>
+        {i === 0 && !failed && listenLead ? (
+          // Night, or someone who came for sleep, and no choice yet: hearing it is the way in.
+          <>
+            <PrimaryButton label="listen" detail="the guide reads it, then the practice" accessibilityLabel="Listen. The guide reads the lesson, then the practice begins" onPress={onListen} />
+            <QuietButton label="read instead" style={{ alignSelf: 'center' }} onPress={onReadInstead} />
+          </>
+        ) : i === 0 && !failed ? (
+          // One way forward, and a small way to hear it instead (remembered for next time).
+          <>
+            <PrimaryButton
+              label="next"
+              onPress={() => {
+                haptic('select');
+                setI(1);
+              }}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Listen instead. The guide reads the lesson, then the practice begins"
+              hitSlop={8}
+              onPress={() => {
+                haptic('select');
+                onListen();
+              }}
+              style={({ pressed }) => [styles.listen, { opacity: pressed ? 0.5 : 1 }]}
+            >
+              <Icon name="speaker.wave.2.fill" size={14} tint={color.textSecondary} />
+              <Txt variant="callout" tone="secondary">
+                listen instead
+              </Txt>
+            </Pressable>
+          </>
         ) : last ? (
           // What it takes, above the button, as on Today: inside the button it broke onto a
           // second line with "your eyes" alone.
           <>
             <Txt variant="footnote" tone="secondary" style={{ marginBottom: space.xs }}>
-              {day.practice.minutes} min · find a comfortable place, then close your eyes
+              {minutes} min · find a comfortable place, then close your eyes
             </Txt>
-            <PrimaryButton label="begin practice" accessibilityLabel={`Begin practice. ${day.practice.minutes} minutes. Find a comfortable place, then close your eyes`} onPress={onFinish} />
+            <PrimaryButton label="begin practice" accessibilityLabel={`Begin practice. ${minutes} minutes. Find a comfortable place, then close your eyes`} onPress={onFinish} />
           </>
         ) : (
           <PrimaryButton
@@ -229,6 +283,5 @@ const makeStyles = (color: Palette) =>
   body: { flexGrow: 1, paddingHorizontal: space.xl, paddingTop: space.l, paddingBottom: space.xxl },
   notice: { padding: space.l, borderRadius: radius.m, backgroundColor: color.practiceSoft },
   footer: { paddingHorizontal: space.xl, gap: space.s },
-  choices: { flexDirection: 'row', gap: space.m },
-  choice: { flex: 1, alignSelf: 'stretch', justifyContent: 'space-between', minHeight: 52 },
+  listen: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: space.s, minHeight: 44, paddingHorizontal: space.s },
 });

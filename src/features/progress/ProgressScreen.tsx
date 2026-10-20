@@ -1,23 +1,24 @@
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useData } from '@/data/store';
-import { currentTz, dayKey, formatPain, MIN_DAYS_FOR_PICTURE, PAIN_MAX, type CheckIn } from '@/domain/checkin';
+import { currentTz, dayKey, formatPain, PAIN_MAX, type CheckIn } from '@/domain/checkin';
 import { milestones, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM } from '@/domain/program';
-import { buildProgress, PROGRESS_MEANING, type ProgressDay } from '@/domain/progress';
+import { buildProgress, PROGRESS_MEANING, type Progress } from '@/domain/progress';
 import { REGIONS } from '@/domain/regions';
-import { Card, Hairline, Icon, PrimaryButton, SectionLabel, TitledScroll, Txt } from '@/design/components';
+import { Card, Hairline, Icon, OutlineButton, SectionLabel, SettingsGear, TitledScroll, Txt } from '@/design/components';
 import { HIT, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { sessionDate } from '../shared/format';
 import { ProgramPath } from '../shared/ProgramPath';
 
 /**
- * Progress: the one place to look back. First the 28 days, filled in as they're done (this
- * was its own tab; one place is simpler). Then what you did — practice days, minutes,
- * lessons, milestones, the moments you saved — celebrated. Then the pain record, shown and
- * never judged: pain over weeks, beside the days practised, never mixed with the practice.
+ * Progress: the one place to look back. People open it to ask "is this helping?" (Round 5),
+ * so the pain record comes first: pain over the weeks, beside the days practiced, never mixed
+ * with the practice, shown and never judged. Until there is a picture, the card says how close
+ * it is, so the question has a path to an answer. Then what you did — practice days, minutes,
+ * lessons, milestones, small wins — celebrated. Then the 28 days.
  * The picture is the person's to read; the screen says what it does not mean, and never
  * which way it went.
  * Colour stays neutral: no hue here carries a verdict.
@@ -30,13 +31,14 @@ const CHART_H = 140;
  */
 const AXIS_W = 22;
 
-function Chart({ days }: { days: ProgressDay[] }) {
+function Chart({ progress }: { progress: Progress }) {
   const styles = useStyles(makeStyles);
+  const { days } = progress;
   const [w, setW] = useState(0);
   const plotW = Math.max(0, w - AXIS_W);
   const step = days.length > 1 ? plotW / (days.length - 1) : 0;
   const onLayout = (e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width);
-  const label = `Pain over the last ${days.length} days. ${days.filter((d) => d.peak !== undefined).length} days with a check-in, ${days.filter((d) => d.practised).length} days practised.`;
+  const label = `Pain from ${progress.startLabel} to today. ${days.filter((d) => d.peak !== undefined).length} days with a check-in, ${days.filter((d) => d.practised).length} days practiced.`;
   return (
     <View onLayout={onLayout} accessible accessibilityRole="image" accessibilityLabel={label}>
       <View style={{ height: CHART_H }}>
@@ -55,20 +57,30 @@ function Chart({ days }: { days: ProgressDay[] }) {
             )
           : null}
       </View>
-      <View style={styles.practiceRow}>
+      {/*
+        The practice row is its own labelled strip under the chart, on the same days: side by
+        side, never mixed. "days practiced" names it as a record of showing up, so a tick under
+        a low dot doesn't read as the cause of it.
+      */}
+      <Txt variant="caption" tone="tertiary" style={styles.rowLabel}>
+        days practiced
+      </Txt>
+      <View style={[styles.practiceRow, { width: plotW }]}>
         {w > 0 ? days.map((d, i) => (d.practised ? <View key={d.day} style={[styles.tick, { left: i * step - 1.5 }]} /> : null)) : null}
+      </View>
+      <View style={[styles.dates, { width: plotW }]}>
+        <Txt variant="caption" tone="tertiary">
+          {progress.startLabel}
+        </Txt>
+        <Txt variant="caption" tone="tertiary">
+          {progress.endLabel}
+        </Txt>
       </View>
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.dot, { position: 'relative' }]} />
           <Txt variant="footnote" tone="tertiary">
             highest pain that day
-          </Txt>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.tick, { position: 'relative' }]} />
-          <Txt variant="footnote" tone="tertiary">
-            practiced
           </Txt>
         </View>
       </View>
@@ -85,6 +97,7 @@ export function ProgressScreen() {
   const color = useColors();
   const styles = useStyles(makeStyles);
   const { checkIns, sessions, prefs, deleteCheckIn } = useData();
+  const { saved } = useLocalSearchParams<{ saved?: string }>();
   const tz = currentTz();
   const progress = useMemo(() => buildProgress(checkIns, sessions, { tz }), [checkIns, sessions, tz]);
   const program = prefs.program ?? EMPTY_PROGRAM;
@@ -94,8 +107,24 @@ export function ProgressScreen() {
   // list of things not yet done; one next star is something to walk toward.
   const nextMark = marks.find((m) => !m.earned);
   const shownMarks = [...marks.filter((m) => m.earned), ...(nextMark ? [nextMark] : [])];
+  // A zero is a count of nothing: "0 lessons" beside "3 practice days" reads as a gap to fill.
+  const tiles = (
+    [
+      [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
+      [stats.minutes, 'minutes'],
+      [program.read.length, program.read.length === 1 ? 'lesson' : 'lessons'],
+    ] as const
+  ).filter(([n]) => n > 0);
   const moments = (prefs.moments ?? []).slice(0, 5);
   const recent = checkIns.filter((c) => !c.isSample).slice(0, 12);
+
+  // A check-in saved from here comes back with ?saved=1: a quiet word, then gone. The record
+  // card it lands on is the rest of the confirmation.
+  useEffect(() => {
+    if (saved !== '1') return;
+    const t = setTimeout(() => router.setParams({ saved: undefined }), 4000);
+    return () => clearTimeout(t);
+  }, [saved]);
 
   const remove = (c: CheckIn) => {
     const go = () => void deleteCheckIn(c.id);
@@ -107,23 +136,46 @@ export function ProgressScreen() {
   };
 
   return (
-    <TitledScroll title="progress">
-      <SectionLabel>your 28 days</SectionLabel>
-      <ProgramPath program={program} todayKey={dayKey(Date.now(), tz)} />
+    // The gear on every tab (Round 5): Settings was only findable from Today.
+    <TitledScroll title="progress" right={<SettingsGear />}>
+      {/* First, because "is this helping?" is what people open Progress to ask. */}
+      <View style={styles.recordHead}>
+        <SectionLabel style={{ marginBottom: 0 }}>your pain record</SectionLabel>
+        {saved === '1' ? (
+          <Txt variant="footnote" tone="secondary" accessibilityLiveRegion="polite">
+            saved
+          </Txt>
+        ) : null}
+      </View>
+      <Card style={styles.card}>
+        {progress.enough ? (
+          <>
+            <Chart progress={progress} />
+            <Txt variant="callout" style={{ marginTop: space.l }}>
+              {progress.summary}
+            </Txt>
+            {/* The sentence about what this is not belongs inside the card it qualifies (Pattern). */}
+            <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
+              {PROGRESS_MEANING}
+            </Txt>
+          </>
+        ) : (
+          <Txt variant="callout" tone="secondary">
+            {progress.untilPicture}
+          </Txt>
+        )}
+      </Card>
+      {/* Secondary on purpose: the record is what's looked at here; logging is ten seconds, not the point of the screen. */}
+      <OutlineButton label="log today's pain" onPress={() => router.push({ pathname: '/checkin', params: { from: 'progress' } })} style={{ marginTop: space.l }} />
 
-      <SectionLabel style={{ marginTop: space.xxl }}>your practice</SectionLabel>
-      {/* Three zeros before anything has happened say nothing; the numbers start with the first session. */}
-      {stats.sessions > 0 ? (
+      <SectionLabel style={{ marginTop: space.xxxl }}>your practice</SectionLabel>
+      {tiles.length ? (
         <View style={[styles.tiles, { marginBottom: space.xl }]}>
-          {[
-            [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
-            [stats.minutes, 'minutes'],
-            [program.read.length, program.read.length === 1 ? 'lesson' : 'lessons'],
-          ].map(([n, label]) => (
-            <View key={String(label)} style={styles.tile}>
+          {tiles.map(([n, label]) => (
+            <View key={label} style={styles.tile}>
               <Txt variant="display">{String(n)}</Txt>
               <Txt variant="footnote" tone="secondary">
-                {String(label)}
+                {label}
               </Txt>
             </View>
           ))}
@@ -148,7 +200,7 @@ export function ProgressScreen() {
 
       {prefs.goal || moments.length ? (
         <>
-          <SectionLabel style={{ marginTop: space.xxl }}>{prefs.goal ? `Toward ${prefs.goal.toLowerCase()}` : 'Moments'}</SectionLabel>
+          <SectionLabel style={{ marginTop: space.xxl }}>{prefs.goal ? `Toward ${prefs.goal.toLowerCase()}` : 'small wins'}</SectionLabel>
           <Card style={{ padding: space.l, gap: space.m }}>
             {moments.length ? (
               moments.map((m) => (
@@ -166,37 +218,19 @@ export function ProgressScreen() {
             )}
             <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={{ minHeight: HIT, justifyContent: 'center', alignSelf: 'flex-start' }}>
               <Txt variant="callout" style={{ color: color.milestone }}>
-                save a moment
+                note a small win
               </Txt>
             </Pressable>
           </Card>
         </>
       ) : null}
 
-      <SectionLabel style={{ marginTop: space.xxl }}>your pain record</SectionLabel>
-      <PrimaryButton label="log pain now" detail="10 seconds · separate from practice" onPress={() => router.push('/checkin')} />
-
-      <Card style={styles.card}>
-        <SectionLabel>last 8 weeks</SectionLabel>
-        {progress.enough ? (
-          <Chart days={progress.days} />
-        ) : (
-          <Txt variant="callout" tone="secondary">
-            After check-ins on {MIN_DAYS_FOR_PICTURE} different days, your record appears here, beside the days you practiced.
-          </Txt>
-        )}
-        <Txt variant="callout" style={{ marginTop: space.l }}>
-          {progress.summary}
-        </Txt>
-        {/* The sentence about what this is not belongs inside the card it qualifies (Pattern). */}
-        <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
-          {PROGRESS_MEANING}
-        </Txt>
-      </Card>
+      <SectionLabel style={{ marginTop: space.xxxl }}>your 28 days</SectionLabel>
+      <ProgramPath program={program} todayKey={dayKey(Date.now(), tz)} />
 
       {recent.length ? (
         <>
-          <SectionLabel style={{ marginTop: space.xxl }}>check-ins</SectionLabel>
+          <SectionLabel style={{ marginTop: space.xxxl }}>check-ins</SectionLabel>
           <View>
             {recent.map((c, i) => (
               <View key={c.id}>
@@ -233,11 +267,14 @@ export function ProgressScreen() {
 
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
-  card: { marginTop: space.xl, padding: space.xl },
+  recordHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space.m },
+  card: { padding: space.xl },
   grid: { position: 'absolute', left: 0, right: AXIS_W, height: StyleSheet.hairlineWidth, backgroundColor: color.hairline },
   gridLabel: { position: 'absolute', right: -AXIS_W, width: AXIS_W - 4, top: -8, fontSize: 10, lineHeight: 15 },
   dot: { position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: color.text },
-  practiceRow: { height: 14, marginTop: space.m },
+  rowLabel: { marginTop: space.l, marginBottom: space.xs },
+  practiceRow: { height: 14 },
+  dates: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.s },
   tick: { position: 'absolute', width: 3, height: 12, borderRadius: 2, backgroundColor: color.textTertiary },
   legend: { flexDirection: 'row', gap: space.xl, marginTop: space.m, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.s },
