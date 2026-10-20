@@ -37,6 +37,9 @@ import type { SpeakOptions, SpeechOutput, VoiceError } from '../types';
  * web it would route the line through Web Audio. Elsewhere the form makes its own envelope.
  */
 
+/** Measure the guide's voice with expo-audio sampling (iOS). Off until verified on a device. */
+export const SAMPLE_GUIDE_VOICE = false;
+
 export type ElevenLabsConfig = {
   apiUrl: string;
   headers?: Record<string, string>;
@@ -228,7 +231,11 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
    * plays the same either way.
    */
   private sample(player: AudioPlayer): { remove(): void } | undefined {
-    if (Platform.OS !== 'ios' || !this.levelListeners.size) return undefined;
+    // Off (20 Oct 2026): the first TestFlight build with sampling crashed in several places, and
+    // expo-audio's iOS sampling (an audio tap on each line's player, released after every line) is
+    // the one native path that build added. Until it is proven on a device, the form makes its
+    // own envelope while the guide speaks (viz/voiceEnvelope.ts). Flip SAMPLE_GUIDE_VOICE to retry.
+    if (!SAMPLE_GUIDE_VOICE || Platform.OS !== 'ios' || !this.levelListeners.size) return undefined;
     try {
       if (!player.isAudioSamplingSupported || typeof player.setAudioSamplingEnabled !== 'function') return undefined;
       // Before play(): the tap goes in when the item is ready, so the first syllable is measured too.
