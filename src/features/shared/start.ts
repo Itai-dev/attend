@@ -3,8 +3,9 @@ import type { Prefs } from '@/data/types';
 import { GUIDE_VOICES } from '@/config';
 import { currentTz, dayKey, latestPlace, type CheckIn } from '@/domain/checkin';
 import { presetTheme, type Preset } from '@/domain/presets';
-import { programDay, SHORT_DAY_MINUTES, type PracticeTheme } from '@/domain/program';
-import { backgroundFor, type BackgroundPref } from '@/domain/soundscapes';
+import { practiceMinutes, programDay, SHORT_DAY_MINUTES, type PracticeTheme } from '@/domain/program';
+import { backgroundFor, DEFAULT_BACKGROUND, DEFAULT_LISTEN_TIMER, soundscape, type BackgroundPref, type SoundscapeId } from '@/domain/soundscapes';
+import { startListening } from '@/voice/listen';
 import type { Place, SessionType } from '@/domain/types';
 import type { SessionLength } from '@/engine/phases';
 
@@ -50,7 +51,8 @@ export function dayPlan(day: number, k: Known): PracticePlan {
   const today = todaysChoices(k.prefs);
   return {
     type: d.practice.sessionType,
-    minutes: (today?.minutes ?? d.practice.minutes) as SessionLength,
+    // Today's choice, then the standing length, then the program's (practiceMinutes).
+    minutes: practiceMinutes(d.practice.minutes, k.prefs.practiceLength, today?.minutes) as SessionLength,
     voice: k.prefs.voiceId ?? GUIDE_VOICES[0].id,
     theme: d.practice.theme,
     day: d.day,
@@ -98,4 +100,29 @@ export function startPractice(plan: PracticePlan, how: 'push' | 'replace' = 'pus
   };
   if (how === 'replace') router.replace({ pathname: '/session', params });
   else router.push({ pathname: '/session', params });
+}
+
+/**
+ * "or just soft rain, no voice →": the sound under practice on its own, for someone at night who
+ * wanted rain and not a guide (Tom, round 5). Plays the sound under practice (rain when that is
+ * "voice only"), with the last listen's timer, and opens the player. Listening is not practice:
+ * nothing is recorded or counted (voice/listen.ts).
+ */
+export function justListenSound(prefs: Prefs): SoundscapeId {
+  const bg = backgroundFor(prefs);
+  return bg === 'none' ? DEFAULT_BACKGROUND : bg;
+}
+
+/** The link's words: "or just soft rain, no voice". */
+export function justListenLabel(prefs: Prefs): string {
+  return `or just ${(soundscape(justListenSound(prefs))?.name ?? 'rain').toLowerCase()}, no voice`;
+}
+
+export function startJustListen(prefs: Prefs, setPrefs: (p: Partial<Prefs>) => unknown, how: 'push' | 'replace' = 'push') {
+  const id = justListenSound(prefs);
+  const timer = prefs.listen?.timer ?? DEFAULT_LISTEN_TIMER;
+  startListening(id, timer);
+  setPrefs({ listen: { id, timer } });
+  if (how === 'replace') router.replace('/listen');
+  else router.push('/listen');
 }

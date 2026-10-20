@@ -35,7 +35,9 @@ export const PRESET_CATEGORIES: Array<{ id: PresetCategory; title: string; detai
   { id: 'worry', title: 'Worry', detail: 'Goes gently' },
 ];
 
-const RIVER = { voiceId: 'SAz9YHcvj6GT2YYXdXww', voiceName: 'River' };
+// Shown as "Jordan": ElevenLabs calls this voice River, which read as a sound in a list beside
+// rain and forest (studio round 5 retest). The id is what the voice service uses.
+const RIVER = { voiceId: 'SAz9YHcvj6GT2YYXdXww', voiceName: 'Jordan' };
 const SARAH = { voiceId: 'EXAVITQu4vr4xnSDxMaL', voiceName: 'Sarah' };
 const LILY = { voiceId: 'pFZP5JQG7iQjIQuC4Bku', voiceName: 'Lily' };
 const MATILDA = { voiceId: 'XrExE9yKIg1WjnnlVkGX', voiceName: 'Matilda' };
@@ -71,7 +73,7 @@ export function presetTheme(p: Preset): PracticeTheme {
  */
 export const NEED_IT: Array<{ id: string; label: string; detail: string; kind: string }> = [
   { id: 'flare-3', label: 'in a flare', detail: '3 min', kind: 'voice-guided' },
-  { id: 'sleep-10', label: 'can’t sleep', detail: '10 min', kind: 'guided into sleep' },
+  { id: 'sleep-10', label: 'can’t sleep', detail: '10 min', kind: 'voice-guided into sleep' },
   { id: 'scan-10', label: 'body scan', detail: '10 min', kind: 'voice-guided' },
   { id: 'worry-5', label: 'feeling worried', detail: '5 min', kind: 'voice-guided' },
 ];
@@ -97,6 +99,29 @@ export function needItOrder(focus: SessionType | undefined, hour: number): typeo
   const lead = [isNight(hour) ? 'sleep-10' : undefined, focus ? FOCUS_NEED[focus] : undefined].filter((x): x is string => !!x);
   const rank = (id: string) => (lead.includes(id) ? lead.indexOf(id) : lead.length + NEED_IT.findIndex((n) => n.id === id));
   return [...NEED_IT].sort((a, b) => rank(a.id) - rank(b.id));
+}
+
+/**
+ * How Today lays the moments out around the daily practice.
+ *
+ * By day (05:00–21:00), before anything has been practiced today: one moment first — the one the
+ * welcome's answer points to, or "in a flare" — then the day's practice, then the others under
+ * "more for right now", "can't sleep" last. Four moments above the program pushed the 28 days out
+ * of view, and Today read as a menu rather than a course with a door for a hard hour (round 5
+ * retest). At night, or once anything is practiced today, the moments lead as before: the day is
+ * done or waiting, and what's left is what the hour needs ("can't sleep" first at night).
+ *
+ * `first` sits above the daily practice; `more` below it (empty when nothing is split off).
+ */
+export function todayMoments(focus: SessionType | undefined, hour: number, practisedToday: boolean): { first: typeof NEED_IT; more: typeof NEED_IT } {
+  const all = needItOrder(focus, hour);
+  if (isNight(hour) || practisedToday) return { first: all, more: [] };
+  const leadId = focus ? FOCUS_NEED[focus] : 'flare-3';
+  const lead = NEED_IT.find((n) => n.id === leadId)!;
+  const rest = NEED_IT.filter((n) => n.id !== leadId);
+  // "can't sleep" last by day: the rest keep their usual order otherwise.
+  const more = [...rest.filter((n) => n.id !== 'sleep-10'), ...rest.filter((n) => n.id === 'sleep-10')];
+  return { first: [lead], more };
 }
 
 export function presetById(id: string | undefined): Preset | undefined {

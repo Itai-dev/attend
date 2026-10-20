@@ -62,6 +62,13 @@ export type Prefs = {
    */
   practiceToday?: { date: string; minutes?: 3 | 5 | 7 | 10; place?: Place | null };
   /**
+   * A standing length for the daily practice (round 5 retest): set in Settings → length, or by
+   * "keep this length every day" in practice settings. Unset: follow the program's length. A
+   * length chosen for today only (practiceToday) still wins for that day; the 3-minute short day
+   * is its own thing. Read by dayPlan() through practiceMinutes() (domain/program.ts).
+   */
+  practiceLength?: 3 | 5 | 7 | 10;
+  /**
    * How the person last chose to take a lesson: read, or listen in the guide's voice. Remembered
    * so a listener isn't offered "next" every day (studio round 5). Unset: listen comes first at
    * night or for someone who came for sleep (listenFirst()), read otherwise.

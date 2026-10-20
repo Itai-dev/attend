@@ -8,6 +8,7 @@ import { useData } from '@/data/store';
 import { currentTz, dayKey, WHERE_REGIONS } from '@/domain/checkin';
 import { currentDay, EMPTY_PROGRAM, programDay, PROGRAM_DAYS } from '@/domain/program';
 import { FOCUS_NEED, isNight, presetById } from '@/domain/presets';
+import { REMINDER_TIMES, type ReminderTimeId } from '@/domain/reminderPlan';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion, SessionType } from '@/domain/types';
 import { Chip, haptic, PrimaryButton, QuietButton, Txt, Wordmark } from '@/design/components';
@@ -16,7 +17,8 @@ import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { clock12 } from '../shared/format';
-import { presetPlan, startPractice } from '../shared/start';
+import { HOW_IT_WORKS, WELCOME_SAFETY_LINE, WELCOME_STOP_LINE } from '@/domain/welcome';
+import { justListenLabel, presetPlan, startJustListen, startPractice } from '../shared/start';
 
 /**
  * The welcome, after the best of Calm and Headspace: one idea or one question per screen,
@@ -53,22 +55,10 @@ const FOCUS_TIP: Record<SessionType, string> = {
 // because a chip is glanced at.
 const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through the night', 'A full day’s work', 'Sports', 'Time with friends'];
 
-const TIMES = [
-  { id: 'morning', label: 'morning', hour: 8, minute: 0 },
-  { id: 'midday', label: 'midday', hour: 13, minute: 0 },
-  { id: 'evening', label: 'evening', hour: 20, minute: 30 },
-] as const;
+// The same times Settings offers, night included (domain/reminderPlan.ts).
+const TIMES = REMINDER_TIMES;
 
 const STEPS = 7;
-
-// The 28 days are named here, before the goal question refers to their last week (round 5).
-const HOW_IT_WORKS = [
-  'When pain lasts, the body’s alarm can stay on.',
-  'Noticing a sensation with curiosity rather than fear is a skill. It’s called somatic tracking, and it grows with use.',
-  '28 days, a few minutes each: a short lesson, then a practice with your eyes closed. You can stop any time.',
-];
-
-const SAFETY_LINE = 'For pain you already know. Anything new or severe: see a doctor; in an emergency, call your local number.';
 
 
 export function OnboardingScreen() {
@@ -83,7 +73,7 @@ export function OnboardingScreen() {
   const [goal, setGoal] = useState<string | undefined>(prefs.goal);
   const [ownGoal, setOwnGoal] = useState(prefs.goal && !GOALS.includes(prefs.goal) ? prefs.goal : '');
   const [writing, setWriting] = useState(!!ownGoal);
-  const [time, setTime] = useState<(typeof TIMES)[number]['id']>('evening');
+  const [time, setTime] = useState<ReminderTimeId>('evening');
   const [remind, setRemind] = useState(prefs.reminder?.enabled ?? true);
   const [reminderOn, setReminderOn] = useState(false);
 
@@ -92,7 +82,6 @@ export function OnboardingScreen() {
   const { day } = currentDay(program, dayKey(Date.now(), currentTz()));
   const first = programDay(day);
   const finalGoal = writing ? ownGoal.trim() || undefined : goal;
-  const photoH = Math.round(height * 0.5);
 
   const next = () => setStep((s) => Math.min(STEPS - 1, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
@@ -108,8 +97,10 @@ export function OnboardingScreen() {
   // now and Day 1 tomorrow: Tom picked "nights" at 23:40 and was handed a lesson (round 5).
   const sleepNow = focus === 'sleep' && isNight(new Date().getHours());
   const sleepPreset = presetById(FOCUS_NEED.sleep)!;
+  // The night ready screen has one more link under its button; a shorter photo keeps its text whole.
+  const photoH = Math.round(height * (sleepNow && step === STEPS - 1 ? 0.38 : 0.5));
 
-  const finish = async (then: 'lesson' | 'sleep' | 'none') => {
+  const finish = async (then: 'lesson' | 'sleep' | 'listen' | 'none') => {
     const t = TIMES.find((x) => x.id === time)!;
     const reminder = { enabled: reminderOn, hour: t.hour, minute: t.minute };
     const place = where && where !== 'whole_body' ? { region: where } : undefined;
@@ -120,6 +111,8 @@ export function OnboardingScreen() {
     // The practice starts now; Today is underneath when it ends.
     if (then === 'lesson') setTimeout(() => router.push({ pathname: '/lesson/[day]', params: { day: String(day) } }), 350);
     if (then === 'sleep') setTimeout(() => startPractice(presetPlan(sleepPreset, { prefs: { ...prefs, focus, place }, checkIns })), 350);
+    // Just the sound, no voice: nothing is recorded or counted (Sounds' rule).
+    if (then === 'listen') setTimeout(() => startJustListen(prefs, setPrefs), 350);
   };
 
   const photoStep = step === 0 || step === STEPS - 1;
@@ -175,9 +168,16 @@ export function OnboardingScreen() {
             {/* One line, in normal weight. The longer note (emergencies, a crisis line, when to
                 stop) is in Settings → About; here, its loudest words were "chest pain… call
                 emergency", and the first minute alarmed the people it was meant to settle (round 5). */}
-            <Txt variant="callout" tone="secondary" style={styles.safety}>
-              {SAFETY_LINE}
-            </Txt>
+            <View style={styles.safety}>
+              <Txt variant="callout" tone="secondary">
+                {WELCOME_SAFETY_LINE}
+              </Txt>
+              {/* Normal weight, beside the line above: stopping is allowed, and is part of the
+                  practice, before anyone meets something hard in it (round 5 retest). */}
+              <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
+                {WELCOME_STOP_LINE}
+              </Txt>
+            </View>
           </Animated.View>
         ) : null}
 
@@ -376,6 +376,8 @@ export function OnboardingScreen() {
             {sleepNow ? (
               <>
                 <PrimaryButton label="can’t sleep · 10 min, starts now" onPress={() => finish('sleep')} />
+                {/* For someone who wanted rain and not a voice (Tom, round 5). */}
+                <QuietButton label={`${justListenLabel(prefs)} →`} accessibilityLabel={`${justListenLabel(prefs)}. Plays the sound on its own`} style={{ alignSelf: 'center' }} onPress={() => finish('listen')} />
                 <View style={styles.pair}>
                   <QuietButton label={`or begin day ${day} now`} onPress={() => finish('lesson')} />
                   <QuietButton label="not now" onPress={() => finish('none')} />
@@ -433,9 +435,11 @@ const makeStyles = (color: Palette) =>
       fontSize: 17,
       ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}),
     },
-    times: { flexDirection: 'row', gap: space.s, marginTop: space.xl },
+    // Four times in two rows: four across squeezed "morning" against its frame.
+    times: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, marginTop: space.xl },
     time: {
-      flex: 1,
+      flexBasis: '47%',
+      flexGrow: 1,
       minHeight: 64,
       alignItems: 'center',
       justifyContent: 'center',

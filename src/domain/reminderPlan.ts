@@ -43,6 +43,19 @@ export type ReminderPlanInput = {
 };
 
 /** Daily reminders after the latest practice, before the step-down (AGENTS.md: weekly after four quiet days). */
+/**
+ * The reminder times on offer, in the welcome and in Settings: one list, so the welcome's
+ * "when is a quiet moment" offers the same night time Settings does (round 5 retest: someone who
+ * practices in bed couldn't choose it until after the welcome).
+ */
+export const REMINDER_TIMES = [
+  { id: 'morning', label: 'morning', hour: 8, minute: 0 },
+  { id: 'midday', label: 'midday', hour: 13, minute: 0 },
+  { id: 'evening', label: 'evening', hour: 20, minute: 30 },
+  { id: 'night', label: 'night', hour: 22, minute: 0 },
+] as const;
+export type ReminderTimeId = (typeof REMINDER_TIMES)[number]['id'];
+
 export const QUIET_DAYS = 4;
 /**
  * How many weekly reminders are queued past the step-down. iOS keeps at most 64 pending, and

@@ -436,6 +436,32 @@ export function completeDay(state: ProgramState, day: number, today: string): Pr
 }
 
 /**
+ * How long a program day's practice runs. A length chosen in practice settings for today wins;
+ * then the person's standing length ("keep this length every day", or Settings → length); then
+ * the program's own. The standing length exists because someone who only ever has five minutes
+ * had to change it every day (round 5 retest). The 3-minute short day sets its own length.
+ */
+export function practiceMinutes(programMinutes: number, standing?: number, today?: number): number {
+  return today ?? standing ?? programMinutes;
+}
+
+/**
+ * Roughly when the 28 days end, as a local day key, if one new day is done each day from here.
+ * An estimate for "look again then", never a deadline: nothing closes when a day is missed.
+ * Undefined once the program is finished.
+ */
+export function programEndDay(state: ProgramState, today: string): string | undefined {
+  const done = Object.keys(state.done).length;
+  if (done >= PROGRAM_DAYS) return undefined;
+  const doneToday = Object.values(state.done).includes(today);
+  // Today's day still to do counts as today; a day already done today means the next one is tomorrow.
+  const ahead = PROGRAM_DAYS - done - (doneToday ? 0 : 1);
+  const d = new Date(`${today}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + ahead);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * A shorter day (studio round 2, replacing the 90-second rule): three active minutes of the
  * day's practice complete the day. How often matters more than how long (RESEARCH.md), and
  * "3 minutes completes the day" is the promise on Today for a low day.

@@ -91,6 +91,7 @@ export function LessonScreen() {
   };
 
   const readInstead = () => {
+    haptic('select');
     remember('read');
     setReadChosen(true);
     vs.stopSpeaking();
@@ -198,7 +199,17 @@ function LessonBody({ day, i, setI, listenLead, listening, voiceState, failed, m
             {day.lesson.title}
           </Txt>
         ) : null}
-        <Animated.View key={i} entering={FadeIn.duration(500)} style={{ gap: space.l, marginTop: space.l }}>
+        {i === 0 && listenLead && !failed ? (
+          // Listening leads: the card waits behind "read instead", so choosing to read visibly
+          // opens the lesson. With the text already on screen, "read instead" only swapped a
+          // button and seemed to do nothing (round 5 retest).
+          <Animated.View key="listen-lead" entering={FadeIn.duration(500)} style={{ marginTop: space.l }}>
+            <Txt variant="body" tone="secondary" style={{ fontSize: 19, lineHeight: 28 }}>
+              About two minutes in the guide’s voice, then the practice, with your eyes closed.
+            </Txt>
+          </Animated.View>
+        ) : (
+        <Animated.View key={`card-${i}`} entering={FadeIn.duration(500)} style={{ gap: space.l, marginTop: space.l }}>
           {card.text.map((p) => (
             <Txt key={p} variant="body" style={{ fontSize: 19, lineHeight: 28 }}>
               {p}
@@ -215,9 +226,11 @@ function LessonBody({ day, i, setI, listenLead, listening, voiceState, failed, m
             </View>
           ) : null}
         </Animated.View>
+        )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      {/* Re-keyed when the way in changes, so the swap from "listen" to "next" is seen happening. */}
+      <Animated.View key={listenLead ? 'lead-listen' : 'lead-read'} entering={FadeIn.duration(400)} style={styles.footer}>
         {i === 0 && !failed && listenLead ? (
           // Night, or someone who came for sleep, and no choice yet: hearing it is the way in.
           <>
@@ -269,7 +282,7 @@ function LessonBody({ day, i, setI, listenLead, listening, voiceState, failed, m
           />
         )}
         {i > 0 ? <QuietButton label="Back" style={{ alignSelf: 'center' }} onPress={() => setI(i - 1)} /> : null}
-      </View>
+      </Animated.View>
     </View>
   );
 }

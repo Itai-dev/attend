@@ -384,3 +384,22 @@ users were:
 - **Night:** primary buttons are softer in dark mode.
 
 Afterwards the same three users test again, to check the fixes worked.
+
+### Round 5 retest (20 Oct 2026)
+
+The same three users ran the rebuilt app. Fixed: Today leads with what's needed now, the first
+night offers sleep, "how it works" no longer alarms, practice settings are findable, and the
+small frictions are gone. What the retest still found, and what was built for it:
+- **By day the program sank under four rows.** Now, from 05:00 to 21:00 with nothing practiced,
+  one moment (the welcome focus) sits above the day card and the rest go under "more for right
+  now". At night, or after a practice, all moments lead.
+- **"day 1 tomorrow" was contradicted by a big "begin day 1".** At night with a sleep focus the
+  day card says "day 1 is ready tomorrow." with only an outline button, and "or just soft rain,
+  no voice →" opens the sound on its own (counts nothing).
+- **"Is this helping?" had no when.** The record card ends "Change, if it comes, shows over
+  weeks. Look again when your 28 days are done, around <date>." Today keeps "your pain record ›"
+  after a save instead of the row vanishing.
+- **A length lasted one day.** "keep this length every day" and a length row in Settings.
+- **The welcome lost its "stop if it brings up panic" line.** Restored, in normal weight.
+- Nits: "River" voice → "Jordan" (read as a sound), "first practice", "delete all practices
+  and check-ins", lowercase labels, night reminder time in the welcome.

@@ -5,7 +5,7 @@ import { useData } from '@/data/store';
 import { currentTz, dayKey, formatPain, PAIN_MAX, type CheckIn } from '@/domain/checkin';
 import { milestones, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM } from '@/domain/program';
-import { buildProgress, PROGRESS_MEANING, type Progress } from '@/domain/progress';
+import { buildProgress, PROGRESS_MEANING, whenToLookText, type Progress } from '@/domain/progress';
 import { REGIONS } from '@/domain/regions';
 import { Card, Hairline, Icon, OutlineButton, SectionLabel, SettingsGear, TitledScroll, Txt } from '@/design/components';
 import { HIT, space, type Palette } from '@/design/theme';
@@ -164,9 +164,13 @@ export function ProgressScreen() {
             {progress.untilPicture}
           </Txt>
         )}
+        {/* "Is this helping?" gets a when, not a reading: no delta, no direction (round 5 retest). */}
+        <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
+          {whenToLookText(program, dayKey(Date.now(), tz))}
+        </Txt>
       </Card>
       {/* Secondary on purpose: the record is what's looked at here; logging is ten seconds, not the point of the screen. */}
-      <OutlineButton label="log today's pain" onPress={() => router.push({ pathname: '/checkin', params: { from: 'progress' } })} style={{ marginTop: space.l }} />
+      <OutlineButton label="log today’s pain" onPress={() => router.push({ pathname: '/checkin', params: { from: 'progress' } })} style={{ marginTop: space.l }} />
 
       <SectionLabel style={{ marginTop: space.xxxl }}>your practice</SectionLabel>
       {tiles.length ? (
@@ -206,7 +210,7 @@ export function ProgressScreen() {
               moments.map((m) => (
                 <View key={m.id} style={{ gap: 2 }}>
                   <Txt variant="callout">“{m.text}”</Txt>
-                  <Txt variant="caption" tone="tertiary">
+                  <Txt variant="caption" tone="tertiary" style={styles.lower}>
                     {sessionDate(m.at)}
                   </Txt>
                 </View>
@@ -242,14 +246,17 @@ export function ProgressScreen() {
                   style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
                 >
                   <View style={{ flex: 1 }}>
-                    <Txt variant="body">{formatPain(c.pain)}</Txt>
+                    {/* A glanced row, so lowercase: "8 · severe", "today · evening". The words are the scale's own. */}
+                    <Txt variant="body" style={styles.lower}>
+                      {formatPain(c.pain)}
+                    </Txt>
                     {placesText(c) ? (
-                      <Txt variant="footnote" tone="tertiary">
+                      <Txt variant="footnote" tone="tertiary" style={styles.lower}>
                         {placesText(c)}
                       </Txt>
                     ) : null}
                   </View>
-                  <Txt variant="footnote" tone="tertiary">
+                  <Txt variant="footnote" tone="tertiary" style={styles.lower}>
                     {sessionDate(c.at)}
                   </Txt>
                 </Pressable>
@@ -267,6 +274,7 @@ export function ProgressScreen() {
 
 const makeStyles = (color: Palette) =>
   StyleSheet.create({
+  lower: { textTransform: 'lowercase' },
   recordHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space.m },
   card: { padding: space.xl },
   grid: { position: 'absolute', left: 0, right: AXIS_W, height: StyleSheet.hairlineWidth, backgroundColor: color.hairline },

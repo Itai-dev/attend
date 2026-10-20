@@ -1,4 +1,5 @@
 import { dayKey, MIN_DAYS_FOR_PICTURE, painDays, practiceDays, type CheckIn } from './checkin';
+import { programEndDay, type ProgramState } from './program';
 import type { Session } from './types';
 
 /**
@@ -47,6 +48,17 @@ export type Progress = {
 
 export const PROGRESS_MEANING =
   'Each dot is the highest number you entered that day. A day without a dot had no check-in — not a day without pain. Pain moves for many reasons; this is a record to look at, not a verdict on you or on the practice.';
+
+/**
+ * "Is this helping?" (round 5 retest) answered with when to look, never with a reading of the
+ * record: change, if any, shows over weeks, so the sentence points at the end of the 28 days. It
+ * names no direction and no comparison, and once the program is done it only says the first part.
+ */
+export function whenToLookText(program: ProgramState, today: string): string {
+  const head = 'Change, if it comes, shows over weeks.';
+  const end = programEndDay(program, today);
+  return end ? `${head} Look again when your 28 days are done, around ${shortDate(end)}.` : head;
+}
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

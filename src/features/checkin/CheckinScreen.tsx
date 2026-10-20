@@ -81,7 +81,8 @@ export function CheckinScreen() {
           <Txt variant="title" style={{ fontSize: 44, lineHeight: 52 }}>
             {pain === null ? '–' : pain}
           </Txt>
-          <Txt variant="title2" tone="secondary">
+          {/* The scale's word, glanced at beside the number: lowercase, like every label. */}
+          <Txt variant="title2" tone="secondary" style={{ textTransform: 'lowercase' }}>
             {pain === null ? 'choose a number' : painLabel(pain)}
           </Txt>
         </View>

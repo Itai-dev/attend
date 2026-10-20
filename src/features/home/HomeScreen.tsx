@@ -8,7 +8,7 @@ import { currentTz, dayKey, MIN_DAYS_FOR_PICTURE } from '@/domain/checkin';
 import { practiceSessions, practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { showFirstWeek } from '@/domain/firstWeek';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay } from '@/domain/program';
-import { needItOrder, needItSubtitle, presetById } from '@/domain/presets';
+import { isNight, NEED_IT, needItSubtitle, presetById, todayMoments } from '@/domain/presets';
 import { buildProgress } from '@/domain/progress';
 import { soundscape, timerLabel } from '@/domain/soundscapes';
 import { Card, haptic, Icon, IconButton, OutlineButton, PrimaryButton, SectionLabel, Txt, Wordmark } from '@/design/components';
@@ -18,7 +18,7 @@ import { useColors, useStyles } from '@/design/ThemeProvider';
 import { pauseListening, resumeListening, useListen } from '@/voice/listen';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { dayPlan, presetPlan, shortDayPlan, startPractice } from '../shared/start';
+import { dayPlan, justListenLabel, presetPlan, shortDayPlan, startJustListen, startPractice } from '../shared/start';
 import { WeekStrip } from '../shared/WeekStrip';
 import { FirstWeekCard } from './FirstWeekCard';
 
@@ -26,12 +26,18 @@ import { FirstWeekCard } from './FirstWeekCard';
  * Today answers one question: what do I need right now? (studio round 5: it read as a course.)
  *
  *  1. Right now: the moments people open the app for — a flare, a night without sleep, a body
- *     scan, a worried hour — above the fold, one tap each, each saying it's a voice and how
- *     long. At night "can't sleep" leads.
+ *     scan, a worried hour — one tap each, each saying it's a voice and how long. By day, before
+ *     any practice, only one leads (the welcome's answer, or a flare) and the rest wait under
+ *     "more for right now" below the day: four of them pushed the program out of view (round 5
+ *     retest). At night, or once something is practiced, they all lead; at night "can't sleep"
+ *     first, with a way to just hear the rain.
  *  2. Your daily practice: the program's day, begun with one tap (the short lesson first if it
  *     hasn't been read, then straight into the practice, eyes closed). After any practice today
  *     it goes quiet: once is enough for a day, and a second ask after a flare reads as homework.
- *  3. Log today's pain, with how far the record is from being a picture.
+ *     At night, for someone who came about sleep, it is quiet too: the welcome promised Day 1
+ *     would wait for tomorrow.
+ *  3. Your pain record: log today's pain, with how far the record is from being a picture; once
+ *     logged, a quiet way to it.
  *
  * A playing sound is pinned under the photo, where it can be found. Sounds have their own tab.
  */
@@ -54,7 +60,7 @@ export function HomeScreen() {
   const { width, height } = useWindowDimensions();
   const listen = useListen();
   const params = useLocalSearchParams<{ saved?: string }>();
-  const { sessions, checkIns, prefs } = useData();
+  const { sessions, checkIns, prefs, setPrefs } = useData();
   const tz = currentTz();
   const now = useNow();
   const hour = new Date(now).getHours();
@@ -94,14 +100,15 @@ export function HomeScreen() {
   // The short version: 3 active minutes of the same practice, straight in — a low-energy day
   // shouldn't start with reading. Offered only while nothing has been practiced today; after a
   // practice it was a second ask ("completes the day" read as homework, round 5).
-  const short = !doneToday && !practisedToday && minutes > 3;
+  const short = !doneToday && !practisedToday && minutes > 3 && !(isNight(hour) && prefs.focus === 'sleep');
   const beginShort = () => {
     haptic('soft');
     startPractice(shortDayPlan(day, known));
   };
   const firstWeek = showFirstWeek(program, prefs.firstWeekDone, todayKey) ? <FirstWeekCard now={now} tz={tz} /> : null;
 
-  const needs = needItOrder(prefs.focus, hour);
+  const night = isNight(hour);
+  const moments = todayMoments(prefs.focus, hour, practisedToday);
   const tomorrow = !finished && day < PROGRAM_DAYS ? programDay(day + 1) : undefined;
   // The week strip appears once there is something on it. Before the first practice it was
   // seven empty circles under a button — a row of absences on the first screen anyone sees.
@@ -124,13 +131,36 @@ export function HomeScreen() {
     : record.checkInDays === 0
       ? `10 seconds. After ${MIN_DAYS_FOR_PICTURE} check-in days, your record appears.`
       : `${record.checkInDays} of ${MIN_DAYS_FOR_PICTURE} check-in days, then your record appears.`;
+  // After today's check-in: counts only, as Progress shows them.
+  const loggedLine = record.enough ? 'logged today' : `logged today · ${record.checkInDays} of ${MIN_DAYS_FOR_PICTURE} check-in days`;
 
   const logRow = saved ? (
     <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(500)} style={[styles.logRow, styles.savedRow]} accessibilityLiveRegion="polite">
       <Icon name="checkmark" size={15} tint={color.practice} />
       <Txt variant="callout">Saved to your record.</Txt>
     </Animated.View>
-  ) : !checkedInToday ? (
+  ) : checkedInToday ? (
+    // Once today is logged the section stays, as a way to the record: it vanished three seconds
+    // after "Saved", and with it the only path from Today to "is this helping?" (round 5 retest).
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`Your pain record. ${loggedLine}. Opens Progress`}
+      onPress={() => router.push('/progress')}
+      style={({ pressed }) => [styles.logRow, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      <View style={styles.logHead}>
+        <Txt variant="headline" style={{ flex: 1 }}>
+          your pain record
+        </Txt>
+        <Txt variant="title2" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
+          ›
+        </Txt>
+      </View>
+      <Txt variant="footnote" tone="secondary">
+        {loggedLine}
+      </Txt>
+    </Pressable>
+  ) : (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Log today’s pain. ${recordLine}`}
@@ -151,34 +181,34 @@ export function HomeScreen() {
         {recordLine}
       </Txt>
     </Pressable>
-  ) : null;
+  );
   // Its own label, apart from the practice above it: the record and practice sit side by side, never mixed.
-  const logPain = logRow ? (
+  const logPain = (
     <View style={{ marginTop: space.xxl }}>
-      <SectionLabel style={{ marginBottom: 0 }}>your pain record</SectionLabel>
+      {/* Once logged, the row itself is "your pain record ›"; a label above it would say it twice. */}
+      {checkedInToday && !saved ? null : <SectionLabel style={{ marginBottom: 0 }}>your pain record</SectionLabel>}
       {logRow}
     </View>
-  ) : null;
+  );
 
   // Practices are text rows; photographs belong to sounds. Two kinds of thing, two looks, so
   // nobody taps a forest expecting rain and gets a voice — and each row says it's a voice.
-  const rightNow = (
-    <View style={{ marginTop: space.xl }}>
-      <SectionLabel>right now</SectionLabel>
-      <View>
-        {needs.map((n, i) => {
-          const p = presetById(n.id)!;
-          const sub = needItSubtitle(n);
-          return (
+  const momentRows = (list: typeof NEED_IT) => (
+    <View>
+      {list.map((n, i) => {
+        const p = presetById(n.id)!;
+        const sub = needItSubtitle(n);
+        const last = i === list.length - 1;
+        return (
+          <View key={n.id} style={[styles.needItem, last && styles.needLast]}>
             <Pressable
-              key={n.id}
               accessibilityRole="button"
               accessibilityLabel={`${n.label}. ${p.title}, ${sub}. Begins now.`}
               onPress={() => {
                 haptic('soft');
                 startPractice(presetPlan(p, known));
               }}
-              style={({ pressed }) => [styles.needRow, i === needs.length - 1 && styles.needLast, { opacity: pressed ? 0.55 : 1 }]}
+              style={({ pressed }) => [styles.needRow, { opacity: pressed ? 0.55 : 1 }]}
             >
               <View style={{ flex: 1 }}>
                 <Txt variant="title2" style={{ textTransform: 'lowercase' }}>
@@ -192,26 +222,65 @@ export function HomeScreen() {
                 →
               </Txt>
             </Pressable>
-          );
-        })}
-      </View>
+            {/* At night, under "can't sleep": the sound alone, for someone who wanted rain and not a
+                voice (Tom, round 5). Listening records nothing and counts toward nothing. */}
+            {n.id === 'sleep-10' && night ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${justListenLabel(prefs)}. Plays the sound on its own`}
+                onPress={() => {
+                  haptic('soft');
+                  startJustListen(prefs, setPrefs);
+                }}
+                hitSlop={4}
+                style={({ pressed }) => [styles.justListen, { opacity: pressed ? 0.55 : 1 }]}
+              >
+                <Txt variant="footnote" tone="secondary">
+                  {justListenLabel(prefs)}{' '}
+                  <Txt variant="footnote" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
+                    →
+                  </Txt>
+                </Txt>
+              </Pressable>
+            ) : null}
+          </View>
+        );
+      })}
     </View>
   );
+  const rightNow = (
+    <View style={{ marginTop: space.xl }}>
+      <SectionLabel>right now</SectionLabel>
+      {momentRows(moments.first)}
+    </View>
+  );
+  const moreNow = moments.more.length ? (
+    <View style={{ marginTop: space.xxl }}>
+      <SectionLabel>more for right now</SectionLabel>
+      {momentRows(moments.more)}
+    </View>
+  ) : null;
 
   // One name per day: the lesson's title, and no week name in the kicker ("· understand" read as
   // an instruction, round 5).
   const kicker = finished ? 'your daily practice · all 28 days done' : `your daily practice · day ${day} of ${PROGRAM_DAYS}`;
-  const title = doneToday ? 'done for today.' : today.lesson.title;
-  const quiet = !doneToday && practisedToday;
+  // The welcome's promise kept: someone who came about nights, opening Today at night with
+  // nothing practiced, was told "sleep first, day 1 tomorrow" — so the day waits, quietly, and
+  // "can't sleep" above it is the loud thing (round 5 retest).
+  const sleepFirst = !doneToday && !practisedToday && night && prefs.focus === 'sleep';
+  const title = doneToday ? 'done for today.' : sleepFirst ? `day ${day} is ready tomorrow.` : today.lesson.title;
+  const quiet = !doneToday && (practisedToday || sleepFirst);
   const meta = doneToday
     ? tomorrow
       ? `Tomorrow: day ${tomorrow.day}, ${tomorrow.lesson.title.toLowerCase()}.`
       : 'Every practice stays here, whenever you want it.'
-    : quiet
-      ? `You practiced today. Day ${day} is here tomorrow too.`
-      : read
-        ? `${minutes} min practice`
-        : `2 min lesson (read or listen) · ${minutes} min practice`;
+    : sleepFirst
+      ? `“${today.lesson.title}”: ${read ? '' : 'a 2 min lesson, then '}${minutes} min practice. Tonight, sleep comes first.`
+      : quiet
+        ? `You practiced today. Day ${day} is here tomorrow too.`
+        : read
+          ? `${minutes} min practice`
+          : `2 min lesson (read or listen) · ${minutes} min practice`;
 
   const daily = (
     <Animated.View entering={FadeIn.duration(600)} style={styles.daily}>
@@ -233,13 +302,13 @@ export function HomeScreen() {
       {short ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Or a 3-minute version. Begins now."
+          accessibilityLabel="Or just a 3-minute practice, without the lesson. Begins now."
           onPress={beginShort}
           hitSlop={4}
           style={({ pressed }) => [styles.shortRow, { opacity: pressed ? 0.55 : 1 }]}
         >
           <Txt variant="callout" tone="secondary">
-            or a 3-minute version{' '}
+            or just a 3-minute practice{' '}
             <Txt variant="callout" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
               →
             </Txt>
@@ -299,6 +368,7 @@ export function HomeScreen() {
 
       {rightNow}
       {daily}
+      {moreNow}
       {logPain}
       {firstWeek}
       {week}
@@ -360,7 +430,8 @@ function NowPlaying({ listen }: { listen: ReturnType<typeof useListen> }) {
     <Card label={`${s.name}, ${listen.playing ? 'playing' : 'paused'}. Open`} onPress={() => router.push('/listen')} style={styles.playing}>
       <Photo scene={s.id} width={52} height={52} radius={radius.s} />
       <View style={{ flex: 1 }}>
-        <Txt variant="headline">{s.name}</Txt>
+        {/* Glanced at, so lowercase, as on every other label (AGENTS.md "App copy"). */}
+        <Txt variant="headline">{s.name.toLowerCase()}</Txt>
         <Txt variant="footnote" tone="secondary">
           {listen.playing ? timerLabel(listen.timer, listen.timerElapsedMs) : 'paused'}
         </Txt>
@@ -399,16 +470,10 @@ const makeStyles = (color: Palette) =>
       borderColor: color.hairline,
     },
     logHead: { flexDirection: 'row', alignItems: 'center', gap: space.m },
-    needRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: space.m,
-      minHeight: 60,
-      paddingVertical: space.m,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderColor: color.hairline,
-    },
+    needItem: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
+    needRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: 60, paddingVertical: space.m },
     needLast: { borderBottomWidth: StyleSheet.hairlineWidth },
+    justListen: { justifyContent: 'center', minHeight: HIT, marginTop: -space.s, paddingBottom: space.xs },
     shortRow: { justifyContent: 'center', minHeight: HIT, marginTop: space.xs },
     daily: { marginTop: space.xxl },
     settingsRow: {

@@ -277,7 +277,7 @@ export function RowGroup({ children, style }: { children: ReactNode; style?: Sty
 }
 
 /**
- * A setting and its current value, which opens its choices below it: "guide voice   River ›".
+ * A setting and its current value, which opens its choices below it: "guide voice   Jordan ›".
  * The value is always visible, so nothing about a practice is hidden behind a tap.
  */
 export function DisclosureRow({ label, value, open, onPress, accessibilityLabel }: { label: string; value: string; open?: boolean; onPress?: () => void; accessibilityLabel?: string }) {

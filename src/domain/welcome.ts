@@ -10,6 +10,27 @@ import type { SessionType } from './types';
  * welcome learns what kind of practice to offer, never a number about pain.
  */
 
+/* ---------------------------------------------------------------------------------------------
+ * The tapped welcome's "how it works" (features/onboarding). App copy, read once: kept here so
+ * tests hold it to the same words the guide may never say.
+ * ------------------------------------------------------------------------------------------- */
+
+// The 28 days are named here, before the goal question refers to their last week (round 5).
+export const HOW_IT_WORKS = [
+  'When pain lasts, the body’s alarm can stay on.',
+  'Noticing a sensation with curiosity rather than fear is a skill. It’s called somatic tracking, and it grows with use.',
+  '28 days, a few minutes each: a short lesson, then a practice with your eyes closed. You can stop any time.',
+];
+
+export const WELCOME_SAFETY_LINE = 'For pain you already know. Anything new or severe: see a doctor; in an emergency, call your local number.';
+
+/**
+ * What to do if close attention to the body brings up something hard. Settings → About says it
+ * at length; the welcome said nothing about it, and someone who meets panic in the first practice
+ * should already know that stopping is allowed (round 5 retest).
+ */
+export const WELCOME_STOP_LINE = 'If a practice brings up panic or old memories, open your eyes and stop. That’s part of it too.';
+
 export type WelcomeAnswers = {
   focus?: SessionType;
   minutes?: 3 | 5 | 10;

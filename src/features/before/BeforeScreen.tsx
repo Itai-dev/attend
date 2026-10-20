@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GUIDE_VOICES, hasRemote } from '@/config';
 import { useData } from '@/data/store';
@@ -26,7 +26,9 @@ import { dayPlan } from '../shared/start';
  *
  * Voice and sound are standing choices (prefs.voiceId, prefs.background, the same ones Settings
  * shows). Length and focus are for today's practice only (prefs.practiceToday, read by
- * dayPlan()): tomorrow is the program's own day again.
+ * dayPlan()): tomorrow is the program's own day again — unless "keep this length every day" is
+ * on, which makes the length a standing one (prefs.practiceLength, Settings → length). Someone
+ * who only ever has five minutes was changing it every day (round 5 retest).
  *
  * The title is the day's lesson title, the one name the day has everywhere: the practice's own
  * name ("finding the place") read as a different thing from Today's "an alarm that learns".
@@ -56,6 +58,29 @@ export function BeforeScreen() {
   const voice = GUIDE_VOICES.find((v) => v.id === plan.voice) ?? GUIDE_VOICES[0];
   const toggle = (k: Open) => setOpen(open === k ? null : k);
   const lessonRead = !!prefs.program?.read?.includes(day.day);
+
+  const keep = prefs.practiceLength !== undefined;
+  /** What was chosen for today, if it was chosen today. */
+  const todays = () => {
+    const date = dayKey(Date.now(), currentTz());
+    return { date, kept: prefs.practiceToday?.date === date ? prefs.practiceToday : undefined };
+  };
+  /**
+   * While "keep" is on a length is the standing one, and today's own length is cleared so it
+   * can't shadow it. Otherwise it is today's only.
+   */
+  const setLength = (m: SessionLength) => {
+    if (!keep) return setToday({ minutes: m });
+    const { kept } = todays();
+    setPrefs({ practiceLength: m, practiceToday: kept ? { ...kept, minutes: undefined } : undefined });
+  };
+  /** On: the length shown now, every day. Off: back to the program, with today's length kept for today. */
+  const setKeep = (on: boolean) => {
+    haptic('select');
+    const { date, kept } = todays();
+    if (on) setPrefs({ practiceLength: plan.minutes, practiceToday: kept ? { ...kept, minutes: undefined } : undefined });
+    else setPrefs({ practiceLength: undefined, practiceToday: { ...kept, minutes: plan.minutes, date } });
+  };
 
   /** Today's choices, merged with what was already chosen today (a new day starts clean). */
   const setToday = (patch: { minutes?: SessionLength; place?: Place | null }) => {
@@ -90,7 +115,7 @@ export function BeforeScreen() {
             <Txt variant="body" style={styles.label}>
               length
             </Txt>
-            <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Length in minutes, for today">
+            <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel={keep ? 'Length in minutes, every day' : 'Length in minutes, for today'}>
               {SESSION_LENGTHS.map((m) => {
                 const on = m === plan.minutes;
                 return (
@@ -101,7 +126,7 @@ export function BeforeScreen() {
                     accessibilityLabel={`${m} minutes`}
                     onPress={() => {
                       haptic('select');
-                      setToday({ minutes: m });
+                      setLength(m);
                     }}
                     style={[styles.len, on && styles.lenOn]}
                   >
@@ -112,6 +137,14 @@ export function BeforeScreen() {
                 );
               })}
             </View>
+          </View>
+          <Hairline />
+          {/* Quiet, under the lengths: makes today's length the standing one (Settings → length). */}
+          <View style={styles.row}>
+            <Txt variant="callout" tone="secondary" style={[styles.label, { flex: 1 }]}>
+              keep this length every day
+            </Txt>
+            <Switch value={keep} onValueChange={setKeep} trackColor={{ true: color.practice }} accessibilityLabel="Keep this length every day" />
           </View>
           <Hairline />
           {wholeBodyDay ? (
@@ -151,7 +184,7 @@ export function BeforeScreen() {
           ) : null}
         </RowGroup>
         <Txt variant="footnote" tone="tertiary" style={styles.note}>
-          Length and focus are for today. Tomorrow starts from the program again.
+          {keep ? 'This length stays every day. Focus is for today.' : 'Length and focus are for today. Tomorrow starts from the program again.'}
         </Txt>
 
         <SectionLabel style={styles.section}>Every practice</SectionLabel>
@@ -195,7 +228,8 @@ export function BeforeScreen() {
 
       <View style={{ paddingHorizontal: space.xl }}>
         {/* Back to Today, never into the practice: the day's button there leads through the lesson. */}
-        <PrimaryButton label="done" detail={`${plan.minutes} min · ${placeName(plan.place)} · ${voice.name.toLowerCase()}`} onPress={() => router.back()} />
+        {/* Length and focus only: a voice's name at the end ("· river") read as one more sound. */}
+        <PrimaryButton label="done" detail={`${plan.minutes} min · ${placeName(plan.place)}`} onPress={() => router.back()} />
       </View>
     </View>
   );

@@ -9,10 +9,12 @@ import type { BrainPref, InputModePref } from '@/data/types';
 import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/domain/access';
 import { currentTz } from '@/domain/checkin';
 import { practiceStats } from '@/domain/engagement';
+import { REMINDER_TIMES } from '@/domain/reminderPlan';
 import { backgroundFor, soundscape, SOUNDSCAPES } from '@/domain/soundscapes';
 import { ChoiceRow as Choice, DisclosureRow, Hairline, QuietButton, RowGroup as Group, SectionLabel, Segmented, Txt } from '@/design/components';
 import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
+import { SESSION_LENGTHS } from '@/engine/phases';
 import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { speechModule } from '@/voice/speechModule';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
@@ -51,22 +53,19 @@ function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
 // Shared with the welcome, so a time reads the same on both (studio round 5).
 export { clock12 };
 
-/** The reminder times on offer. A time set elsewhere (the welcome) still shows on the row. */
-const REMINDER_TIMES = [
-  { name: 'morning', hour: 8, minute: 0 },
-  { name: 'midday', hour: 13, minute: 0 },
-  { name: 'evening', hour: 20, minute: 30 },
-  { name: 'night', hour: 22, minute: 0 },
-] as const;
+// The reminder times on offer are shared with the welcome (domain/reminderPlan.ts).
 
-type Open = 'voice' | 'sound' | 'time' | null;
+type Open = 'voice' | 'sound' | 'time' | 'length' | null;
 
 export function SettingsScreen() {
   const color = useColors();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
+  const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions, checkIns } = useData();
   const realCount = sessions.filter((s) => !s.isSample).length;
+  const checkInCount = checkIns.filter((c) => !c.isSample).length;
+  const deleteCount = `${realCount === 1 ? '1 practice' : `${realCount} practices`} · ${checkInCount === 1 ? '1 check-in' : `${checkInCount} check-ins`}`;
+  const length = prefs.practiceLength ? `${prefs.practiceLength} min` : 'follow the program';
   const background = backgroundFor(prefs);
   // Sounds' "sound under practice ›" opens Settings with that list already open.
   const params = useLocalSearchParams<{ open?: string }>();
@@ -115,6 +114,22 @@ export function SettingsScreen() {
             ))
           : null}
         <Hairline />
+        {/* A standing length (round 5 retest): the same one practice settings' "keep this length
+            every day" sets. A length for today only, chosen there, still wins for today. */}
+        <DisclosureRow label="length" value={length} open={open === 'length'} onPress={() => toggle('length')} />
+        {open === 'length' ? (
+          <>
+            <Hairline />
+            <Choice label="follow the program" detail="Each day’s own length, 3 to 10 min" selected={!prefs.practiceLength} onPress={() => setPrefs({ practiceLength: undefined })} />
+            {SESSION_LENGTHS.map((m) => (
+              <View key={m}>
+                <Hairline />
+                <Choice label={`${m} min`} detail="Every day" selected={prefs.practiceLength === m} onPress={() => setPrefs({ practiceLength: m })} />
+              </View>
+            ))}
+          </>
+        ) : null}
+        <Hairline />
         <DisclosureRow label="sound under practice" value={soundName} open={open === 'sound'} onPress={() => toggle('sound')} />
         {open === 'sound' ? (
           <>
@@ -132,7 +147,8 @@ export function SettingsScreen() {
 
       <SectionLabel style={styles.section}>Daily reminder</SectionLabel>
       <Group>
-        <View style={styles.row}>
+        {/* Padded top and bottom: with two lines beside the switch, the title sat on the card's edge. */}
+        <View style={[styles.row, styles.rowTall]}>
           <View style={{ flex: 1 }}>
             <Txt variant="body">a gentle reminder</Txt>
             <Txt variant="footnote" tone="tertiary">
@@ -162,10 +178,10 @@ export function SettingsScreen() {
             <DisclosureRow label="time" value={time} open={open === 'time'} onPress={() => toggle('time')} />
             {open === 'time'
               ? REMINDER_TIMES.map((t) => (
-                  <View key={t.name}>
+                  <View key={t.id}>
                     <Hairline />
                     <Choice
-                      label={t.name}
+                      label={t.label}
                       detail={clock12(t.hour, t.minute)}
                       selected={reminder.hour === t.hour && reminder.minute === t.minute}
                       onPress={() => setReminderTime(t.hour, t.minute)}
@@ -183,19 +199,19 @@ export function SettingsScreen() {
         <Hairline />
         <Choice label="Light" selected={prefs.appearance === 'light'} onPress={() => setPrefs({ appearance: 'light' })} />
         <Hairline />
-        <Choice label="Dark" detail="Sessions are always dark" selected={prefs.appearance === 'dark'} onPress={() => setPrefs({ appearance: 'dark' })} />
+        <Choice label="Dark" detail="Practices are always dark" selected={prefs.appearance === 'dark'} onPress={() => setPrefs({ appearance: 'dark' })} />
       </Group>
 
       <SectionLabel style={styles.section}>Privacy</SectionLabel>
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
-            Your sessions and check-ins are stored only on this iPhone. There is no account. Sessions are guided: they never use the microphone, and nothing you say is heard. Where the guide rests your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
+            Your practices and check-ins are stored only on this iPhone. There is no account. Practices are guided: they never use the microphone, and nothing you say is heard. Where the guide focuses your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
           </Txt>
           {/* Its own paragraph: the one thing that leaves the phone shouldn't sit mid-wall. */}
           {hasRemote ? (
             <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
-              The guide’s lines are voiced through Attend’s voice service by ElevenLabs. The only thing about you in them is the body area a practice rests on, such as “your lower back”, with no name or account attached.
+              The guide’s lines are voiced through Attend’s voice service by ElevenLabs. The only thing about you in them is the body area a practice focuses on, such as “your lower back”, with no name or account attached.
             </Txt>
           ) : null}
         </View>
@@ -203,17 +219,18 @@ export function SettingsScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() =>
-            confirm('Delete all sessions?', 'Every session and map on this iPhone will be removed. This can’t be undone.', 'Delete all', () => {
+            confirm('Delete all practices and check-ins?', 'Every practice and check-in on this iPhone will be removed. This can’t be undone.', 'Delete all', () => {
               deleteAll();
             })
           }
-          style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
+          // Stacked: the name says what it deletes, which is too long to share a line with the count.
+          style={({ pressed }) => [styles.row, styles.rowTall, styles.stack, { opacity: pressed ? 0.6 : 1 }]}
         >
           <Txt variant="body" style={[styles.label, { color: color.destructive }]}>
-            Delete all sessions
+            delete all practices and check-ins
           </Txt>
           <Txt variant="footnote" tone="tertiary">
-            {realCount === 1 ? '1 session' : `${realCount} sessions`}
+            {deleteCount}
           </Txt>
         </Pressable>
       </Group>
@@ -353,6 +370,8 @@ const makeStyles = (color: Palette) =>
   // Row and choice labels are glanced at, so lowercase (AGENTS.md "App copy"); details stay sentence case.
   label: { textTransform: 'lowercase' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: HIT + 8, paddingHorizontal: space.l },
+  rowTall: { gap: space.m, paddingVertical: space.m },
+  stack: { flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2 },
   textBlock: { padding: space.l },
   note: { marginTop: space.s, paddingHorizontal: space.xs },
 });

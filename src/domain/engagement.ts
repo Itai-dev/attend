@@ -70,7 +70,7 @@ export type MilestoneId = 'first' | 'three_days' | 'seven_days' | 'flare_met' | 
 export type Milestone = { id: MilestoneId; label: string; detail: string; earned: boolean };
 
 export const MILESTONE_COPY: Record<MilestoneId, { label: string; detail: string }> = {
-  first: { label: 'first session', detail: 'You began.' },
+  first: { label: 'first practice', detail: 'You began.' },
   three_days: { label: '3 days', detail: 'Three days of practice.' },
   seven_days: { label: 'a full week', detail: 'Seven practice days since you began.' },
   flare_met: { label: 'a flare met', detail: 'You met a flare with a practice.' },

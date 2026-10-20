@@ -111,7 +111,7 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
             </Animated.View>
           ) : (
             <View style={styles.metaRow}>
-              <Txt variant="footnote" tone="tertiary">
+              <Txt variant="footnote" tone="tertiary" style={{ textTransform: 'lowercase' }}>
                 {sessionDate(session.startedAt)} · {SESSION_TYPE_LABELS[session.sessionType].title}
               </Txt>
               {session.isSample ? <SampleBadge /> : null}
