@@ -1,10 +1,11 @@
-import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { DEFAULT_BACKGROUND, soundscape, UNDER_VOICE, volumeFor, type Soundscape, type SoundscapeId } from '../domain/soundscapes';
+import type { CrossfadeLoop } from './crossfadeLoop';
+import { loopSoundscape } from './soundscapeAssets';
 import type { SessionStatus } from './VoiceSessionProvider';
 
 /**
- * A soft tone under the session: a low drone tuned to 432 Hz (assets/audio/tone-432.wav,
- * a seamless 30-second loop). It is atmosphere, nothing more — the app never calls it
- * healing or says it does anything for pain.
+ * A sound under the session: one of the soft tones (domain/soundscapes.ts), a seamless loop (two players crossing over: voice/crossfadeLoop.ts). It is atmosphere,
+ * nothing more — the app never calls it healing or says it does anything for pain.
  *
  * It sits well under the voice: quieter while the guide speaks and while listening,
  * and fuller in the silences. When the person actually speaks it dips a little more,
@@ -12,14 +13,14 @@ import type { SessionStatus } from './VoiceSessionProvider';
  * the loudest thing an eyes-closed person hears. Paused or ended, it fades away.
  */
 
-const LEVEL: Partial<Record<SessionStatus, number>> = {
-  preparing: 0.14,
-  speaking: 0.1,
-  holding: 0.18,
-  listening: 0.09,
-};
+/** Target loudness per state, in LUFS (domain/soundscapes.ts UNDER_VOICE). */
+const LEVEL: Partial<Record<SessionStatus, number>> = UNDER_VOICE;
 const FADE_MS = 1200;
-const STEP_MS = 60;
+/**
+ * Changing the sound mid-practice (the session's "sound ›" sheet): the old one fades out and the
+ * new one in over this long, so the room changes rather than cuts. The guide carries on.
+ */
+export const SWAP_FADE_MS = 2000;
 /** While the person speaks: a share of the listening level, eased down and back. */
 const DUCK = 0.6;
 const DUCK_MS = 1400;
@@ -28,41 +29,44 @@ const UNDUCK_MS = 2400;
 const VOICE_LEVEL = 0.3;
 const RELEASE_MS = 1200;
 
-/** Ease in and out, so a fade has no audible corner at either end. */
-const ease = (t: number) => t * t * (3 - 2 * t);
-
 export class Ambience {
-  private player?: AudioPlayer;
-  private target = 0;
-  private timer?: ReturnType<typeof setInterval>;
+  private loop?: CrossfadeLoop;
   private status: SessionStatus = 'idle';
   private ducked = false;
   private lastVoiceAt = 0;
   private release?: ReturnType<typeof setTimeout>;
+  /** The sound's own loudness, so a low tone and a bright one sit alike under the voice. */
+  private readonly sound: Soundscape;
+
+  constructor(source: SoundscapeId = DEFAULT_BACKGROUND) {
+    // An id this build doesn't have (a sound from an older build, say) plays the middle tone.
+    this.sound = soundscape(source) ?? soundscape(DEFAULT_BACKGROUND)!;
+  }
 
   start() {
-    if (this.player) return;
+    if (this.loop) return;
     try {
-      // Pausing must not switch the audio session off under the recogniser (see ElevenLabsSpeechOutput.play).
-      this.player = createAudioPlayer(require('../../assets/audio/tone-432.wav'), { keepAudioSessionActive: true });
-      this.player.loop = true;
-      this.player.volume = 0;
-      this.player.play();
+      // Silent at first; follow() fades it in. Its players keep the audio session active when
+      // paused, so a pause never switches the session off under the recogniser (loopSoundscape).
+      this.loop = loopSoundscape(this.sound.id, 0);
     } catch {
-      // No tone is better than no session.
-      this.player = undefined;
+      // No sound is better than no session.
+      this.loop = undefined;
     }
   }
 
-  /** Follow the session: the level for this status, faded rather than jumped. */
-  follow(status: SessionStatus) {
+  /**
+   * Follow the session: the level for this status, faded rather than jumped. A sound swapped in
+   * mid-practice follows the status it joins over `fadeMs` (SWAP_FADE_MS), rising from nothing.
+   */
+  follow(status: SessionStatus, fadeMs = FADE_MS) {
     if (status === this.status) return;
     this.status = status;
     this.unduck();
-    const level = LEVEL[status] ?? 0;
+    const level = this.level(status);
     // Started on the first audible state, after the runner has set the audio session (silent switch, speaker).
     if (level > 0) this.start();
-    this.fadeTo(level, FADE_MS);
+    this.fadeTo(level, fadeMs);
   }
 
   /** The microphone level while listening: dip under the person's voice, come back after they stop. */
@@ -71,7 +75,7 @@ export class Ambience {
     this.lastVoiceAt = Date.now();
     if (this.ducked) return;
     this.ducked = true;
-    this.fadeTo((LEVEL.listening ?? 0) * DUCK, DUCK_MS);
+    this.fadeTo(this.level('listening') * DUCK, DUCK_MS);
     this.scheduleRelease();
   }
 
@@ -81,8 +85,13 @@ export class Ambience {
       if (!this.ducked) return;
       if (Date.now() - this.lastVoiceAt < RELEASE_MS) return this.scheduleRelease();
       this.ducked = false;
-      this.fadeTo(LEVEL[this.status] ?? 0, UNDUCK_MS);
+      this.fadeTo(this.level(this.status), UNDUCK_MS);
     }, RELEASE_MS);
+  }
+
+  private level(status: SessionStatus) {
+    const target = LEVEL[status];
+    return target === undefined ? 0 : volumeFor(this.sound, target);
   }
 
   private unduck() {
@@ -91,41 +100,26 @@ export class Ambience {
     this.release = undefined;
   }
 
-  stop() {
+  /** Fade out and let go. A longer fade crosses into whatever plays next (sleep hands its sound to Just listen). */
+  stop(fadeMs = FADE_MS) {
     this.status = 'idle';
     this.unduck();
-    this.fadeTo(0, FADE_MS, () => {
-      try {
-        this.player?.remove();
-      } catch {}
-      this.player = undefined;
+    const l = this.loop;
+    // A fade, then release: a follow() during the fade still finds the sound and brings it back.
+    this.fadeTo(0, fadeMs, () => {
+      l?.release();
+      if (this.loop === l) this.loop = undefined;
     });
   }
 
+  /** Eased by the loop; at nothing it pauses, so a paused session's sound costs nothing. */
   private fadeTo(target: number, ms: number, done?: () => void) {
-    const p = this.player;
-    if (!p) return done?.();
-    this.target = target;
-    if (this.timer) clearInterval(this.timer);
-    if (target > 0 && !p.playing) p.play();
-    const from = p.volume;
-    const steps = Math.max(1, Math.round(ms / STEP_MS));
-    let i = 0;
-    this.timer = setInterval(() => {
-      i++;
-      try {
-        p.volume = from + (this.target - from) * ease(i / steps);
-      } catch {}
-      if (i >= steps) {
-        clearInterval(this.timer);
-        this.timer = undefined;
-        if (this.target === 0) {
-          try {
-            p.pause();
-          } catch {}
-        }
-        done?.();
-      }
-    }, STEP_MS);
+    const l = this.loop;
+    if (!l) return done?.();
+    if (target > 0) l.resume();
+    l.fadeTo(target, ms, () => {
+      if (target === 0) l.pause();
+      done?.();
+    });
   }
 }

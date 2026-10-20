@@ -4,7 +4,8 @@ import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useDerivedValue, useReducedMotion, type SharedValue } from 'react-native-reanimated';
 import { speakPlace } from '../domain/regions';
 import type { BodyMapState } from '../domain/types';
-import { color } from '../design/theme';
+import { type Palette } from '../design/theme';
+import { useColors, useStyles } from '../design/ThemeProvider';
 import { bodyUniforms, fieldsFor, focusFor, type View as FigureView } from './bodyUniforms';
 import { BG_RGB, effect } from './effects';
 
@@ -41,6 +42,7 @@ export function describeMap(map: BodyMapState): string {
 }
 
 export function BodyField({ map, view, width, height, animated = true, reveal, weights, scale = 1, style, accessibilityLabel }: Props) {
+  const color = useColors();
   const reduceMotion = useReducedMotion();
   const fx = effect('body');
   const base = useMemo(

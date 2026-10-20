@@ -1,159 +1,491 @@
-import { router } from 'expo-router';
-import { useEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import { currentTz, dayKey, latestPlace } from '@/domain/checkin';
-import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
-import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
-import { speakPlace } from '@/domain/regions';
-import { Card, haptic, Icon, PrimaryButton, SectionLabel, Txt } from '@/design/components';
-import { color, HIT, radius, space } from '@/design/theme';
+import { currentTz, dayKey, MIN_DAYS_FOR_PICTURE } from '@/domain/checkin';
+import { practiceSessions, practiceStats, weekLine, weekStrip } from '@/domain/engagement';
+import { showFirstWeek } from '@/domain/firstWeek';
+import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay } from '@/domain/program';
+import { isNight, NEED_IT, needItSubtitle, presetById, todayMoments } from '@/domain/presets';
+import { buildProgress } from '@/domain/progress';
+import { DEFAULT_BACKGROUND, soundscape, timerLabel } from '@/domain/soundscapes';
+import { Card, haptic, Icon, IconButton, OutlineButton, PrimaryButton, SectionLabel, Txt, Wordmark } from '@/design/components';
+import { Photo, sceneForHour } from '@/design/Photo';
+import { HIT, radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
+import { pauseListening, resumeListening, useListen } from '@/voice/listen';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { greeting } from '../shared/format';
+import { dayPlan, justListenLabel, presetPlan, shortDayPlan, startJustListen, startPractice } from '../shared/start';
 import { WeekStrip } from '../shared/WeekStrip';
+import { FirstWeekCard } from './FirstWeekCard';
 
 /**
- * Today: one next step. The day's lesson and practice, this week's practice days, a way in
- * for a flare, a check-in, and the person's goal. The pain record isn't here — Today is
- * about doing, Progress is for looking back (docs/RESEARCH.md §5).
+ * Today answers one question: what do I need right now? (studio round 5: it read as a course.)
+ *
+ *  1. Right now: the moments people open the app for — a flare, a night without sleep, a body
+ *     scan, a worried hour — one tap each, each saying it's a voice and how long. By day, before
+ *     any practice, only one leads (the welcome's answer, or a flare) and the rest wait under
+ *     "more for right now" below the day: four of them pushed the program out of view (round 5
+ *     retest). At night, or once something is practiced, they all lead; at night "can't sleep"
+ *     first, with a way to just hear a tone, no voice.
+ *  2. Your daily practice: the program's day, begun with one tap (the short lesson first if it
+ *     hasn't been read, then straight into the practice, eyes closed). After any practice today
+ *     it goes quiet: once is enough for a day, and a second ask after a flare reads as homework.
+ *     At night, for someone who came about sleep, it is quiet too: the welcome promised Day 1
+ *     would wait for tomorrow.
+ *  3. Your pain record: log today's pain, with how far the record is from being a picture; once
+ *     logged, a quiet way to it.
+ *
+ * A playing sound is pinned under the photo, where it can be found. Sounds have their own tab.
  */
 
+const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/** "tuesday evening." The small hours still belong to the night before: 1am Wednesday is Tuesday night. */
+function partOfDay(now: number): string {
+  const d = new Date(now);
+  const h = d.getHours();
+  const part = h < 5 || h >= 21 ? 'night' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+  const day = new Date(h < 5 ? now - 6 * 3_600_000 : now).getDay();
+  return `${WEEKDAYS[day]} ${part}.`;
+}
+
 export function HomeScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const { sessions, checkIns, prefs } = useData();
+  const { width, height } = useWindowDimensions();
+  const listen = useListen();
+  const params = useLocalSearchParams<{ saved?: string }>();
+  const { sessions, checkIns, prefs, setPrefs } = useData();
   const tz = currentTz();
-  const now = Date.now();
+  const now = useNow();
+  const hour = new Date(now).getHours();
+  const todayKey = dayKey(now, tz);
   const program = prefs.program ?? EMPTY_PROGRAM;
-  const { day, doneToday, finished } = currentDay(program, dayKey(now, tz));
+  const { day, doneToday, finished } = currentDay(program, todayKey);
   const today = programDay(day);
   const read = program.read.includes(day);
+  // The length the practice will actually run: practice settings can change today's (start.ts).
+  const minutes = dayPlan(day, { prefs, checkIns }).minutes;
   const strip = useMemo(() => weekStrip(sessions, now, tz), [sessions, now, tz]);
   const stats = useMemo(() => practiceStats(sessions, now, tz), [sessions, now, tz]);
-  const place = latestPlace(checkIns) ?? prefs.place;
-  const restsOn = today.practice.theme === 'open' || !place ? 'the body as a whole' : speakPlace(place.region, place.side);
-  const lastMoment = prefs.moments?.[0];
+  // Any practice today, not only the program's: a flare met at noon is the day's practice too.
+  const practisedToday = useMemo(() => practiceSessions(sessions).some((s) => dayKey(s.startedAt, tz) === todayKey), [sessions, tz, todayKey]);
+  const record = useMemo(() => buildProgress(checkIns, sessions, { now, tz }), [checkIns, sessions, now, tz]);
+  const checkedInToday = checkIns.some((c) => !c.isSample && dayKey(c.at, tz) === todayKey);
+  const known = { prefs, checkIns };
+  const saved = useSavedNote(params.saved, checkIns);
 
-  // Keep the reminder in step with the latest practice: daily while practising, weekly after
-  // four quiet days (voice/reminders.ts). Rescheduling is idempotent.
+  // Keep the reminders in step with the latest practice and the program: dated one-offs, daily
+  // for four days after a practice, then weekly (voice/reminders.ts). A new day re-plans too, so
+  // the reminder copy names the right day. Rescheduling with nothing changed is a no-op.
   useEffect(() => {
-    scheduleReminders(prefs.reminder, stats.lastPractice);
-  }, [prefs.reminder, stats.lastPractice]);
+    scheduleReminders(prefs.reminder, stats.lastPractice, prefs.program);
+  }, [prefs.reminder, stats.lastPractice, prefs.program, todayKey]);
 
   const { warm } = useVoiceSession();
   // Ready the practice while the person reads Today, so Begin goes straight to the guide's first words.
   useEffect(() => warm(today.practice.sessionType, prefs.voiceId), [today.practice.sessionType, prefs.voiceId, warm]);
 
-  const go = () => {
+  const begin = () => {
     haptic('soft');
-    if (!read && !doneToday) router.push({ pathname: '/lesson/[day]', params: { day: String(day) } });
-    else router.push({ pathname: '/before', params: { day: String(day) } });
+    if (!read) router.push({ pathname: '/lesson/[day]', params: { day: String(day) } });
+    else startPractice(dayPlan(day, known));
   };
+
+  // The short version: 3 active minutes of the same practice, straight in — a low-energy day
+  // shouldn't start with reading. Offered only while nothing has been practiced today; after a
+  // practice it was a second ask ("completes the day" read as homework, round 5).
+  const short = !doneToday && !practisedToday && minutes > 3 && !(isNight(hour) && prefs.focus === 'sleep');
+  const beginShort = () => {
+    haptic('soft');
+    startPractice(shortDayPlan(day, known));
+  };
+  const firstWeek = showFirstWeek(program, prefs.firstWeekDone, todayKey) ? <FirstWeekCard now={now} tz={tz} /> : null;
+
+  const night = isNight(hour);
+  const moments = todayMoments(prefs.focus, hour, practisedToday);
+  const tomorrow = !finished && day < PROGRAM_DAYS ? programDay(day + 1) : undefined;
+  // The week strip appears once there is something on it. Before the first practice it was
+  // seven empty circles under a button — a row of absences on the first screen anyone sees.
+  const showWeek = stats.sessions > 0;
+
+  const week = showWeek ? (
+    <View style={{ marginTop: space.xxl }}>
+      <WeekStrip days={strip} />
+      <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
+        {weekLine(stats, now)}
+      </Txt>
+    </View>
+  ) : null;
+
+  // How far the record is from a picture, in check-in days (the same count Progress draws from),
+  // so "is this helping?" has a visible path to an answer (round 5). Counts what was entered,
+  // never what wasn't.
+  const recordLine = record.enough
+    ? '10 seconds. A record you can look back on.'
+    : record.checkInDays === 0
+      ? `10 seconds. After ${MIN_DAYS_FOR_PICTURE} check-in days, your record appears.`
+      : `${record.checkInDays} of ${MIN_DAYS_FOR_PICTURE} check-in days, then your record appears.`;
+  // After today's check-in: counts only, as Progress shows them.
+  const loggedLine = record.enough ? 'logged today' : `logged today · ${record.checkInDays} of ${MIN_DAYS_FOR_PICTURE} check-in days`;
+
+  const logRow = saved ? (
+    <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(500)} style={[styles.logRow, styles.savedRow]} accessibilityLiveRegion="polite">
+      <Icon name="checkmark" size={15} tint={color.practice} />
+      <Txt variant="callout">Saved to your record.</Txt>
+    </Animated.View>
+  ) : checkedInToday ? (
+    // Once today is logged the section stays, as a way to the record: it vanished three seconds
+    // after "Saved", and with it the only path from Today to "is this helping?" (round 5 retest).
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`Your pain record. ${loggedLine}. Opens Progress`}
+      onPress={() => router.push('/progress')}
+      style={({ pressed }) => [styles.logRow, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      <View style={styles.logHead}>
+        <Txt variant="headline" style={{ flex: 1 }}>
+          your pain record
+        </Txt>
+        <Txt variant="title2" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
+          ›
+        </Txt>
+      </View>
+      <Txt variant="footnote" tone="secondary">
+        {loggedLine}
+      </Txt>
+    </Pressable>
+  ) : (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Log today’s pain. ${recordLine}`}
+      onPress={() => router.push('/checkin')}
+      style={({ pressed }) => [styles.logRow, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      {/* The arrow sits with the label, as on every other row here, so the line under it has the
+          full width (beside a chevron it broke with one word left over). */}
+      <View style={styles.logHead}>
+        <Txt variant="headline" style={{ flex: 1 }}>
+          log today’s pain
+        </Txt>
+        <Txt variant="callout" importantForAccessibility="no" accessibilityElementsHidden>
+          →
+        </Txt>
+      </View>
+      <Txt variant="footnote" tone="secondary">
+        {recordLine}
+      </Txt>
+    </Pressable>
+  );
+  // Its own label, apart from the practice above it: the record and practice sit side by side, never mixed.
+  const logPain = (
+    <View style={{ marginTop: space.xxl }}>
+      {/* Once logged, the row itself is "your pain record ›"; a label above it would say it twice. */}
+      {checkedInToday && !saved ? null : <SectionLabel style={{ marginBottom: 0 }}>your pain record</SectionLabel>}
+      {logRow}
+    </View>
+  );
+
+  // Practices are text rows; photographs belong to sounds. Two kinds of thing, two looks, so
+  // nobody taps a sound's photograph and gets a voice — and each row says it's a voice.
+  const momentRows = (list: typeof NEED_IT) => (
+    <View>
+      {list.map((n, i) => {
+        const p = presetById(n.id)!;
+        const sub = needItSubtitle(n);
+        const last = i === list.length - 1;
+        return (
+          <View key={n.id} style={[styles.needItem, last && styles.needLast]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${n.label}. ${p.title}, ${sub}. Begins now.`}
+              onPress={() => {
+                haptic('soft');
+                startPractice(presetPlan(p, known));
+              }}
+              style={({ pressed }) => [styles.needRow, { opacity: pressed ? 0.55 : 1 }]}
+            >
+              <View style={{ flex: 1 }}>
+                <Txt variant="title2" style={{ textTransform: 'lowercase' }}>
+                  {n.label}
+                </Txt>
+                <Txt variant="footnote" tone="secondary" style={{ marginTop: space.xxs }}>
+                  {sub}
+                </Txt>
+              </View>
+              <Txt variant="callout" importantForAccessibility="no" accessibilityElementsHidden>
+                →
+              </Txt>
+            </Pressable>
+            {/* At night, under "can't sleep": the sound alone, for someone who wanted a sound and not
+                a voice (Tom, round 5). Listening records nothing and counts toward nothing. */}
+            {n.id === 'sleep-10' && night ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${justListenLabel(prefs)}. Plays the sound on its own`}
+                onPress={() => {
+                  haptic('soft');
+                  startJustListen(prefs, setPrefs);
+                }}
+                hitSlop={4}
+                style={({ pressed }) => [styles.justListen, { opacity: pressed ? 0.55 : 1 }]}
+              >
+                <Txt variant="footnote" tone="secondary">
+                  {justListenLabel(prefs)}{' '}
+                  <Txt variant="footnote" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
+                    →
+                  </Txt>
+                </Txt>
+              </Pressable>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+  const rightNow = (
+    <View style={{ marginTop: space.xl }}>
+      <SectionLabel>right now</SectionLabel>
+      {momentRows(moments.first)}
+    </View>
+  );
+  const moreNow = moments.more.length ? (
+    <View style={{ marginTop: space.xxl }}>
+      <SectionLabel>more for right now</SectionLabel>
+      {momentRows(moments.more)}
+    </View>
+  ) : null;
+
+  // One name per day: the lesson's title, and no week name in the kicker ("· understand" read as
+  // an instruction, round 5).
+  const kicker = finished ? 'your daily practice · all 28 days done' : `your daily practice · day ${day} of ${PROGRAM_DAYS}`;
+  // The welcome's promise kept: someone who came about nights, opening Today at night with
+  // nothing practiced, was told "sleep first, day 1 tomorrow" — so the day waits, quietly, and
+  // "can't sleep" above it is the loud thing (round 5 retest).
+  const sleepFirst = !doneToday && !practisedToday && night && prefs.focus === 'sleep';
+  const title = doneToday ? 'done for today.' : sleepFirst ? `day ${day} is ready tomorrow.` : today.lesson.title;
+  const quiet = !doneToday && (practisedToday || sleepFirst);
+  const meta = doneToday
+    ? tomorrow
+      ? `Tomorrow: day ${tomorrow.day}, ${tomorrow.lesson.title.toLowerCase()}.`
+      : 'Every practice stays here, whenever you want it.'
+    : sleepFirst
+      ? `“${today.lesson.title}”: ${read ? '' : 'a 2 min lesson, then '}${minutes} min practice. Tonight, sleep comes first.`
+      : quiet
+        ? `You practiced today. Day ${day} is here tomorrow too.`
+        : read
+          ? `${minutes} min practice`
+          : `2 min lesson (read or listen) · ${minutes} min practice`;
+
+  const daily = (
+    <Animated.View entering={FadeIn.duration(600)} style={styles.daily}>
+      <SectionLabel style={{ marginBottom: space.s }}>{kicker}</SectionLabel>
+      <Txt variant="title" accessibilityRole="header">
+        {title}
+      </Txt>
+      <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
+        {meta}
+      </Txt>
+      {doneToday ? (
+        <OutlineButton label="practice again" onPress={() => startPractice(dayPlan(day, known))} style={{ marginTop: space.l }} />
+      ) : quiet ? (
+        // Still there for anyone who wants it, but no longer the loud thing on the page.
+        <OutlineButton label={read ? `day ${day} practice` : `begin day ${day}`} onPress={begin} style={{ marginTop: space.l }} />
+      ) : (
+        <PrimaryButton label={read ? 'begin practice' : `begin day ${day}`} onPress={begin} style={{ marginTop: space.l }} />
+      )}
+      {short ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Or just a 3-minute practice, without the lesson. Begins now."
+          onPress={beginShort}
+          hitSlop={4}
+          style={({ pressed }) => [styles.shortRow, { opacity: pressed ? 0.55 : 1 }]}
+        >
+          <Txt variant="callout" tone="secondary">
+            or just a 3-minute practice{' '}
+            <Txt variant="callout" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
+              →
+            </Txt>
+          </Txt>
+        </Pressable>
+      ) : null}
+      {/* A row, not a caption: "adjust" was read as a note and missed (round 5). */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Practice settings. Voice, length and sound."
+        onPress={() => router.push({ pathname: '/before', params: { day: String(day) } })}
+        style={({ pressed }) => [styles.settingsRow, { opacity: pressed ? 0.55 : 1 }]}
+      >
+        <Txt variant="callout" style={{ flex: 1 }}>
+          practice settings
+        </Txt>
+        <Txt variant="title2" tone="secondary" importantForAccessibility="no" accessibilityElementsHidden>
+          ›
+        </Txt>
+      </Pressable>
+    </Animated.View>
+  );
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
     >
-      <View style={styles.head}>
-        <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
-          {greeting()}
-        </Txt>
-        <Txt variant="footnote" tone="tertiary">
-          {finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`}
-        </Txt>
-      </View>
-
-      <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xl }}>
-        <WeekStrip days={strip} />
-        <Txt variant="footnote" tone="secondary" style={{ marginTop: space.m }}>
-          {weekLine(stats, now)}
-        </Txt>
-      </Animated.View>
-
-      <Card style={styles.today}>
-        <Txt variant="caption" style={styles.kicker}>
-          {finished ? 'ANY TIME' : `TODAY · WEEK ${today.week} · ${WEEKS[today.week].name.toUpperCase()}`}
-        </Txt>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Lesson: ${today.lesson.title}. ${read ? 'Read.' : '2 minutes.'}`}
-          onPress={() => router.push({ pathname: '/lesson/[day]', params: { day: String(day) } })}
-          style={({ pressed }) => [styles.step, { opacity: pressed ? 0.6 : read ? 0.72 : 1 }]}
-        >
-          <View style={[styles.mark, read && styles.markDone]}>
-            {read ? <Icon name="checkmark" size={13} tint={color.practice} weight="bold" /> : <Txt variant="footnote" style={{ fontWeight: '700' }}>1</Txt>}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Txt variant="body">{today.lesson.title}</Txt>
-            <Txt variant="footnote" tone="secondary">
-              Lesson · 2 min
-            </Txt>
-          </View>
-        </Pressable>
-        <View style={[styles.step, { opacity: doneToday ? 0.72 : 1 }]}>
-          <View style={[styles.mark, doneToday && styles.markDone]}>
-            {doneToday ? <Icon name="checkmark" size={13} tint={color.practice} weight="bold" /> : <Txt variant="footnote" style={{ fontWeight: '700' }}>2</Txt>}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Txt variant="body" style={{ fontWeight: '600' }}>
-              {today.practice.title}
-            </Txt>
-            <Txt variant="footnote" tone="secondary">
-              Practice · {today.practice.minutes} min · rests on {restsOn}
-            </Txt>
-          </View>
+      {/* Daisy's opening: the hour's sky, full-bleed, the wordmark over it. Shorter than it was, so
+          the moments sit above the fold on a 393×852 screen. */}
+      <Photo
+        scene={sceneForHour(hour)}
+        width={width}
+        height={Math.max(180, Math.round(height * 0.24)) + insets.top}
+        drift
+        style={{ marginHorizontal: -space.xl }}
+      >
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: color.scrim }]} />
+        <View style={[styles.heroTop, { paddingTop: insets.top + space.xs }]}>
+          <View style={{ width: HIT }} />
+          <Wordmark tone="onImage" />
+          <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={color.onImage} />
         </View>
-        {doneToday ? (
-          <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
-            {finished ? 'All 28 days done. Every practice stays here.' : `Day ${day} is done. Day ${day + 1} opens tomorrow.`}
+        <View style={styles.heroBottom}>
+          <Txt variant="title" accessibilityRole="header" style={[styles.onImage, styles.shadow]}>
+            {partOfDay(now)}
           </Txt>
-        ) : (
-          <PrimaryButton label={read ? `Begin Day ${day}` : `Continue Day ${day}`} onPress={go} style={{ marginTop: space.s }} />
-        )}
-      </Card>
+        </View>
+      </Photo>
 
-      <View style={styles.quick}>
-        <Card label="Flare. A 3-minute session for right now" onPress={() => router.push({ pathname: '/before', params: { preset: 'flare-3' } })} style={styles.quickCard}>
-          <SectionLabel style={{ marginBottom: space.xs }}>Flare?</SectionLabel>
-          <Txt variant="callout">A 3-minute session for right now</Txt>
-        </Card>
-        <Card label="Check in. How it is today, and where" onPress={() => router.push('/checkin')} style={styles.quickCard}>
-          <SectionLabel style={{ marginBottom: space.xs }}>Check in</SectionLabel>
-          <Txt variant="callout">How it is today, and where</Txt>
-        </Card>
-      </View>
-
-      {prefs.goal ? (
-        <Card style={styles.goal}>
-          <Txt variant="caption" style={{ color: color.milestone, letterSpacing: 1.2 }}>
-            TOWARD · {prefs.goal.toUpperCase()}
-          </Txt>
-          <Txt variant="callout" style={{ marginTop: space.xs }}>
-            {lastMoment ? `Last moment you saved: “${lastMoment.text}”` : 'Did something toward it today, however small? Save it as a moment.'}
-          </Txt>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={styles.goalLink} hitSlop={8}>
-            <Txt variant="callout" style={{ color: color.milestone }}>
-              Save a moment
-            </Txt>
-          </Pressable>
-        </Card>
+      {/* While a sound plays, it is the first thing under the photo: it was below the fold (round 5). */}
+      {listen.id ? (
+        <View style={{ marginTop: space.l }}>
+          <NowPlaying listen={listen} />
+        </View>
       ) : null}
+
+      {rightNow}
+      {daily}
+      {moreNow}
+      {logPain}
+      {firstWeek}
+      {week}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'baseline', gap: space.m },
-  today: { marginTop: space.xl, padding: space.l, gap: space.m, borderRadius: radius.l },
-  kicker: { color: color.practice, letterSpacing: 1.4 },
-  step: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: HIT },
-  mark: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: color.text, alignItems: 'center', justifyContent: 'center' },
-  markDone: { borderWidth: 0, backgroundColor: color.practiceSoft },
-  quick: { flexDirection: 'row', gap: space.m, marginTop: space.m },
-  quickCard: { flex: 1, padding: space.l, minHeight: 96 },
-  goal: { marginTop: space.m, padding: space.l, backgroundColor: color.milestoneSoft, borderColor: 'rgba(242,196,141,0.24)' },
-  goalLink: { minHeight: 36, justifyContent: 'center', marginTop: space.xs, alignSelf: 'flex-start' },
-});
+/**
+ * A quiet "saved" for three seconds after a check-in, because a save with no confirmation left
+ * people unsure it had worked (round 5). Shown when the check-in screen returns with `?saved=1`,
+ * or when a check-in landed in the last five seconds (so it works whichever way the check-in
+ * screen closes).
+ */
+function useSavedNote(param: string | undefined, checkIns: Array<{ at: number; isSample?: boolean }>): boolean {
+  const latest = useMemo(() => checkIns.reduce((m, c) => (c.isSample ? m : Math.max(m, c.at)), 0), [checkIns]);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (param === '1') {
+      setSaved(true);
+      router.setParams({ saved: undefined });
+    } else if (latest && Date.now() - latest < 5000) setSaved(true);
+  }, [param, latest]);
+  useEffect(() => {
+    if (!saved) return;
+    const t = setTimeout(() => setSaved(false), 3000);
+    return () => clearTimeout(t);
+  }, [saved]);
+  return saved;
+}
+
+/**
+ * The time Today reads its day from. Held in state and refreshed when the app comes back to
+ * the foreground, and at local midnight while it stays open: an app left open overnight
+ * otherwise shows yesterday's day, done, until something else re-renders it.
+ */
+function useNow(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setNow(Date.now());
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 1, 0);
+    const t = setTimeout(() => setNow(Date.now()), midnight.getTime() - now);
+    return () => clearTimeout(t);
+  }, [now]);
+  return now;
+}
+
+/** While a sound plays on its own: what it is, how long is left, pause in place. */
+function NowPlaying({ listen }: { listen: ReturnType<typeof useListen> }) {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
+  const s = soundscape(listen.id) ?? soundscape(DEFAULT_BACKGROUND)!;
+  return (
+    <Card label={`${s.name}, ${listen.playing ? 'playing' : 'paused'}. Open`} onPress={() => router.push('/listen')} style={styles.playing}>
+      <Photo scene={s.id} width={52} height={52} radius={radius.s} />
+      <View style={{ flex: 1 }}>
+        {/* Glanced at, yet as written: "432 Hz" keeps its unit (Soundscape.name). */}
+        <Txt variant="headline">{s.name}</Txt>
+        <Txt variant="footnote" tone="secondary">
+          {listen.playing ? timerLabel(listen.timer, listen.timerElapsedMs) : 'paused'}
+        </Txt>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={listen.playing ? 'Pause' : 'Resume'}
+        hitSlop={8}
+        onPress={() => {
+          haptic('select');
+          if (listen.playing) pauseListening();
+          else resumeListening();
+        }}
+        style={styles.playBtn}
+      >
+        <Icon name={listen.playing ? 'pause.fill' : 'play.fill'} size={13} tint={color.onAccent} />
+      </Pressable>
+    </Card>
+  );
+}
+
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
+    heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.s },
+    heroBottom: { position: 'absolute', left: space.xl, right: space.xl, bottom: space.xl },
+    onImage: { color: color.onImage },
+    shadow: { textShadowColor: 'rgba(5,8,9,0.3)', textShadowRadius: 14, textShadowOffset: { width: 0, height: 1 } },
+    logRow: {
+      justifyContent: 'center',
+      gap: space.xxs,
+      minHeight: 64,
+      marginTop: space.s,
+      paddingVertical: space.m,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderColor: color.hairline,
+    },
+    logHead: { flexDirection: 'row', alignItems: 'center', gap: space.m },
+    needItem: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
+    needRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: 60, paddingVertical: space.m },
+    needLast: { borderBottomWidth: StyleSheet.hairlineWidth },
+    justListen: { justifyContent: 'center', minHeight: HIT, marginTop: -space.s, paddingBottom: space.xs },
+    shortRow: { justifyContent: 'center', minHeight: HIT, marginTop: space.xs },
+    daily: { marginTop: space.xxl },
+    settingsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: HIT + 4,
+      marginTop: space.s,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderColor: color.hairline,
+    },
+    savedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: space.s },
+    playing: { flexDirection: 'row', alignItems: 'center', gap: space.m, padding: space.s, paddingRight: space.l },
+    playBtn: { width: 40, height: 40, borderRadius: 3, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
+  });

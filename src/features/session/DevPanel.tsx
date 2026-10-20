@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QuietButton, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 
 /**
@@ -12,6 +13,8 @@ import { useVoiceSession } from '@/voice/VoiceSessionProvider';
  * transcript UI the product refuses to have, which is why it lives here.
  */
 export function DevPanel() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const vs = useVoiceSession();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
@@ -56,14 +59,15 @@ export function DevPanel() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   panel: {
     position: 'absolute',
     left: space.m,
     right: space.m,
     padding: space.m,
     borderRadius: radius.m,
-    backgroundColor: 'rgba(20,20,24,0.92)',
+    backgroundColor: color.bgElevated,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.hairline,
   },

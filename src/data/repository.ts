@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import type { EngineDraft } from '../engine/SessionEngine';
 import { normalizePain, type CheckIn } from '../domain/checkin';
 import type { Session, SessionMoment } from '../domain/types';
-import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from './types';
+import { DEFAULT_PREFS, loadPrefs, mergePrefs, type Prefs, type SessionRepository } from './types';
 
 /**
  * SQLite on the device. The schema follows the domain types closely: maps and
@@ -10,7 +10,7 @@ import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from '.
  * queried into.
  */
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 const MIGRATIONS: Record<number, string> = {
   1: `
@@ -65,6 +65,11 @@ const MIGRATIONS: Record<number, string> = {
     ALTER TABLE sessions ADD COLUMN program_day INTEGER;
     ALTER TABLE sessions ADD COLUMN feeling TEXT;
   `,
+  // 18 Oct 2026: practised time, kept on its own so endedAt can become the wall-clock end later.
+  // Nullable: older rows were saved with endedAt = start + practised time, which still reads right.
+  4: `
+    ALTER TABLE sessions ADD COLUMN active_ms INTEGER;
+  `,
 };
 
 type SessionRow = {
@@ -86,6 +91,7 @@ type SessionRow = {
   place: string | null;
   program_day: number | null;
   feeling: string | null;
+  active_ms: number | null;
 };
 
 type CheckInRow = {
@@ -143,6 +149,7 @@ function toSession(r: SessionRow): Session {
     ...(r.place ? { place: JSON.parse(r.place) } : {}),
     ...(r.program_day ? { programDay: r.program_day } : {}),
     ...(r.feeling ? { feeling: r.feeling as Session['feeling'] } : {}),
+    ...(typeof r.active_ms === 'number' ? { activeMs: r.active_ms } : {}),
   };
 }
 
@@ -202,8 +209,8 @@ class SQLiteRepository implements SessionRepository {
     await db.withTransactionAsync(async () => {
       await db.runAsync(
         `INSERT OR REPLACE INTO sessions
-          (id, started_at, ended_at, session_type, title, summary, one_liner, body_map_start, body_map_end, changes, outcome, signals, is_sample, created_at, mode, place, program_day, feeling)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, started_at, ended_at, session_type, title, summary, one_liner, body_map_start, body_map_end, changes, outcome, signals, is_sample, created_at, mode, place, program_day, feeling, active_ms)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         s.id,
         s.startedAt,
         s.endedAt,
@@ -222,6 +229,7 @@ class SQLiteRepository implements SessionRepository {
         s.place ? JSON.stringify(s.place) : null,
         s.programDay ?? null,
         s.feeling ?? null,
+        s.activeMs ?? null,
       );
       for (const m of moments) {
         await db.runAsync(
@@ -298,7 +306,7 @@ class SQLiteRepository implements SessionRepository {
 
   async getPrefs(): Promise<Prefs> {
     const stored = await this.getKV<Partial<Prefs>>('prefs');
-    return mergePrefs(DEFAULT_PREFS, stored ?? {});
+    return loadPrefs(stored);
   }
 
   async setPrefs(patch: Partial<Prefs>): Promise<Prefs> {

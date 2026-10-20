@@ -33,6 +33,10 @@ import type { AskKind, GuideContext, GuideLine, GuideTurn, HistoryItem, RemoteOb
  *
  * Everything time-based reads `now()`, so a whole session can be driven in a
  * unit test in milliseconds.
+ *
+ * The session's clock is ACTIVE time: wall time minus pauses (pauseClock/resumeClock). On
+ * wall time, a five-minute pause in a ten-minute practice made timeGuard close the session
+ * a minute after resume, and the minutes recorded counted the pause as practice.
  */
 
 export type EngineOptions = {
@@ -57,7 +61,23 @@ export type EngineOptions = {
   theme?: PracticeTheme;
   /** The program day this session is. Recorded, never read by the guide. */
   programDay?: number;
+  /**
+   * Guided: 'body' is the body scan practice (the scan-10 preset), which scans with SCAN_BODY.
+   * An option rather than read from the theme: program Days 14, 21 and 28 are theme 'open'
+   * too, and must keep their own scan and theme lines.
+   */
+  scan?: ScanBank;
+  /**
+   * No earlier session (samples aside): the arrival adds the fixed first-session doctor line.
+   * Set by the app from the device's sessions, never by a model or the remote script.
+   */
+  firstSession?: boolean;
 };
+
+/** Which scan bank a session uses, beyond the one its length gives it. */
+export type ScanBank = 'body';
+/** SCAN_BODY runs about nine minutes; a shorter session gets the usual scan for its length rather than a scan cut off by the close. */
+const BODY_SCAN_MIN_MS = 10 * 60_000;
 
 export type IngestOutcome = { command?: Command };
 
@@ -104,6 +124,8 @@ export class SessionEngine {
   readonly place?: Place;
   readonly theme?: PracticeTheme;
   readonly programDay?: number;
+  readonly scan?: ScanBank;
+  readonly firstSession: boolean;
 
   private readonly now: () => number;
   private readonly newId: (prefix?: string) => string;
@@ -139,6 +161,8 @@ export class SessionEngine {
   private repeatRequested = false;
   private advanceAfterAnswer = false;
   private outcome: SessionOutcome = 'completed';
+  private pausedTotal = 0;
+  private pausedSince?: number;
 
   constructor(opts: EngineOptions) {
     this.sessionType = opts.sessionType;
@@ -153,6 +177,8 @@ export class SessionEngine {
     this.place = this.mode === 'guided' ? opts.place : undefined;
     this.theme = this.mode === 'guided' ? opts.theme : undefined;
     this.programDay = opts.programDay;
+    this.scan = this.mode === 'guided' && opts.scan === 'body' && this.plan.targetMs >= BODY_SCAN_MIN_MS ? 'body' : undefined;
+    this.firstSession = opts.firstSession ?? false;
     this.startedAt = this.now();
     this.sessionId = this.newId('s_');
   }
@@ -165,8 +191,30 @@ export class SessionEngine {
     return this._phase === 'DONE';
   }
 
+  /** Active session time: what has been practised, never counting pauses. */
   get elapsedMs(): number {
-    return this.now() - this.startedAt;
+    return this.activeNow() - this.startedAt;
+  }
+
+  get clockPaused(): boolean {
+    return this.pausedSince !== undefined;
+  }
+
+  /** The session is paused (button, voice failure, interruption): its clock stops with it. */
+  pauseClock(): void {
+    if (this.pausedSince === undefined && !this.done) this.pausedSince = this.now();
+  }
+
+  resumeClock(): void {
+    if (this.pausedSince === undefined) return;
+    this.pausedTotal += this.now() - this.pausedSince;
+    this.pausedSince = undefined;
+  }
+
+  /** Wall time with every pause (including one still running) taken out. */
+  private activeNow(): number {
+    const now = this.now();
+    return now - this.pausedTotal - (this.pausedSince !== undefined ? now - this.pausedSince : 0);
   }
 
   get currentMap() {
@@ -183,6 +231,8 @@ export class SessionEngine {
       mode: this.mode,
       place: this.place,
       theme: this.theme,
+      scan: this.scan,
+      firstSession: this.firstSession,
       plan: this.plan,
       phase: this._phase,
       phaseTurn: this.phaseTurn,
@@ -393,7 +443,10 @@ export class SessionEngine {
 
   finalize(): { session: Session; moments: SessionMoment[] } {
     this.closeObserveWindow();
-    const endedAt = this.now();
+    // endedAt − startedAt is how every screen reads a session's minutes (After, practice stats,
+    // the "a real minute" rule), so it is the practised time, not the wall time: a session paused
+    // for twenty minutes is recorded as the ten it ran. createdAt keeps the real moment it ended.
+    const endedAt = this.startedAt + this.elapsedMs;
     return SessionEngine.build(
       {
         sessionId: this.sessionId,
@@ -411,6 +464,7 @@ export class SessionEngine {
       },
       endedAt,
       this.keepTranscript,
+      this.now(),
     );
   }
 
@@ -420,7 +474,8 @@ export class SessionEngine {
       sessionId: this.sessionId,
       sessionType: this.sessionType,
       startedAt: this.startedAt,
-      updatedAt: this.now(),
+      // A recovered draft is built with updatedAt as its end, so it too is start + active time.
+      updatedAt: this.startedAt + this.elapsedMs,
       map: { current: cloneMap(this.map.current), baseline: cloneMap(this.map.baseline), focusId: this.map.focusId },
       changes: [...this.changes],
       signals: { ...this.signals, observedSeconds: Math.round(this.observedMs / 1000) },
@@ -432,7 +487,7 @@ export class SessionEngine {
     };
   }
 
-  static build(draft: EngineDraft, endedAt: number, keepTranscript = false): { session: Session; moments: SessionMoment[] } {
+  static build(draft: EngineDraft, endedAt: number, keepTranscript = false, createdAt = endedAt): { session: Session; moments: SessionMoment[] } {
     const changes = consolidateChanges(draft.changes);
     const recap = buildRecap({
       sessionType: draft.sessionType,
@@ -457,7 +512,9 @@ export class SessionEngine {
       changes,
       outcome: draft.outcome,
       signals: draft.signals,
-      createdAt: endedAt,
+      createdAt,
+      // endedAt is start + practised time (finalize, toDraft), so this is the practised time.
+      activeMs: Math.max(0, endedAt - draft.startedAt),
       ...(draft.mode ? { mode: draft.mode } : {}),
       ...(draft.place ? { place: draft.place } : {}),
       ...(draft.programDay ? { programDay: draft.programDay } : {}),
@@ -646,7 +703,7 @@ export class SessionEngine {
     if (p === this._phase) return;
     const observing = (x: Phase) => x === 'OBSERVE' || x === 'REAPPRAISE';
     if (observing(this._phase) && !observing(p)) this.closeObserveWindow();
-    if (!observing(this._phase) && observing(p)) this.observeSince = this.now();
+    if (!observing(this._phase) && observing(p)) this.observeSince = this.activeNow();
     this._phase = p;
     this.phaseTurn = 0;
     this.phaseStep = 0;
@@ -655,7 +712,7 @@ export class SessionEngine {
 
   private closeObserveWindow() {
     if (this.observeSince !== undefined) {
-      this.observedMs += this.now() - this.observeSince;
+      this.observedMs += this.activeNow() - this.observeSince;
       this.observeSince = undefined;
     }
   }
@@ -705,6 +762,9 @@ export class SessionEngine {
   /** The session closes on time, gently, whatever phase it is in. */
   private timeGuard() {
     if (isClosing(this._phase) || this._phase === 'ARRIVE' || this._phase === 'SAFETY_CHECK') return;
+    // The body scan practice is the scan: every step is heard, through to the whole body, and the
+    // close follows it. On a slower voice it runs a little long rather than ending at the neck.
+    if (this._phase === 'SCAN' && this.scan === 'body') return;
     const elapsed = this.elapsedMs;
     const target = this.plan.targetMs;
     const early: Phase[] = ['NOTICE', 'LOCATE', 'EXPLORE', 'OBSERVE'];

@@ -1,4 +1,4 @@
-import type { SessionType } from './types';
+import type { SessionOutcome, SessionType } from './types';
 
 /**
  * The 28-day program: one short lesson and one guided practice a day.
@@ -56,7 +56,8 @@ export const WEEKS: Record<1 | 2 | 3 | 4, { name: string; about: string }> = {
   4: { name: 'Live', about: 'Back to what you want to do' },
 };
 
-const DOCTOR = 'If your pain is new, changing, or worries you, have it checked by a doctor before practising with it.';
+// Not a gate before the first practice: it reads as a check that sits beside care (research round 1, 18 Oct 2026).
+const DOCTOR = 'If a pain is new, or different from your usual, have it checked by a doctor. Keep any treatment you have. This practice sits beside it.';
 
 type Def = [title: string, cards: LessonCard[], practice: string, theme: PracticeTheme, minutes: 3 | 5 | 7 | 10];
 
@@ -65,8 +66,8 @@ const DAYS: Def[] = [
   [
     'Pain is real',
     [
-      { text: ['Every pain you feel is real. All pain is made by the nervous system — that is how pain works for everyone.'] },
-      { text: ['Pain is a protector. It is an alarm that says: something might be wrong, take care.'] },
+      { text: ['Every pain you feel is real.', 'All pain, from a broken bone to a migraine, is made by the nervous system. That is how pain works, for everyone, and it makes pain no less real.'] },
+      { text: ['Pain is a protector. It is an alarm. It says something might be wrong, and to take care.'] },
       {
         text: ['For many people whose pain lasts, the alarm becomes more sensitive over time, and goes off more easily and more loudly.', DOCTOR],
         notice: 'Over the next days, notice when the alarm is louder, and when it is quieter.',
@@ -77,10 +78,10 @@ const DAYS: Def[] = [
     5,
   ],
   [
-    'An alarm that learned',
+    'An alarm that learns',
     [
-      { text: ['Nervous systems learn. Whatever happens often gets easier to do again — a skill, a habit, and pain too.'] },
-      { text: ['After months or years, the pathways that make pain can become well worn, sometimes long after an injury has healed.'] },
+      { text: ['Nervous systems learn. What a nervous system does often, it gets better at. A skill, a habit. Pain too.'] },
+      { text: ['After months or years, the pathways that make pain can become well worn. Sometimes long after an injury has healed. Sometimes with no injury at all.'] },
       { text: ['What was learned can be relearned. That is the idea this program is built on.'] },
     ],
     'Finding the place',
@@ -88,10 +89,12 @@ const DAYS: Def[] = [
     5,
   ],
   [
-    'The pain–fear loop',
+    'The worry loop',
     [
-      { text: ['Pain brings worry. What is this? Will it get worse? What if I make it worse?'] },
-      { text: ['Worry tells the alarm there may be danger, and the alarm turns the volume up. More pain, more worry.'] },
+      { text: ['Pain brings worry. About what this is, whether it will get worse, whether you might make it worse.'] },
+      // The loop must not read as "worry causes your pain", nor as a reason to wave off a new worry
+      // (safety review round 3).
+      { text: ['Worry tells the alarm there may be danger, and the alarm turns the volume up. More pain, more worry.', 'This doesn’t mean worry causes pain. Worry about something new is a reason to have it checked.'] },
       { text: ['Meeting a sensation with less alarm is one way to loosen the loop. That is what the practice trains.'] },
     ],
     'Breath around it',
@@ -101,10 +104,17 @@ const DAYS: Def[] = [
   [
     'Signs from your own pain',
     [
-      { text: ['Clinicians look for signs that pain is coming from a sensitive alarm rather than from ongoing damage.'] },
-      { text: ['Some of those signs: it began in a stressful time. It moves, or spreads. It changes with mood or setting. It fades when you are absorbed in something.'] },
+      // Merged into card 1 so card 2 stays the signs (firstWeek.ts reads it), and so the signs are
+      // never read without the other half of what clinicians look for (safety review round 3).
       {
-        text: ['Only you — ideally with your doctor — can weigh your own signs. The app can’t.'],
+        text: [
+          'Clinicians look for signs that pain is coming from a sensitive alarm rather than from ongoing damage.',
+          'They also look for signs that need a closer look. That’s why anything new or changing goes to a doctor first.',
+        ],
+      },
+      { text: ['Here are some of those signs. It began during a stressful time. It moves, or spreads. It changes with mood or setting. It fades when you are absorbed in something.'] },
+      {
+        text: ['Only you can weigh your own signs, ideally with your doctor. The app can’t.'],
         notice: 'Today, just notice which of these sound familiar. No conclusions needed.',
       },
     ],
@@ -115,9 +125,9 @@ const DAYS: Def[] = [
   [
     'When it fades',
     [
-      { text: ['Has your pain ever faded while you were laughing, absorbed in something, or far from your usual day?'] },
+      { text: ['Sometimes pain fades for a while. While laughing, or absorbed in something, or far from your usual day.'] },
       { text: ['Moments like that are worth noticing. They show the volume can change.'] },
-      { text: ['If one happens this week, save it as a moment. They add up.'], notice: 'Watch for a moment when the pain is quieter than you expected.' },
+      { text: ['If one happens this week, just notice it. Nothing to record, nothing to prove.'], notice: 'Watch for a moment when the pain is quieter than you expected.' },
     ],
     'Arriving, again',
     'settle',
@@ -127,7 +137,7 @@ const DAYS: Def[] = [
     'Why stress turns the volume up',
     [
       { text: ['Your nervous system sets how loud a signal feels.'] },
-      { text: ['When it senses threat — a deadline, a worry, a short night — it can turn the volume up.'] },
+      { text: ['When it senses threat, like a deadline, a worry, or a short night, it can turn the volume up.'] },
       { text: ['Calm attention is one way to let it turn back down. That is today’s practice.'] },
     ],
     'Breath around it',
@@ -137,9 +147,9 @@ const DAYS: Def[] = [
   [
     'One week in',
     [
-      { text: ['This week was about the alarm: what it is for, how it learns, and how fear feeds it.'] },
-      { text: ['Next week the practice gets more detailed: the edges of a sensation, its texture, whether it moves.'] },
-      { text: ['Showing up is the work. Whatever the pain did this week, you practised.'] },
+      { text: ['This week was about the alarm. What it is for, how it learns, and how fear feeds it.'] },
+      { text: ['Next week, the practice looks more closely at a sensation. Its edges, its texture, whether it moves.'] },
+      { text: ['Showing up is the work. Whatever the pain did this week, you practiced.'] },
     ],
     'The body as a whole',
     'open',
@@ -303,7 +313,7 @@ const DAYS: Def[] = [
     [
       { text: ['When you started, you named what you want to get back to.'] },
       { text: ['This week, choose one small step toward it. Small means: a little more than easy, well short of a flare.'] },
-      { text: ['Practise first, then take the step. Save it as a moment when you have.'] },
+      { text: ['Practice first, then take the step. Save it as a moment when you have.'] },
     ],
     'Before a step',
     'activity',
@@ -313,7 +323,7 @@ const DAYS: Def[] = [
     'Small steps, often',
     [
       { text: ['Fear of an activity shrinks most when you do a little of it, often, and notice what actually happens.'] },
-      { text: ['If a step brings a sensation, it is an invitation to practise: notice it, without alarm, and carry on gently if you can.'] },
+      { text: ['If a step brings a sensation, it is an invitation to practice: notice it, without alarm, and carry on gently if you can.'] },
     ],
     'Before a step',
     'activity',
@@ -334,7 +344,7 @@ const DAYS: Def[] = [
     'Flares are part of the road',
     [
       { text: ['A flare does not mean you are back at the start. Most people’s path goes up and down.'] },
-      { text: ['In a flare: practise, rest, be kind to yourself. If a flare is different from your usual, or comes with new symptoms, see a doctor.'] },
+      { text: ['In a flare: practice, rest, be kind to yourself. If a flare is different from your usual, or comes with new symptoms, see a doctor.'] },
     ],
     'In the moment',
     'flare',
@@ -423,6 +433,64 @@ export function currentDay(state: ProgramState, today: string): { day: number; d
 export function completeDay(state: ProgramState, day: number, today: string): ProgramState {
   if (state.done[day]) return state;
   return { ...state, done: { ...state.done, [day]: today } };
+}
+
+/**
+ * How long a program day's practice runs. A length chosen in practice settings for today wins;
+ * then the person's standing length ("keep this length every day", or Settings → length); then
+ * the program's own. The standing length exists because someone who only ever has five minutes
+ * had to change it every day (round 5 retest). The 3-minute short day sets its own length.
+ */
+export function practiceMinutes(programMinutes: number, standing?: number, today?: number): number {
+  return today ?? standing ?? programMinutes;
+}
+
+/**
+ * Roughly when the 28 days end, as a local day key, if one new day is done each day from here.
+ * An estimate for "look again then", never a deadline: nothing closes when a day is missed.
+ * Undefined once the program is finished.
+ */
+export function programEndDay(state: ProgramState, today: string): string | undefined {
+  const done = Object.keys(state.done).length;
+  if (done >= PROGRAM_DAYS) return undefined;
+  const doneToday = Object.values(state.done).includes(today);
+  // Today's day still to do counts as today; a day already done today means the next one is tomorrow.
+  const ahead = PROGRAM_DAYS - done - (doneToday ? 0 : 1);
+  const d = new Date(`${today}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + ahead);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * A shorter day (studio round 2, replacing the 90-second rule): three active minutes of the
+ * day's practice complete the day. How often matters more than how long (RESEARCH.md), and
+ * "3 minutes completes the day" is the promise on Today for a low day.
+ */
+export const SHORT_DAY_MINUTES = 3;
+const SHORT_DAY_MS = SHORT_DAY_MINUTES * 60_000;
+
+/** What a finished practice needs to say about itself for the day to count. */
+export type PracticeRun = { outcome: SessionOutcome; startedAt: number; endedAt: number; activeMs?: number };
+
+/**
+ * A program day is done when its practice ran to its end (a 3-minute version included, which
+ * closes on its own a little before three minutes), or the person ended it after three active
+ * minutes. Paused time never counts (the engine's clock is active time). A safety or crisis
+ * pause never completes a day: the practice was stopped for something else.
+ */
+export function dayCompleted(run: PracticeRun): boolean {
+  if (run.outcome === 'completed') return true;
+  if (run.outcome !== 'ended_early') return false;
+  return (run.activeMs ?? run.endedAt - run.startedAt) >= SHORT_DAY_MS;
+}
+
+/**
+ * Record a finished practice against its program day, on the local day it STARTED. Counted on
+ * the day it ended, Day N begun at 23:55 was "done" tomorrow, and tomorrow said "Day N+1 opens
+ * tomorrow" (founder, 18 Oct 2026). `dayOf` turns a time into a local day key.
+ */
+export function completePractice(state: ProgramState, day: number, run: PracticeRun, dayOf: (at: number) => string): ProgramState {
+  return dayCompleted(run) ? completeDay(state, day, dayOf(run.startedAt)) : state;
 }
 
 export function markRead(state: ProgramState, day: number): ProgramState {

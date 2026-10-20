@@ -25,6 +25,10 @@ export type RunnerState = {
   pausedBy?: PauseReason;
 };
 
+/**
+ * Why the session is paused. 'voice' is "pause" said aloud (conversation only); 'error' is the
+ * guide's voice that couldn't be had — the session screen says so and resume tries again.
+ */
 export type PauseReason = 'button' | 'voice' | 'interrupted' | 'background' | 'error';
 
 export type RunnerDeps = {
@@ -59,8 +63,11 @@ export class SessionRunner {
   private resumeWaiters: Array<() => void> = [];
   private step?: AbortController;
   private hardStop = false;
-  private pausedAt = 0;
-  private pausedTotal = 0;
+  /**
+   * The last line failed. The next one (after the person taps Resume) is tried once and
+   * briefly: offline, the full retries meant ~30 s of silence before the same pause again.
+   */
+  private voiceFailed = false;
   private status: RunnerStatus = 'preparing';
   private unsubLevel?: () => void;
 
@@ -70,10 +77,9 @@ export class SessionRunner {
     return this.d.engine;
   }
 
-  /** Milliseconds of session time, not counting pauses. */
+  /** Milliseconds of session time, not counting pauses (the engine's own clock). */
   get activeMs(): number {
-    const pausedNow = this.paused ? Date.now() - this.pausedAt : 0;
-    return this.d.engine.elapsedMs - this.pausedTotal - pausedNow;
+    return this.d.engine.elapsedMs;
   }
 
   get isPaused(): boolean {
@@ -157,7 +163,7 @@ export class SessionRunner {
   pause(reason: PauseReason = 'button') {
     if (this.paused || this.hardStop || this.d.engine.done) return;
     this.paused = reason;
-    this.pausedAt = Date.now();
+    this.d.engine.pauseClock();
     this.step?.abort();
     this.d.voice.output.stop();
     this.set('paused');
@@ -165,7 +171,7 @@ export class SessionRunner {
 
   resume() {
     if (!this.paused) return;
-    this.pausedTotal += Date.now() - this.pausedAt;
+    this.d.engine.resumeClock();
     this.paused = null;
     this.d.engine.markInterrupted();
     const waiters = this.resumeWaiters;
@@ -204,11 +210,14 @@ export class SessionRunner {
       this.set('speaking');
       this.debug('guide', line.text);
       try {
-        await out.speak(line.text, signal);
+        await out.speak(line.text, signal, this.voiceFailed ? { quick: true } : undefined);
+        this.voiceFailed = false;
       } catch (e) {
         // The guide has one voice. When it can't be reached, the session pauses
         // (resume repeats the turn) rather than carrying on in a different voice.
         this.debug('system', `voice unavailable: ${String((e as { message?: string })?.message ?? e)}`);
+        if (signal.aborted) return;
+        this.voiceFailed = true;
         this.pause('error');
         return;
       }
@@ -235,7 +244,7 @@ export class SessionRunner {
     }
     if (result.error.code === 'permission' || result.error.code === 'unavailable') {
       this.paused = 'error';
-      this.pausedAt = Date.now();
+      this.d.engine.pauseClock();
       this.d.onState({ status: 'error', phase: this.d.engine.phase, error: result.error, pausedBy: 'error' });
       return;
     }
@@ -246,10 +255,11 @@ export class SessionRunner {
   /** "Pause" said aloud: the guide acknowledges, then listens only for "continue". */
   private async voicePause() {
     this.paused = 'voice';
-    this.pausedAt = Date.now();
+    this.d.engine.pauseClock();
     this.set('paused');
     const step = (this.step = new AbortController());
-    await this.d.voice.output.speak("Pausing. Say 'continue' when you're ready.", step.signal);
+    // Unvoiced, the pause still holds; a rejection here used to escape run() and end the session.
+    await this.d.voice.output.speak("Pausing. Say 'continue' when you're ready.", step.signal).catch(() => {});
     while (this.paused === 'voice' && !this.hardStop) {
       const r = await this.d.voice.input.listen(
         { maxWaitMs: 60_000, endOfUtteranceMs: 1200, maxUtteranceMs: 10_000, prompt: 'paused' },
@@ -262,6 +272,7 @@ export class SessionRunner {
       }
       if (r.kind === 'speech' && /\b(stop|end|done)\b/i.test(r.text)) {
         this.paused = null;
+        this.d.engine.resumeClock();
         this.d.engine.requestStop();
         break;
       }

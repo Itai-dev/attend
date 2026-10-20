@@ -6,8 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "attend",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#09090B",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F7F7F5",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.itaiagami.attend",
@@ -19,12 +19,21 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSPhotoLibraryUsageDescription": "Attend doesn't use your photo library. This permission is listed only because a component in the app could ask for it; it is never requested."
+        "NSPhotoLibraryUsageDescription": "Attend doesn't access your photo library."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyTrackingDomains": [],
-        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeHealth",
+            "NSPrivacyCollectedDataTypeLinked": false,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          }
+        ],
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
@@ -44,7 +53,7 @@
     "android": {
       "package": "com.itaiagami.attend",
       "adaptiveIcon": {
-        "backgroundColor": "#09090B",
+        "backgroundColor": "#F3F3F0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -60,24 +69,28 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#09090B",
+          "backgroundColor": "#F7F7F5",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 120
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#050606",
+            "image": "./assets/images/splash-icon-dark.png"
+          }
         }
       ],
       "expo-sqlite",
       [
         "expo-audio",
         {
-          "microphonePermission": "Attend listens while you speak during a session, so the guide can respond. Audio is processed on this iPhone and never saved.",
+          "microphonePermission": "Attend's guided practices only play audio and never use the microphone. Attend asks only in an optional voice mode, where your words are recognized on this iPhone and audio is never saved.",
           "enableBackgroundPlayback": true
         }
       ],
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Attend listens while you speak during a session, so the guide can respond. Audio is processed on this iPhone and never saved.",
-          "speechRecognitionPermission": "Attend turns what you say during a session into words, on this iPhone, so the guide can follow what you notice."
+          "microphonePermission": "Attend's guided practices only play audio and never use the microphone. Attend asks only in an optional voice mode, where your words are recognized on this iPhone and audio is never saved.",
+          "speechRecognitionPermission": "Attend's guided practices never listen. Speech is recognized only in an optional voice mode, on this iPhone, and audio is never saved."
         }
       ]
     ],

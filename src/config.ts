@@ -25,7 +25,9 @@ export const hasRemote = config.apiUrl.length > 0;
  * paid plan). Picked for a calm, unhurried read. Unset, each session type uses its agent's voice.
  */
 export const GUIDE_VOICES = [
-  { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', detail: 'Calm, neutral' },
+  // ElevenLabs' "River". Shown under a person's name: "river" in a list next to rain and forest
+  // read as a sound, not a voice (round 5 retest). The id is all the voice service needs.
+  { id: 'SAz9YHcvj6GT2YYXdXww', name: 'Jordan', detail: 'Calm, neutral' },
   { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', detail: 'Soft, reassuring' },
   { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', detail: 'Warm, British' },
   { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', detail: 'Gentle, friendly' },

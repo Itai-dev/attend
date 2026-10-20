@@ -3,8 +3,9 @@
 A voice-guided, eyes-closed somatic practice for chronic pain, with a simple pain record
 to show whether it helps. Expo SDK 57 / React Native / TypeScript, iOS first, one founder.
 Read `README.md` for the architecture, `docs/MERGE.md` for why Pattern's pain record
-moved in (12 Oct 2026), and `docs/RESEARCH.md` for the evidence the 28-day program and its
-engagement rules rest on (13 Oct 2026).
+moved in (12 Oct 2026), `docs/RESEARCH.md` for the evidence the 28-day program and its
+engagement rules rest on (13 Oct 2026), and `docs/LAUNCH.md` for the path to the App Store
+and paying users (18 Oct 2026).
 
 **Expo has changed.** Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/
 before touching an Expo API, and use `npx expo install` for packages.
@@ -35,7 +36,8 @@ even when it looks like an improvement.
 silence; it never asks, and the session never listens. Answering questions mid-practice
 pulled people out of it. Once a session starts it must be completable with the eyes
 closed: no tap to continue, no body-part picker, no reading. The session screen shows a
-breathing form, one quiet status word, pause and end. Never a transcript, never text of
+breathing form that follows the guide's voice, one quiet status word, the time left (a
+hairline ring and a dim "6:12", never a colour or a sound; 20 Oct 2026), pause and end. Never a transcript, never text of
 what the guide says. The conversational engine is kept behind `mode: 'conversation'`;
 the app runs `mode: 'guided'`.
 
@@ -76,6 +78,12 @@ line. No "thank you for sharing", "I hear you", praise, apologies
 for pain, or therapy clichés. Closing moves attention out of the body and into the room —
 the app is used, then left. Do not add anything that encourages checking the body more.
 
+**App copy (studio, 18 Oct 2026).** Describe the practice, never its effect: no "calmer",
+"less pain", "heals". Lowercase for what you glance at (headings, labels, buttons, tiles);
+sentence case for what you read; never all caps. American English (US launch first). The guide
+invites and never asks: a guided line never ends in a question mark (tests guard it). Full
+notes and the voice guide: `docs/STUDIO.md`.
+
 **The engine owns structure; models own words.** Phase, whether to ask, what kind of
 question, and when to end are decided in `SessionEngine`. A `GuideBrain` only phrases the
 turn. Arrival, closing and all safety lines are fixed text and never sent to a model.
@@ -85,7 +93,30 @@ sessions use no microphone. Speech, where it is used (the welcome), is recognise
 device and audio is never stored. No analytics. Changing what leaves the phone means
 updating the privacy copy in Settings and the README first.
 
-**Colour is never a verdict.** Dark, calm, no red in the body visualisation. The body map
+**Sounds are atmosphere, not treatment (18 Oct 2026).** Soft tones named by their pitch,
+174 to 639 Hz (`domain/soundscapes.ts`; nature recordings paused 20 Oct 2026), play under a
+session or on their own from the Sounds tab. Under a practice the tone is matched to it unless
+the person chose one. The numbers carry a mythology (RESEARCH.md §7): the names are the
+numbers, and no copy says they heal, relax the nervous system or lower pain. Listening on its own is not practice: it
+never counts toward days, minutes or milestones, and nothing about it is recorded. Once a
+listen starts it needs nothing — it fades out on its own timer.
+
+**One obvious next step (18 Oct 2026).** People opened the app and didn't know what to do.
+Today answers that with one button for the day (lesson, then straight into the practice) and
+four one-tap moments for when it's needed. Three tabs — Today, Sounds, Progress; Settings
+behind the gear. Starting a practice asks nothing: it is planned from what the app knows
+(`features/shared/start.ts`), and "adjust" is the way to change it. The welcome is one
+question per screen, every one skippable, and ends by starting Day 1. Adding a tab, a screen
+between a tap and the practice, or a question before it needs a reason this thesis supports.
+
+**The look is Daisy's (18 Oct 2026; replaces "dark only").** Quiet and editorial, after
+daisysound.com: off-white and ink by day, black by night (the app follows the iPhone, or
+Settings → Appearance), misty 35mm-style photographs of places (`design/Photo.tsx`),
+lowercase headings, nearly square controls with an arrow. The session, recap and body map are
+always dark (`forceDark`): eyes open onto them in a dim room. Photographs show places, never a
+body or pain.
+
+**Colour is never a verdict.** Calm, muted accents (`design/theme.ts`), no red in the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.
 
 ## Structure rules

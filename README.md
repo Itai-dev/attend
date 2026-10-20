@@ -12,6 +12,32 @@ pain record (ported from Pattern) to show whether practice is helping. See `docs
 > `docs/RESEARCH.md` and `docs/MERGE.md`. The conversational loop described below is kept
 > behind `mode: 'conversation'` (Settings → Developer).
 
+> **18 Oct 2026:** the look follows daisysound.com — off-white and ink by day, black at night
+> (follows the iPhone; the session is always dark), lowercase headings, square controls, and
+> misty film-style photographs for every sound and time of day (`design/Photo.tsx`,
+> `tools/grade-photos.py`) — and sound: seven
+> nature soundscapes, real public-domain field recordings (`assets/audio/soundscapes/SOURCES.md`,
+> built by `tools/master-recordings.py`; the app loops
+> each one seamlessly with two players crossing over, `voice/crossfadeLoop.ts`, so a recording can
+> be minutes long), matched to each practice under a session (or chosen, or none; changeable
+> mid-practice from the session's controls, 20 Oct 2026), or played on their own from the
+> **Sounds** tab with a sleep timer (`voice/listen.ts`). The plan to the App Store and paying
+> users is `docs/LAUNCH.md`.
+>
+> **20 Oct 2026:** for now the sounds are six soft tones, named by their pitch (174, 285,
+> 396, 432, 528 and 639 Hz; `tools/make-tones.py`, `assets/audio/tones/`). The nature
+> recordings are paused, not deleted; `voice/soundscapeAssets.ts` says how to bring them back.
+> The names are the numbers people know. The app makes no claim about what a frequency does
+> (`docs/RESEARCH.md` §7).
+>
+> **The flow (18 Oct 2026):** three tabs — **Today** (one button for the day: lesson, then
+> straight into the practice; four one-tap moments: a flare, can't sleep, body scan, worried),
+> **Sounds** (tap one, it plays) and **Progress** (the 28-day path, practice, the pain record).
+> Settings is the gear on Today. The welcome is seven short screens, one question each, and ends
+> by starting Day 1. Practices start in one tap from what the app already knows
+> (`features/shared/start.ts`); "Adjust" on Today opens the Before screen for length, voice and
+> sound.
+
 Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · Skia · local-first SQLite · iOS-first.
 
 ---
@@ -20,8 +46,8 @@ Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · Skia · local-f
 
 ```bash
 npm install
-npm run verify          # typecheck + 30 engine/domain tests
-npm start               # Expo Go: full loop with a simulated participant and the phone's voice
+npm run verify          # typecheck + the node:test suite
+npm start               # Expo Go: the full app; the guide's voice needs the voice server
 ```
 
 **Expo Go** has no speech recognition module, so in development the app answers the guide
@@ -38,39 +64,46 @@ npm run start:dev-client
 
 The development build installs as **Attend Dev** beside the real app (same pattern as Pattern).
 
-**Natural voice + Claude guide**: deploy the proxy (`supabase/README.md`), then copy
-`.env.example` to `.env.local` and fill in the URL and anon key. Without it, sessions use the
-on-device voice and the local adaptive guide — fully offline.
+**The guide's voice** comes from the voice server (`server/`, ElevenLabs). There is no
+on-device voice fallback. Lines are cached on the phone by voice and words, and the server's
+script and voice settings are saved on the device (`voice/savedGuide.ts`), so a practice that
+has played once plays again offline. If a line can't load, the session pauses and says why;
+resume tries once, quickly.
 
 **Web preview** (design review only): `npm run web:setup && npm run web`.
 
 ---
 
-## The loop
+## The flow
 
 ```
-Welcome (a short chat) ──▶ Today / Explore ──tap──▶ Session (eyes closed, voice only) ──▶ Recap ──▶ Journey
+Welcome (7 short screens) ──▶ Day 1 lesson (read or listen) ──▶ Practice (eyes closed) ──▶ After ──▶ Today
 ```
 
-Three tabs: **Today** (the session set up in the welcome, its length, a few others),
-**Explore** (every ready-made session, by what it's for) and **You** (Body, Journey, the
-welcome again, Settings). Each ready-made session (`src/domain/presets.ts`) carries its own
-type, length and voice, so one tap begins it. The welcome (`src/domain/welcome.ts`) asks what
-brings the person here, how much time they have and which voice feels right — never how bad
-anything is — and ends on the safety note. It is spoken (`engine/WelcomeRunner.ts`): the same
-screen and loop as a session, answers understood on the device, voices auditioned by ear. A
-tap-through version is the fallback when listening isn't available or the person prefers it.
+Three tabs (18 Oct 2026, `docs/STUDIO.md`):
 
-1. **Session** — the guide speaks, holds silence, listens, adapts. No tapping, no transcript.
-   Pause / end are there for the eyes-open moments; "pause", "continue", "stop" and "sorry?"
-   also work by voice.
-2. **Recap** — the body map fades in as the eyes open. A short qualitative reflection built
-   only from what was said. "At first / By the end" shows the change on the figure.
-3. **Journey** — earliest map beside the latest, then evidence-backed statements
-   ("Fixed in 4 of your first 4 sessions. Moving or changing in 3 of your last 3."), then
-   every session on a timeline.
-4. **Body** — everything attended to, recent places brighter, and the places returned to in
-   your own words.
+- **Today** has one button for the day: the lesson, then straight into the guided practice.
+  Below it:
+  - a 3-minute short version that also completes the day
+  - four one-tap practices (in a flare, can't sleep, body scan, feeling worried)
+  - the week's practice dots
+  - a quiet row to log pain
+- **Sounds:** tap one and it plays, with a sleep timer.
+- **Progress:** the 28-day path, then practice and milestones, then the pain record. The two
+  halves are never mixed.
+
+Settings is the gear on Today.
+
+1. **Practice.** The guide speaks and holds silence. It never asks and never listens
+   (`mode: 'guided'`). The screen shows a dim breathing form. Pause and end fade after a few
+   seconds and come back on a tap. It keeps playing with the phone locked.
+2. **After.** One moment: what was done, the week's dots, and one optional question about
+   the practice, never the pain. A sleep practice skips it: the screen stays dark and the
+   sound carries on, then fades.
+3. **Progress.** Practice and the pain record side by side, never mixed, never graded.
+
+The conversation mode (the guide listens and adapts, with a recap, Journey and Body) is kept
+behind Settings → Developer.
 
 ---
 
@@ -90,7 +123,8 @@ src/
                VoiceSessionProvider (the only thing the UI talks to).
   data/        SessionRepository: SQLite on device, localStorage on web; seed samples.
   viz/         SkSL shaders (body field, breathing field), BodyMapState → uniforms.
-  design/      Tokens and a handful of components. System type, Dynamic Type.
+  design/      Light and dark palettes, ThemeProvider (useColors/useStyles, forceDark),
+               Photo, a handful of components. System type, Dynamic Type.
   features/    Screens. app/ holds routes only.
 supabase/functions/attend   The proxy: POST /guide (Claude), GET /tts (ElevenLabs).
 server/                     The voice server on Vercel: GET /tts (ElevenLabs v4), GET /script, POST /guide.

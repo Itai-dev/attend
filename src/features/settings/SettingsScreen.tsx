@@ -1,19 +1,32 @@
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
-import { type ReactNode } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hasRemote } from '@/config';
+import { GUIDE_VOICES, hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
-import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
-import { color, HIT, radius, space } from '@/design/theme';
+import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/domain/access';
+import { currentTz } from '@/domain/checkin';
+import { practiceStats } from '@/domain/engagement';
+import { REMINDER_TIMES } from '@/domain/reminderPlan';
+import { backgroundFor, backgroundLabel, soundForPractice } from '@/domain/soundscapes';
+import { ChoiceRow as Choice, DisclosureRow, Hairline, QuietButton, RowGroup as Group, SectionLabel, Segmented, Txt } from '@/design/components';
+import { HIT, radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
+import { SESSION_LENGTHS } from '@/engine/phases';
 import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { speechModule } from '@/voice/speechModule';
+import { previewVoice, stopPreview } from '@/voice/voicePreview';
+import { clock12 } from '../shared/format';
+import { SoundChoices } from '../shared/SoundChoices';
+import { todaysPractice } from '../shared/start';
 
 /**
- * Settings, kept short. Background sound, privacy, samples, what this is not — and, in
- * development builds only, the switches for testing without a microphone.
+ * Settings, kept short. The guide's voice and the sound under practice first (the same prefs
+ * practice settings saves), then the reminder and its time, appearance, privacy, what this is
+ * not — and, in development builds only, the switches for testing without a microphone.
+ * Every choice saves on tap; there is nothing to confirm.
  */
 
 function confirm(title: string, message: string, action: string, run: () => void) {
@@ -24,149 +37,246 @@ function confirm(title: string, message: string, action: string, run: () => void
   ]);
 }
 
-function Group({ children }: { children: ReactNode }) {
-  return <View style={styles.group}>{children}</View>;
-}
-
-function Choice({ label, detail, selected, disabled, onPress }: { label: string; detail?: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
+/** A row that leaves the app: a page in the browser, or a new email. */
+function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
+  const styles = useStyles(makeStyles);
   return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected, disabled }}
-      disabled={disabled}
-      onPress={() => {
-        haptic('select');
-        onPress();
-      }}
-      style={({ pressed }) => [styles.choice, { opacity: disabled ? 0.4 : pressed ? 0.6 : 1 }]}
-    >
-      <View style={{ flex: 1 }}>
-        <Txt variant="body">{label}</Txt>
-        {detail ? (
-          <Txt variant="footnote" tone="tertiary">
-            {detail}
-          </Txt>
-        ) : null}
-      </View>
-      <View style={[styles.radio, selected && styles.radioOn]} />
+    <Pressable accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
+      <Txt variant="body" style={styles.label}>
+        {label}
+      </Txt>
+      <Txt variant="body" tone="tertiary" importantForAccessibility="no" accessibilityElementsHidden>
+        →
+      </Txt>
     </Pressable>
   );
 }
 
+// Shared with the welcome, so a time reads the same on both (studio round 5).
+export { clock12 };
+
+// The reminder times on offer are shared with the welcome (domain/reminderPlan.ts).
+
+type Open = 'voice' | 'sound' | 'time' | 'length' | null;
+
 export function SettingsScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
+  const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions, checkIns } = useData();
   const realCount = sessions.filter((s) => !s.isSample).length;
+  const checkInCount = checkIns.filter((c) => !c.isSample).length;
+  const deleteCount = `${realCount === 1 ? '1 practice' : `${realCount} practices`} · ${checkInCount === 1 ? '1 check-in' : `${checkInCount} check-ins`}`;
+  const length = prefs.practiceLength ? `${prefs.practiceLength} min` : 'follow the program';
+  const background = backgroundFor(prefs);
+  // Sounds' "sound under practice ›" opens Settings with that list already open.
+  const params = useLocalSearchParams<{ open?: string }>();
+  const [open, setOpen] = useState<Open>(params.open === 'sound' || params.open === 'voice' ? params.open : null);
+  const toggle = (k: Open) => setOpen(open === k ? null : k);
+  useEffect(() => stopPreview, []);
+
+  const voice = GUIDE_VOICES.find((v) => v.id === prefs.voiceId) ?? GUIDE_VOICES[0];
+  // "Matched" means a different sound on different days: today's is the one named.
+  const today = todaysPractice(prefs);
+  const soundName = backgroundLabel(background, today);
+  const reminder = prefs.reminder;
+  const time = reminder ? clock12(reminder.hour, reminder.minute) : clock12(20, 30);
+
+  const setReminderTime = async (hour: number, minute: number) => {
+    const next = { enabled: true, hour, minute };
+    await setPrefs({ reminder: next });
+    await scheduleReminders(next, practiceStats(sessions, Date.now(), currentTz()).lastPractice, prefs.program);
+  };
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: color.bg }} contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xxxl }}>
       <View style={styles.header}>
-        <Txt variant="title">Settings</Txt>
+        <Txt variant="title" accessibilityRole="header">
+          settings
+        </Txt>
         <QuietButton label="Done" tone="primary" onPress={() => router.back()} />
       </View>
 
-      <SectionLabel>Daily reminder</SectionLabel>
+      {/* First, because it's what people came looking for (round 5: the guide's voice couldn't be found). */}
+      <SectionLabel>Practice</SectionLabel>
       <Group>
-        <View style={styles.row}>
+        <DisclosureRow label="guide voice" value={voice.name.toLowerCase()} open={open === 'voice'} onPress={() => toggle('voice')} />
+        {open === 'voice'
+          ? GUIDE_VOICES.map((v) => (
+              <View key={v.id}>
+                <Hairline />
+                <Choice
+                  label={v.name}
+                  detail={v.detail}
+                  selected={v.id === voice.id}
+                  onPress={() => {
+                    setPrefs({ voiceId: v.id });
+                    if (hasRemote) previewVoice(v.id);
+                  }}
+                />
+              </View>
+            ))
+          : null}
+        <Hairline />
+        {/* A standing length (round 5 retest): the same one practice settings' "keep this length
+            every day" sets. A length for today only, chosen there, still wins for today. */}
+        <DisclosureRow label="length" value={length} open={open === 'length'} onPress={() => toggle('length')} />
+        {open === 'length' ? (
+          <>
+            <Hairline />
+            <Choice label="follow the program" detail="Each day’s own length, 3 to 10 min" selected={!prefs.practiceLength} onPress={() => setPrefs({ practiceLength: undefined })} />
+            {SESSION_LENGTHS.map((m) => (
+              <View key={m}>
+                <Hairline />
+                <Choice label={`${m} min`} detail="Every day" selected={prefs.practiceLength === m} onPress={() => setPrefs({ practiceLength: m })} />
+              </View>
+            ))}
+          </>
+        ) : null}
+        <Hairline />
+        {/* "sound", not "sound under practice": with "matched · 432 Hz" beside it the long label
+          wrapped and the value was cut off. VoiceOver still hears the whole of it. */}
+        <DisclosureRow
+          label="sound"
+          value={soundName}
+          accessibilityLabel={`Sound under practice: ${soundName.replace(' · ', ' to the practice, today ')}`}
+          open={open === 'sound'}
+          onPress={() => toggle('sound')}
+        />
+        {open === 'sound' ? <SoundChoices selected={background} today={soundForPractice(today)} onChoose={(b) => setPrefs({ background: b })} /> : null}
+      </Group>
+
+      <SectionLabel style={styles.section}>Daily reminder</SectionLabel>
+      <Group>
+        {/* Padded top and bottom: with two lines beside the switch, the title sat on the card's edge. */}
+        <View style={[styles.row, styles.rowTall]}>
           <View style={{ flex: 1 }}>
-            <Txt variant="body">A gentle reminder</Txt>
+            <Txt variant="body">a gentle reminder</Txt>
             <Txt variant="footnote" tone="tertiary">
-              {remindersAvailable() ? 'One a day. Never about missed days.' : 'Needs the next app update.'}
+              {!remindersAvailable()
+                ? 'Needs the next app update.'
+                : reminder?.enabled
+                  ? `Every day at ${time}. Weekly after a few quiet days.`
+                  : 'One a day, at a time you choose. Weekly after a few quiet days.'}
             </Txt>
           </View>
           <Switch
-            value={!!prefs.reminder?.enabled}
+            value={!!reminder?.enabled}
             disabled={!remindersAvailable()}
             trackColor={{ true: color.practice }}
-            accessibilityLabel="A gentle reminder"
+            accessibilityLabel="a gentle reminder"
             onValueChange={async (on) => {
               const base = prefs.reminder ?? { enabled: false, hour: 20, minute: 30 };
               const reminder = { ...base, enabled: on && (await requestReminderPermission()) };
               await setPrefs({ reminder });
-              await scheduleReminders(reminder, undefined);
+              await scheduleReminders(reminder, practiceStats(sessions, Date.now(), currentTz()).lastPractice, prefs.program);
             }}
           />
         </View>
-        {prefs.reminder?.enabled ? (
+        {reminder?.enabled ? (
           <>
             <Hairline />
-            <View style={styles.textBlock}>
-              <Segmented<string>
-                options={[
-                  { value: '8:0', label: 'Morning' },
-                  { value: '13:0', label: 'Midday' },
-                  { value: '20:30', label: 'Evening' },
-                ]}
-                value={`${prefs.reminder.hour}:${prefs.reminder.minute}`}
-                onChange={async (v) => {
-                  const [hour, minute] = v.split(':').map(Number);
-                  const reminder = { enabled: true, hour, minute };
-                  await setPrefs({ reminder });
-                  await scheduleReminders(reminder, undefined);
-                }}
-              />
-            </View>
+            <DisclosureRow label="time" value={time} open={open === 'time'} onPress={() => toggle('time')} />
+            {open === 'time'
+              ? REMINDER_TIMES.map((t) => (
+                  <View key={t.id}>
+                    <Hairline />
+                    <Choice
+                      label={t.label}
+                      detail={clock12(t.hour, t.minute)}
+                      selected={reminder.hour === t.hour && reminder.minute === t.minute}
+                      onPress={() => setReminderTime(t.hour, t.minute)}
+                    />
+                  </View>
+                ))
+              : null}
           </>
         ) : null}
       </Group>
 
-      <SectionLabel style={styles.section}>Background</SectionLabel>
+      <SectionLabel style={styles.section}>Appearance</SectionLabel>
       <Group>
-        <Choice
-          label="Soft tone"
-          detail="A low 432 Hz drone under the voice"
-          selected={prefs.ambience !== false}
-          onPress={() => setPrefs({ ambience: true })}
-        />
+        <Choice label="Automatic" detail="Light by day, dark at night, as the iPhone is" selected={(prefs.appearance ?? 'auto') === 'auto'} onPress={() => setPrefs({ appearance: 'auto' })} />
         <Hairline />
-        <Choice label="Silence" detail="Only the guide’s voice" selected={prefs.ambience === false} onPress={() => setPrefs({ ambience: false })} />
+        <Choice label="Light" selected={prefs.appearance === 'light'} onPress={() => setPrefs({ appearance: 'light' })} />
+        <Hairline />
+        <Choice label="Dark" detail="Practices are always dark" selected={prefs.appearance === 'dark'} onPress={() => setPrefs({ appearance: 'dark' })} />
       </Group>
 
       <SectionLabel style={styles.section}>Privacy</SectionLabel>
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
-            Your sessions and check-ins are stored only on this iPhone. There is no account. Sessions are guided: they never use the microphone, and nothing you say is heard. Where the guide rests your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
-            {hasRemote ? ' The guide’s lines are voiced through Attend’s voice service by ElevenLabs. Nothing about you is sent with them.' : ''}
+            Your practices and check-ins are stored only on this iPhone. There is no account. Practices are guided: they never use the microphone, and nothing you say is heard. Where the guide focuses your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
           </Txt>
+          {/* Its own paragraph: the one thing that leaves the phone shouldn't sit mid-wall. */}
+          {hasRemote ? (
+            <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+              The guide’s lines are voiced through Attend’s voice service by ElevenLabs. The only thing about you in them is the body area a practice focuses on, such as “your lower back”, with no name or account attached.
+            </Txt>
+          ) : null}
         </View>
         <Hairline />
         <Pressable
           accessibilityRole="button"
           onPress={() =>
-            confirm('Delete all sessions?', 'Every session and map on this iPhone will be removed. This can’t be undone.', 'Delete all', () => {
+            confirm('Delete all practices and check-ins?', 'Every practice and check-in on this iPhone will be removed. This can’t be undone.', 'Delete all', () => {
               deleteAll();
             })
           }
-          style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
+          // Stacked: the name says what it deletes, which is too long to share a line with the count.
+          style={({ pressed }) => [styles.row, styles.rowTall, styles.stack, { opacity: pressed ? 0.6 : 1 }]}
         >
-          <Txt variant="body" style={{ color: '#FFB4A8' }}>
-            Delete all sessions
+          <Txt variant="body" style={[styles.label, { color: color.destructive }]}>
+            delete all practices and check-ins
           </Txt>
           <Txt variant="footnote" tone="tertiary">
-            {realCount === 1 ? '1 session' : `${realCount} sessions`}
+            {deleteCount}
           </Txt>
         </Pressable>
       </Group>
 
-      <SectionLabel style={styles.section}>Sample sessions</SectionLabel>
-      <Group>
-        <Pressable accessibilityRole="button" onPress={() => (hasSamples ? deleteSamples() : addSamples())} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
-          <Txt variant="body">{hasSamples ? 'Remove sample sessions' : 'Show sample sessions'}</Txt>
-        </Pressable>
-      </Group>
+      {__DEV__ ? (
+        <>
+          <SectionLabel style={styles.section}>Sample sessions</SectionLabel>
+          <Group>
+            <Pressable accessibilityRole="button" onPress={() => (hasSamples ? deleteSamples() : addSamples())} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
+              <Txt variant="body" style={styles.label}>
+                {hasSamples ? 'Remove sample sessions' : 'Show sample sessions'}
+              </Txt>
+            </Pressable>
+          </Group>
+        </>
+      ) : null}
 
       <SectionLabel style={styles.section}>About</SectionLabel>
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
-            Attend is a practice for familiar, long-standing sensations, built around somatic tracking. It isn’t a diagnostic tool and doesn’t replace medical care. If a symptom is new,
-            changing quickly or severe, contact a medical professional.
+            Attend is a practice for familiar, long-standing sensations, built around somatic tracking: noticing a sensation with curiosity rather than fear. It isn’t a diagnostic tool and doesn’t replace medical care. If a symptom is new,
+            changing quickly or severe, contact a medical professional. If it’s sudden or severe, call your local emergency number.
+          </Txt>
+          {/* Its own line, so it can be found at a glance (round 3, researcher: there was no crisis line). */}
+          <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+            If you’re thinking about ending your life, call or text 988 (US), or find a line at findahelpline.com.
+          </Txt>
+          <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+            Close attention to the body doesn’t suit everyone. If a practice brings up old memories, panic, or a far-away feeling, open your eyes, look around the room, and stop. If you notice yourself checking your body more between practices, try a shorter practice, or just listen to a sound for a while.
           </Txt>
           <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
             Version {Constants.expoConfig?.version ?? '0.1.0'}
           </Txt>
         </View>
+        <Hairline />
+        <LinkRow label="privacy policy" onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})} />
+        <Hairline />
+        <LinkRow label="terms" onPress={() => Linking.openURL(TERMS_URL).catch(() => {})} />
+        {SUPPORT_EMAIL ? (
+          <>
+            <Hairline />
+            <LinkRow label="contact" onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})} />
+          </>
+        ) : null}
       </Group>
 
       {__DEV__ ? <DeveloperSettings /> : null}
@@ -175,6 +285,8 @@ export function SettingsScreen() {
 }
 
 function DeveloperSettings() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const { prefs, setPrefs } = useData();
   const dev = prefs.dev;
   const speech = !!speechModule();
@@ -215,18 +327,30 @@ function DeveloperSettings() {
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Conversational sessions</Txt>
-          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: color.practice }} />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Debug panel in sessions</Txt>
-          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: color.practice }} />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Keep transcripts</Txt>
-          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: color.practice }} />
         </View>
+        <Hairline />
+        <Pressable accessibilityRole="button" onPress={() => router.push('/body')} style={styles.row}>
+          <Txt variant="body">Body map (conversation mode)</Txt>
+        </Pressable>
+        <Hairline />
+        <Pressable accessibilityRole="button" onPress={() => router.push('/journey')} style={styles.row}>
+          <Txt variant="body">Journey (conversation mode)</Txt>
+        </Pressable>
+        <Hairline />
+        <Pressable accessibilityRole="button" onPress={() => setPrefs({ onboarded: false }).then(() => router.replace('/onboarding'))} style={styles.row}>
+          <Txt variant="body">Replay the welcome</Txt>
+        </Pressable>
         <Hairline />
         <View style={styles.textBlock}>
           <Txt variant="footnote" tone="tertiary">
@@ -240,20 +364,15 @@ function DeveloperSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xl },
   section: { marginTop: space.xxl },
-  group: {
-    borderRadius: radius.m,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
-    overflow: 'hidden',
-  },
-  choice: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, paddingHorizontal: space.l, paddingVertical: space.s, gap: space.m },
-  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.4, borderColor: color.textTertiary },
-  radioOn: { borderWidth: 5.5, borderColor: color.text },
+  // Row and choice labels are glanced at, so lowercase (AGENTS.md "App copy"); details stay sentence case.
+  label: { textTransform: 'lowercase' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: HIT + 8, paddingHorizontal: space.l },
+  rowTall: { gap: space.m, paddingVertical: space.m },
+  stack: { flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2 },
   textBlock: { padding: space.l },
   note: { marginTop: space.s, paddingHorizontal: space.xs },
 });

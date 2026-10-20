@@ -1,3 +1,4 @@
+import type { PracticeTheme } from './program';
 import type { SessionType } from './types';
 
 /**
@@ -21,6 +22,10 @@ export type Preset = {
   minutes: 3 | 5 | 10;
   voiceId: string;
   voiceName: string;
+  /** What the guide works with. Defaults from the type (presetTheme). */
+  theme?: PracticeTheme;
+  /** The body scan's own sixteen-step scan (SCAN_BODY). Only the body scan has it; see SessionEngine's `scan`. */
+  scan?: 'body';
 };
 
 export const PRESET_CATEGORIES: Array<{ id: PresetCategory; title: string; detail: string }> = [
@@ -30,7 +35,9 @@ export const PRESET_CATEGORIES: Array<{ id: PresetCategory; title: string; detai
   { id: 'worry', title: 'Worry', detail: 'Goes gently' },
 ];
 
-const RIVER = { voiceId: 'SAz9YHcvj6GT2YYXdXww', voiceName: 'River' };
+// Shown as "Jordan": ElevenLabs calls this voice River, which read as a sound in a list beside
+// rain and forest (studio round 5 retest). The id is what the voice service uses.
+const RIVER = { voiceId: 'SAz9YHcvj6GT2YYXdXww', voiceName: 'Jordan' };
 const SARAH = { voiceId: 'EXAVITQu4vr4xnSDxMaL', voiceName: 'Sarah' };
 const LILY = { voiceId: 'pFZP5JQG7iQjIQuC4Bku', voiceName: 'Lily' };
 const MATILDA = { voiceId: 'XrExE9yKIg1WjnnlVkGX', voiceName: 'Matilda' };
@@ -42,6 +49,7 @@ const DANIEL = { voiceId: 'onwK4e9ZLuTAKqWW03F9', voiceName: 'Daniel' };
 export const PRESETS: Preset[] = [
   { id: 'notice-5', title: 'Meet a familiar sensation', blurb: 'Find it, describe it, watch it for a while.', category: 'familiar', type: 'notice', minutes: 5, ...RIVER },
   { id: 'notice-3', title: 'A short check-in', blurb: 'A few minutes with whatever is asking for attention.', category: 'familiar', type: 'notice', minutes: 3, ...ALICE },
+  { id: 'scan-10', title: 'Body scan', blurb: 'A slow sweep from the feet up, resting on the body as a whole.', category: 'familiar', type: 'notice', minutes: 10, theme: 'open', scan: 'body', ...RIVER },
   { id: 'notice-10', title: 'Stay with it longer', blurb: 'More time to watch how it moves and shifts.', category: 'familiar', type: 'notice', minutes: 10, ...GEORGE },
   { id: 'flare-5', title: 'During a flare', blurb: 'Slower lines and more room between them.', category: 'flare', type: 'flare', minutes: 5, ...MATILDA },
   { id: 'flare-3', title: 'A flare, briefly', blurb: 'Something short for when it’s loud.', category: 'flare', type: 'flare', minutes: 3, ...SARAH },
@@ -50,6 +58,71 @@ export const PRESETS: Preset[] = [
   { id: 'worry-5', title: 'When it feels worrying', blurb: 'Goes gently around fear about a familiar sensation.', category: 'worry', type: 'fear', minutes: 5, ...BRIAN },
   { id: 'worry-3', title: 'A worried moment', blurb: 'A few steady minutes when the worry is louder than the sensation.', category: 'worry', type: 'fear', minutes: 3, ...SARAH },
 ];
+
+/** What a preset's guide works with: its own theme, or the one that suits its type. */
+export function presetTheme(p: Preset): PracticeTheme {
+  if (p.theme) return p.theme;
+  return p.type === 'flare' ? 'flare' : p.type === 'fear' ? 'fear' : p.type === 'sleep' ? 'open' : 'curious';
+}
+
+/**
+ * Today's "right now": the four moments people open the app for outside the daily practice.
+ * One tap each, nothing to choose. `detail` is the length (access.presetDetail adds "Plus" to
+ * it where a practice is locked); `kind` says what starts, because Tom tapped "can't sleep"
+ * wanting rain and got a voice (studio round 5). Every one of these is a voice.
+ */
+export const NEED_IT: Array<{ id: string; label: string; detail: string; kind: string }> = [
+  { id: 'flare-3', label: 'in a flare', detail: '3 min', kind: 'voice-guided' },
+  { id: 'sleep-10', label: 'can’t sleep', detail: '10 min', kind: 'voice-guided into sleep' },
+  { id: 'scan-10', label: 'body scan', detail: '10 min', kind: 'voice-guided' },
+  { id: 'worry-5', label: 'feeling worried', detail: '5 min', kind: 'voice-guided' },
+];
+
+/** The line under a moment on Today: what starts, and how long. */
+export function needItSubtitle(n: (typeof NEED_IT)[number]): string {
+  return `${n.kind} · ${n.detail}`;
+}
+
+/** 21:00 to 05:00, local: when "can't sleep" is the moment someone most likely opened the app for. */
+export function isNight(hour: number): boolean {
+  return hour >= 21 || hour < 5;
+}
+
+/** What the welcome's "what brings you here" puts first among the moments. */
+export const FOCUS_NEED: Record<SessionType, string> = { flare: 'flare-3', sleep: 'sleep-10', notice: 'scan-10', fear: 'worry-5' };
+
+/**
+ * The moments in Today's order: at night "can't sleep" leads whatever brought the person here
+ * (Tom, 23:40, round 5); then the welcome's focus; then the rest in their usual order.
+ */
+export function needItOrder(focus: SessionType | undefined, hour: number): typeof NEED_IT {
+  const lead = [isNight(hour) ? 'sleep-10' : undefined, focus ? FOCUS_NEED[focus] : undefined].filter((x): x is string => !!x);
+  const rank = (id: string) => (lead.includes(id) ? lead.indexOf(id) : lead.length + NEED_IT.findIndex((n) => n.id === id));
+  return [...NEED_IT].sort((a, b) => rank(a.id) - rank(b.id));
+}
+
+/**
+ * How Today lays the moments out around the daily practice.
+ *
+ * By day (05:00–21:00), before anything has been practiced today: one moment first — the one the
+ * welcome's answer points to, or "in a flare" — then the day's practice, then the others under
+ * "more for right now", "can't sleep" last. Four moments above the program pushed the 28 days out
+ * of view, and Today read as a menu rather than a course with a door for a hard hour (round 5
+ * retest). At night, or once anything is practiced today, the moments lead as before: the day is
+ * done or waiting, and what's left is what the hour needs ("can't sleep" first at night).
+ *
+ * `first` sits above the daily practice; `more` below it (empty when nothing is split off).
+ */
+export function todayMoments(focus: SessionType | undefined, hour: number, practisedToday: boolean): { first: typeof NEED_IT; more: typeof NEED_IT } {
+  const all = needItOrder(focus, hour);
+  if (isNight(hour) || practisedToday) return { first: all, more: [] };
+  const leadId = focus ? FOCUS_NEED[focus] : 'flare-3';
+  const lead = NEED_IT.find((n) => n.id === leadId)!;
+  const rest = NEED_IT.filter((n) => n.id !== leadId);
+  // "can't sleep" last by day: the rest keep their usual order otherwise.
+  const more = [...rest.filter((n) => n.id !== 'sleep-10'), ...rest.filter((n) => n.id === 'sleep-10')];
+  return { first: [lead], more };
+}
 
 export function presetById(id: string | undefined): Preset | undefined {
   return PRESETS.find((p) => p.id === id);

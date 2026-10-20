@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { newId } from '@/domain/ids';
 import { haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { radius, space, type Palette } from '@/design/theme';
+import { useColors, useStyles } from '@/design/ThemeProvider';
 
 /**
  * A moment: something the person did toward their goal, or a time the pain was quieter than
@@ -13,6 +14,8 @@ import { color, radius, space } from '@/design/theme';
  * §4). No rating, no amount, nothing derived.
  */
 export function MomentScreen() {
+  const color = useColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs } = useData();
   const [text, setText] = useState('');
@@ -32,12 +35,13 @@ export function MomentScreen() {
       </View>
       <View style={{ paddingHorizontal: space.xl, flex: 1 }}>
         <Txt variant="title" accessibilityRole="header">
-          Save a moment
+          note a small win
         </Txt>
         <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
           {prefs.goal
-            ? `A step toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}, or a time the pain was quieter than you expected.`
-            : 'A step you took, or a time the pain was quieter than you expected.'}
+            ? // A step, never a quieter-pain moment: "A first step" is a milestone, and no milestone may be earned by pain going down (AGENTS.md).
+              `A step toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}, in your own words.`
+            : 'A step you took, in your own words.'}
         </Txt>
         <TextInput
           value={text}
@@ -61,7 +65,8 @@ export function MomentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (color: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: { flexDirection: 'row', justifyContent: 'flex-end', padding: space.s },
   input: {

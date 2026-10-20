@@ -1,7 +1,9 @@
 import type { EngineDraft } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
+import type { SignsReply } from '../domain/firstWeek';
 import type { Moment } from '../domain/engagement';
 import type { ProgramState } from '../domain/program';
+import { migrateSoundPrefs, type BackgroundPref, type ListenTimer, type SoundscapeId } from '../domain/soundscapes';
 import type { Place, SessionFeeling } from '../domain/types';
 import type { Session, SessionMoment, SessionType } from '../domain/types';
 
@@ -51,6 +53,27 @@ export type Prefs = {
   focus?: SessionType;
   /** Last length picked on Home, offered again next time. */
   sessionMinutes?: 3 | 5 | 7 | 10;
+  /**
+   * Today's practice settings (studio round 5): a length and where attention rests, chosen on
+   * the practice settings screen for today's practice only. `date` is the local YYYY-MM-DD it was
+   * chosen on; on any other day it is ignored, so tomorrow's practice is the program's own again
+   * rather than a 3-minute choice made in a flare. `place: null` is the whole body; absent, the
+   * usual source (latest check-in, then the welcome). Read by dayPlan() (features/shared/start.ts).
+   */
+  practiceToday?: { date: string; minutes?: 3 | 5 | 7 | 10; place?: Place | null };
+  /**
+   * A standing length for the daily practice (round 5 retest): set in Settings → length, or by
+   * "keep this length every day" in practice settings. Unset: follow the program's length. A
+   * length chosen for today only (practiceToday) still wins for that day; the 3-minute short day
+   * is its own thing. Read by dayPlan() through practiceMinutes() (domain/program.ts).
+   */
+  practiceLength?: 3 | 5 | 7 | 10;
+  /**
+   * How the person last chose to take a lesson: read, or listen in the guide's voice. Remembered
+   * so a listener isn't offered "next" every day (studio round 5). Unset: listen comes first at
+   * night or for someone who came for sleep (listenFirst()), read otherwise.
+   */
+  lessonMode?: 'read' | 'listen';
   /** The 28-day program: which days are done, which lessons read. */
   program?: ProgramState;
   /** What the person wants to get back to, from onboarding, in their words or a chip's. */
@@ -63,8 +86,22 @@ export type Prefs = {
   reminder?: { enabled: boolean; hour: number; minute: number };
   /** Steps toward the goal, saved by the person. Newest first. Small, so kept with the prefs. */
   moments?: Moment[];
-  /** The soft tone under the session. On unless turned off in Settings. */
+  /** Before soundscapes: the soft tone under the session, on unless turned off. Read by backgroundFor(). */
   ambience?: boolean;
+  /** The sound under sessions (domain/soundscapes.ts). Unset: matched to each practice, or none if `ambience` was off. */
+  background?: BackgroundPref;
+  /** Light, dark, or following the phone (unset). */
+  appearance?: 'auto' | 'light' | 'dark';
+  /** The last Just listen: which sound and how long, offered again next time. */
+  listen?: { id: SoundscapeId; timer: ListenTimer };
+  /** When the "your first week" card on Today was put away with done. Unset: not yet. */
+  firstWeekDone?: number;
+  /**
+   * The Day 7 card's optional question: which of Day 4's signs the person has noticed. Three
+   * states: unset (never asked), `skipped` ("not now", or done without an answer), or the
+   * answer. Asked once, and it feeds nothing (domain/firstWeek.ts).
+   */
+  signs?: SignsReply;
   /** Developer settings. Ignored outside development builds. */
   dev: {
     inputMode: InputModePref;
@@ -85,4 +122,13 @@ export const DEFAULT_PREFS: Prefs = {
 
 export function mergePrefs(base: Prefs, patch: Partial<Prefs>): Prefs {
   return { ...base, ...patch, dev: { ...base.dev, ...(patch.dev ?? {}) } };
+}
+
+/**
+ * Prefs as stored by any build, ready for this one: defaults filled in, and sounds an older
+ * build stored (the nature recordings, the old 'tone', paused 20 Oct 2026) brought up to date,
+ * so a stored choice never breaks a practice or a listen (domain/soundscapes.ts).
+ */
+export function loadPrefs(stored: Partial<Prefs> | null | undefined): Prefs {
+  return migrateSoundPrefs(mergePrefs(DEFAULT_PREFS, stored ?? {}));
 }

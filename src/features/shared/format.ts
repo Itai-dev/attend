@@ -18,7 +18,7 @@ export function dayLabel(ts: number, now = Date.now()): string {
   const diff = Math.floor((today.getTime() - new Date(d).setHours(0, 0, 0, 0)) / DAY);
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
-  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`; // US order: Sun, Oct 18
 }
 
 export function sessionDate(ts: number): string {
@@ -27,7 +27,7 @@ export function sessionDate(ts: number): string {
 
 export function shortDate(ts: number): string {
   const d = new Date(ts);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 export function clock(ms: number): string {
@@ -38,4 +38,10 @@ export function clock(ms: number): string {
 export function greeting(now = Date.now()): string {
   const p = partOfDay(now);
   return p === 'Night' ? 'Good evening.' : `Good ${p.toLowerCase()}.`;
+}
+
+/** "8:30 pm": 12-hour, for a US launch (studio round 5: 24-hour times read as foreign). */
+export function clock12(hour: number, minute: number): string {
+  const h = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'am' : 'pm'}`;
 }

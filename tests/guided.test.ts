@@ -19,7 +19,8 @@ test('a guided session rests on the place, then reappraises and closes', async (
   const r = await runSession({}, { mode: 'guided', place: LOWER_BACK, minutes: 10, maxTurns: 200 });
   const said = r.spoken.join(' ');
   assert.match(said, /the middle of your lower back/);
-  assert.match(said, /rather than a problem|difference between feeling something|You don't need to solve/);
+  assert.match(said, /simply be a sensation|difference between feeling something|You don't need to solve/);
+  assert.doesNotMatch(said, /rather than a problem|not a problem/);
   assert.match(r.spoken[r.spoken.length - 1], /open your eyes/);
   assert.ok(r.session.signals.observedSeconds > 4 * 60, `${r.session.signals.observedSeconds}`);
 });
@@ -67,4 +68,62 @@ test('a place is ignored by a conversation, which finds its own', async () => {
   const r = await runSession({ notice: 'My neck.' }, { place: LOWER_BACK, maxTurns: 40 });
   assert.equal(r.session.place, undefined);
   assert.ok(r.asks.length > 0);
+});
+
+/**
+ * Drive a guided session the way the runner does, with a pause between two lines: the clock
+ * stops, the wall clock runs on for `pauseMs`, then the session resumes ("Let's continue.").
+ */
+async function guidedWithPause(pauseAfterMs: number | null, pauseMs: number, minutes: 5 | 10 = 10) {
+  const { SessionEngine } = await import('../src/engine/SessionEngine');
+  const { LocalGuideBrain } = await import('../src/engine/guide/LocalGuideBrain');
+  const start = 1_000_000;
+  let t = start;
+  const engine = new SessionEngine({ sessionType: 'notice', minutes, now: () => t, seed: 3, mode: 'guided', place: LOWER_BACK });
+  const brain = new LocalGuideBrain();
+  const spoken: string[] = [];
+  let paused = false;
+  let elapsedAtResume = 0;
+  for (let turns = 0; !engine.done && turns < 200; turns++) {
+    const turn = await brain.next(engine.context());
+    engine.recordGuideTurn(turn);
+    let cut = false;
+    for (const l of turn.lines) {
+      spoken.push(l.text);
+      t += l.text.length * 70 + l.pauseAfterMs;
+      if (!paused && pauseAfterMs !== null && engine.elapsedMs >= pauseAfterMs) {
+        paused = true;
+        engine.pauseClock();
+        t += pauseMs;
+        engine.resumeClock();
+        elapsedAtResume = engine.elapsedMs;
+        engine.markInterrupted();
+        cut = true;
+        break;
+      }
+    }
+    if (!cut) engine.afterGuideTurn(turn);
+  }
+  const { session } = engine.finalize();
+  return { session, spoken, elapsedAtResume, wallMs: t - start };
+}
+
+test('a long pause does not cut a guided practice short: its clock is the time practised', async () => {
+  const plain = await guidedWithPause(null, 0);
+  // Twenty minutes paused, three minutes into a ten-minute practice.
+  const paused = await guidedWithPause(3 * 60_000, 20 * 60_000);
+  assert.equal(paused.session.outcome, 'completed');
+  assert.match(paused.spoken[paused.spoken.length - 1], /open your eyes/);
+  const target = 10 * 60_000;
+  const practised = paused.session.endedAt - paused.session.startedAt;
+  // On the wall clock the session would have closed straight after resume; it runs its length.
+  assert.ok(practised > target * 0.85 && practised < target * 1.2, `practised ${Math.round(practised / 1000)}s`);
+  assert.ok(practised - paused.elapsedAtResume > 5 * 60_000, `after resume ${Math.round((practised - paused.elapsedAtResume) / 1000)}s`);
+  // Recorded minutes exclude the pause; the real end is kept.
+  assert.ok(paused.wallMs > practised + 19 * 60_000);
+  assert.equal(paused.session.createdAt, paused.session.startedAt + paused.wallMs);
+  assert.ok(Math.abs(practised - (plain.session.endedAt - plain.session.startedAt)) < 60_000);
+  // Observed time is practice time too.
+  assert.ok(paused.session.signals.observedSeconds < 10 * 60, `${paused.session.signals.observedSeconds}`);
+  assert.ok(Math.abs(paused.session.signals.observedSeconds - plain.session.signals.observedSeconds) < 60);
 });

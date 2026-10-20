@@ -28,7 +28,7 @@ export const PHASE_GOALS: Record<Phase, string> = {
   EXPLORE: 'Explore the quality of the sensation with curiosity, using their words, without trying to fix it.',
   OBSERVE: 'Explore variability: edges, stillness, movement, shifts while observing. Change is not success; no change is not failure.',
   REAPPRAISE:
-    'For a familiar sensation only: gently invite noticing it without treating it as an emergency. Never claim medical certainty or safety.',
+    'For a familiar sensation only: gently invite noticing it without needing to react to it. Never call it safe, harmless or "not a problem", and never claim medical certainty.',
   CLOSE: 'Move attention away from the body and back into the room and into life. No more checking.',
   SAFETY_CHECK: 'Ask once, neutrally, whether this is a familiar sensation or something new.',
   SAFETY_CLOSE: 'Pause the practice neutrally and suggest appropriate medical evaluation. No reinterpretation.',

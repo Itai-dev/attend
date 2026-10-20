@@ -15,7 +15,8 @@ import { violatesGuideLanguage } from '../../domain/safety';
  * guide stays quiet before going on.
  *
  * Safety and crisis lines are below, not in the script: they are fixed text
- * that nothing remote can change.
+ * that nothing remote can change. That includes the arrival's doctor and
+ * emergency lines (ARRIVAL_SAFETY), which the brain adds to every arrival.
  */
 
 export type Line = [text: string, pauseMs: number];
@@ -26,6 +27,8 @@ export let ARRIVE = GUIDE_SCRIPT.ARRIVE;
 export let SCAN_BRIEF = GUIDE_SCRIPT.SCAN_BRIEF;
 export let SCAN_SHORT = GUIDE_SCRIPT.SCAN_SHORT;
 export let SCAN_FULL = GUIDE_SCRIPT.SCAN_FULL;
+/** A remote or saved script from before the body scan has no SCAN_BODY: applyScript keeps the bundled one. */
+export let SCAN_BODY = GUIDE_SCRIPT.SCAN_BODY;
 export let SCAN_NOTICE = GUIDE_SCRIPT.SCAN_NOTICE;
 export let SCAN_USUAL = GUIDE_SCRIPT.SCAN_USUAL;
 export let LOCATE_USUAL = GUIDE_SCRIPT.LOCATE_USUAL;
@@ -80,6 +83,7 @@ function setAll(s: GuideScript) {
   SCAN_BRIEF = s.SCAN_BRIEF;
   SCAN_SHORT = s.SCAN_SHORT;
   SCAN_FULL = s.SCAN_FULL;
+  SCAN_BODY = s.SCAN_BODY ?? GUIDE_SCRIPT.SCAN_BODY;
   SCAN_NOTICE = s.SCAN_NOTICE;
   SCAN_USUAL = s.SCAN_USUAL;
   LOCATE_USUAL = s.LOCATE_USUAL;
@@ -220,6 +224,53 @@ export const EARLY_CLOSE: Line[] = [
   ["When you're ready, open your eyes.", 0],
 ];
 export const RESUME: Line = ["Let's continue.", 2500];
+
+/**
+ * The arrival's safety lines (safety review round 3). They lived in the remotely edited
+ * script, where one edit, or one malformed ARRIVE section replaced wholesale, could delete the
+ * only doctor line a worried person hears at 2am. They are fixed here, and withArrivalSafety
+ * puts them into every arrival, whatever the script's ARRIVE says.
+ */
+export const ARRIVAL_SAFETY = {
+  /** Worry may be about something new; the welcome's note was days ago. */
+  fear: [
+    ['This practice is for a sensation you know. If this one is new, or different, stop here and contact a doctor.', 5500],
+    ['If it is sudden, or severe, call your local emergency number.', 5000],
+  ] as Line[],
+  /** Second in a flare's arrival: before anything invites staying with it. */
+  flare: ['If this flare feels new, or different from your usual, stop here and contact a doctor.', 4500] as Line,
+  /** The first session ever, of any other type: the welcome's note, said once in the voice. */
+  first: ['This practice is for pain you already know. If something is new, or different, stop and contact a doctor.', 5500] as Line,
+  /** Every arrival, once: the eyes-closed practice is never a commitment. */
+  stop: ['You can open your eyes, or stop, at any time.', 3000] as Line,
+};
+
+const FIXED_ARRIVAL = new Set([...ARRIVAL_SAFETY.fear, ARRIVAL_SAFETY.flare, ARRIVAL_SAFETY.first, ARRIVAL_SAFETY.stop].map(([t]) => t));
+
+/**
+ * An arrival as spoken: the script's lines with the fixed safety lines put in place. Any copy
+ * of a fixed line already in the script (a stale remote or saved script) is dropped first, so
+ * each is heard exactly once.
+ *  - stop goes before the arrival's last line (after the fear lines, for fear), so the arrival
+ *    still ends on its own settling words; a one-line arrival gets it after;
+ *  - flare's doctor line is second; fear's two lines close the arrival, as they always have;
+ *  - the first-session line is second, for the types without their own doctor line.
+ */
+export function withArrivalSafety(script: Line[], type: keyof GuideScript['ARRIVE'], firstSession = false): Line[] {
+  const base = script.filter(([t]) => !FIXED_ARRIVAL.has(t));
+  const out = [...base];
+  if (type === 'fear') out.push(...ARRIVAL_SAFETY.fear, ARRIVAL_SAFETY.stop);
+  else out.splice(out.length >= 2 ? out.length - 1 : out.length, 0, ARRIVAL_SAFETY.stop);
+  if (type === 'flare') out.splice(Math.min(1, out.length), 0, ARRIVAL_SAFETY.flare);
+  else if (firstSession && type !== 'fear') out.splice(Math.min(1, out.length), 0, ARRIVAL_SAFETY.first);
+  return out;
+}
+
+/** Every fixed arrival line a type can speak, for warming the audio cache. */
+export function arrivalSafetyTexts(type: keyof GuideScript['ARRIVE']): string[] {
+  const ls = type === 'fear' ? ARRIVAL_SAFETY.fear : type === 'flare' ? [ARRIVAL_SAFETY.flare] : [ARRIVAL_SAFETY.first];
+  return [...ls, ARRIVAL_SAFETY.stop].map(([t]) => t);
+}
 /**
  * "Is this serious?", "Why does it hurt?" — fixed, like the safety lines: the guide can't
  * know, says so, and points to a professional for anything new or changing. Never a
