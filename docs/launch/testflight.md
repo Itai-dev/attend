@@ -8,95 +8,53 @@ bundle `com.itaiagami.attend`. Replace anything in `<angle brackets>`.
 
 ## 1. Before building
 
-### 1.1 The app token (deters strangers from running up the voice bill)
+Decided 20 Oct 2026 (Itai: "decide as you see fit"). The reasons are in `docs/STUDIO.md`,
+under "Decisions for the beta".
 
-The server checks `ATTEND_APP_TOKEN` (`server/api/tts.ts`, `agent.ts`, `guide.ts`). The app
-sends `EXPO_PUBLIC_ATTEND_APP_TOKEN` as the `x-attend-token` header (`src/config.ts`). The two
-values must be identical. The token isn't a secret, since it ships inside the app. It only
-keeps casual callers out.
+### 1.1 The app token: off for the beta
+
+Turning the token on silences every build made without it, including tonight's. At 30–50
+testers the risk of a stranger running up the voice bill is small. So the beta runs **without**
+the token. Turn it on **before the public release**, in this order: EAS first, then Vercel, then
+expire older builds.
 
 ```powershell
-# a random token
-[guid]::NewGuid().ToString("N")
-
-# EAS: builds read it at build time (the production profile uses environment "production")
+[guid]::NewGuid().ToString("N")   # the token
 npx eas-cli@latest env:create --name EXPO_PUBLIC_ATTEND_APP_TOKEN --value <token> --environment production --environment preview --environment development --visibility sensitive
-npx eas-cli@latest env:list --environment production
 ```
 
-If `env:create` complains, add it at expo.dev → attend → Environment variables instead.
-Add the same line to `.env.local` (it's gitignored) so `npx expo start` keeps working:
-`EXPO_PUBLIC_ATTEND_APP_TOKEN=<token>`.
+Then on vercel.com, in the `attend-server` project:
+1. Settings → Environment Variables → add `ATTEND_APP_TOKEN` with the same value.
+2. Redeploy the latest deployment.
 
-**Vercel, after EAS.** vercel.com → the `attend-server` project → Settings → Environment
-Variables → add `ATTEND_APP_TOKEN` = `<token>`, for Production and Preview → Save. Then go to
-Deployments → the latest → **Redeploy**, because a new variable only applies to new deployments.
+### 1.2 ElevenLabs credits: the one thing to check yourself
 
-> The moment Vercel has the token, **every build made without it goes silent**. That includes
-> tonight's build and an old "Attend Dev" install. Expire tonight's build in TestFlight (iOS
-> builds → the build → Expire) so no one installs it.
+An empty quota means a silent session for everyone.
+1. At elevenlabs.io → Subscription, check the characters left and the reset date.
+2. After your own test session (§3), look at Usage.
+3. Budget for about 50 testers × 21 sessions. If that doesn't fit, upgrade for the beta month.
 
-Check it (`curl.exe`, not PowerShell's `curl` alias):
+### 1.3 Privacy policy: hosted by the voice server
 
-```powershell
-curl.exe https://attend-server-ochre.vercel.app/api/health
-# {"ok":true,"voice":true,"guide":true}
-curl.exe -s -o NUL -w "%{http_code}`n" "https://attend-server-ochre.vercel.app/api/tts?text=hello"
-# 401
-curl.exe -s -o NUL -w "%{http_code}`n" -H "x-attend-token: <token>" "https://attend-server-ochre.vercel.app/api/tts?text=hello"
-# 200
-```
+The policy is a route on the server, `server/api/privacy.ts`, so it needs no domain. The app
+already links to it: `PRIVACY_URL` points to https://attend-server-ochre.vercel.app/api/privacy.
 
-### 1.2 ElevenLabs credits
+It goes live when the server's production deploy includes this branch, that is, when PR #19 is
+merged. Open the URL once on your phone, then paste it into App Store Connect → TestFlight →
+Test Information → Privacy Policy URL.
 
-Every guided line is voiced through ElevenLabs. The edge cache serves a repeated line in the
-same voice for free, so lines that vary per person (the body area) cost the most. At
-elevenlabs.io → Subscription, check the characters left and the reset date. After the internal
-test (§3), look at Usage to see what one session cost. Then budget for about **50 testers × 21
-sessions** in the worst case, with no cache. If that doesn't fit, upgrade for the beta month
-or turn on usage-based billing. An empty quota is a silent session for everyone, which is the
-one thing the beta must not have.
+### 1.4 Support email: none in the app yet
 
-### 1.3 Host the privacy policy
+During the beta, feedback goes through TestFlight ("Send Beta Feedback": screenshot and shake).
+Settings hides the contact row until `SUPPORT_EMAIL` in `src/domain/access.ts` is set.
 
-Apple requires a privacy policy URL for an external beta. A `*.vercel.app` page is enough.
+Before the public release:
+1. Create a dedicated address, not your personal one.
+2. Set `SUPPORT_EMAIL` to it.
+3. Put it on the privacy page.
 
-```powershell
-mkdir $HOME\attend-privacy; cd $HOME\attend-privacy
-copy <repo>\docs\launch\privacy-policy.md policy.md
-notepad policy.md   # delete everything down to and including the first "---"; fill in [support email]
-npx marked@latest -i policy.md -o body.html
-$head = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Attend privacy policy</title><body style="font:17px/1.55 Georgia,serif;max-width:38em;margin:2em auto;padding:0 16px">'
-Set-Content index.html -Encoding UTF8 -Value ($head + (Get-Content body.html -Raw -Encoding UTF8))
-npx vercel@latest deploy --prod   # name the project attend-privacy
-```
-
-Open the URL on the iPhone and check that the curly quotes render.
-
-**Support email:** use a dedicated address, not a personal one. It goes on the policy, in
-TestFlight and in review notes.
-
-### 1.4 The two lines in the app (make these after the pull in §2)
-
-`src/domain/access.ts`, line 264:
-
-```ts
-export const PRIVACY_URL = 'https://attend-privacy.vercel.app';
-```
-
-And add directly under it (**the constant doesn't exist yet**: nothing in `src/` defines a
-support email):
-
-```ts
-export const SUPPORT_EMAIL = '<support email>';
-```
-
-At the moment only the paywall's footer, which is switched off, links `PRIVACY_URL`.
-Settings has no privacy, terms or contact rows yet (round 3, decision 4). The beta can go
-without them, because TestFlight takes the URL from App Store Connect, but **App Store
-submission can't** (Guideline 5.1.1).
-
----
+App Store Connect still asks for a Feedback Email for TestFlight. That address isn't shown inside
+the app, so your own is fine there.
 
 ## 2. Build and upload
 
@@ -108,10 +66,7 @@ git fetch
 git checkout look-and-sound
 git pull
 npm install
-# make the §1.4 edit, then:
 npm run verify                  # tsc and every test; stop if it fails
-git commit -am "Privacy URL and support email for the beta"
-git push
 npx eas-cli@latest build -p ios --profile production --auto-submit
 ```
 
@@ -173,9 +128,9 @@ Also read the welcome's safety screen. The emergency line must come first, at re
 | Field | Value |
 | --- | --- |
 | Beta App Description | below |
-| Feedback Email | `<support email>` |
+| Feedback Email | your own email (TestFlight only; not shown in the app) |
 | Marketing URL | the landing page once it's live (`landing-page.md`); otherwise leave it empty |
-| Privacy Policy URL | `https://attend-privacy.vercel.app` |
+| Privacy Policy URL | `https://attend-server-ochre.vercel.app/api/privacy` |
 
 **Beta App Description**
 
@@ -187,7 +142,7 @@ Attend is a wellness practice and education. It doesn't diagnose or treat. If a 
 
 ### Beta App Review Information
 
-- **Contact:** Itai Agami, `<phone>`, `<support email>`.
+- **Contact:** Itai Agami, your phone and email (only Apple's reviewers see these).
 - **Sign-in required:** leave it unchecked. There's no account.
 - **Review notes:**
 
@@ -205,7 +160,7 @@ Microphone: guided sessions never use the microphone, and this build never asks 
 
 Safety: Attend is a wellness practice and education, not a medical device. It does not diagnose or treat. The welcome's safety screen tells anyone with new chest pain, a sudden severe headache, trouble breathing or new weakness to call their local emergency number, and sends anything new or different to a doctor. The flare and worry practices open with a fixed doctor line, and the worry practice names the emergency number.
 
-Contact: Itai Agami, <support email>, <phone>
+Contact: Itai Agami (details in the contact fields above).
 ```
 
 Don't use the review notes in `store-listing.md` for the beta. They describe the paywall,

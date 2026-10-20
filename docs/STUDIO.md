@@ -287,3 +287,21 @@ simulated first-week test with the personas never ran.
 
 **Needs an iPhone:** everything listed in `docs/ON-DEVICE.md`: the lock screen, offline play,
 the sleep tail, fading controls and VoiceOver.
+
+## Decisions for the beta (20 Oct 2026)
+
+Itai handed over the open questions ("decide as you see fit"). The founder role decided them as
+follows (also in `docs/LAUNCH.md` §7):
+
+- **Prices:** the founding prices as proposed: $39.99/yr with 7 days free, $7.99/mo, $99
+  lifetime. They are the go-to-market recommendation and undercut Curable by more than half.
+  The paywall stays off for the beta, so testers see everything.
+- **App token:** off for the beta. Turning it on silences every build without it, and 50
+  testers are a small risk. It goes on before the public release.
+- **Privacy page:** a route on the voice server (`server/api/privacy.ts`). It needs no domain
+  and no second project, and goes live when PR #19 is merged.
+- **Support email:** not in the app until a dedicated address exists; Settings hides the row.
+  The beta uses TestFlight feedback. A personal address never goes in the app.
+- **Body area:** may go to the voice service for the beta. It is disclosed, declared and
+  anonymous. A downloaded voice pack before the public release removes it.
+- **ElevenLabs credits:** the one item only Itai can check.

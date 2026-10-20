@@ -237,13 +237,28 @@ most: people who practise are the ones who benefit, stay and recommend it.
 | **7–24 Dec** | Fix, ship over the air | Start Search Ads once trial→paid is known | Reviews, clinician codes |
 | **26 Dec–10 Jan** | Stable; nothing risky | — | **"Start 2027 with 28 days"** |
 
-## 7. Decisions I need from you
+## 7. Decisions (made 20 Oct 2026; Itai: "decide as you see fit")
 
-1. Pricing: option A ($59.99/yr with a free week, $9.99/mo)? Lifetime at launch or later?
-2. EU at launch (as a declared trader), or US/UK/Canada/Australia first?
-3. Store name: "Attend: Chronic Pain Practice" — happy with it?
-4. Should I build the landing page with a waitlist next (on Vercel), or payments first?
-5. Sounds: keep the generated ones after you've listened, or license field recordings?
+1. **Pricing:** founding prices of $39.99/yr with 7 days free, $7.99/mo and $99 lifetime,
+   until 10 Jan 2027, then $59.99 / $9.99. The paywall stays off (`PLUS_ENABLED = false`)
+   through the beta, so testers get everything.
+2. **Markets:** US, UK, Canada and Australia first. The EU waits until the trader question
+   is settled.
+3. **Store name:** "Attend: Chronic Pain Practice", subtitle "Somatic tracking, eyes closed".
+4. **Next build:** the external TestFlight beta (`docs/launch/testflight.md`). Payments come
+   after the beta; the landing page goes up alongside the beta, for the waitlist.
+5. **Sounds:** keep the generated ones for the beta. Replace any that testers call fake.
+6. **App token:** off for the beta (turning it on silences existing builds); on before the
+   public release.
+7. **Privacy page:** served by the voice server at `/api/privacy`, with no domain needed.
+8. **Support email:** none in the app during the beta; feedback goes through TestFlight. A
+   dedicated address before release, never a personal one.
+9. **Body area sent to the voice service:** allowed for the beta. It is disclosed in the
+   welcome, the privacy page and Settings, and declared in the privacy manifest. It carries no
+   name or account. Before the public release, build a downloaded voice pack so nothing
+   personal leaves the phone.
+10. **Weekly reminders:** they stop after 12, about three months (`WEEKLY_COUNT`). They do not
+    stop earlier after four unanswered.
 
 Running costs to launch: Apple Developer $99/yr (already paid), a domain (~$15), ElevenLabs
 (current plan), Vercel/Supabase free tiers, RevenueCat free tier, optional $500 for the

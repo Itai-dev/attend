@@ -259,11 +259,19 @@ export function trialTimeline(now: number, tzMinutes: number, price: string, { r
 export const PAYWALL_LEGAL =
   'The free week applies to the yearly plan for new subscribers. Payment is charged to your Apple ID when the free week ends, or when you confirm. Subscriptions renew automatically at the same price unless canceled at least 24 hours before the end of the current period. Manage or cancel any time in Settings → [your name] → Subscriptions. Founding members keep their price for as long as they stay subscribed. Lifetime is a single purchase.';
 
-/** Placeholders until the landing page's domain is chosen (docs/launch/store-listing.md). */
+/** Apple's standard licence until Attend has its own terms. */
 export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
-export const PRIVACY_URL = 'https://attend.example/privacy';
-/** Settings → About → contact. Placeholder until Itai sets the support address. */
-export const SUPPORT_EMAIL = 'support@attend.example';
+/**
+ * Served by the voice server (server/api/privacy.ts), so it lives at a stable URL without a
+ * domain. Live once the server's production deploy carries the route.
+ */
+export const PRIVACY_URL = 'https://attend-server-ochre.vercel.app/api/privacy';
+/**
+ * Settings → About → contact. Empty until a dedicated support address exists: Settings hides
+ * the row rather than show a link that goes nowhere. During the beta, feedback goes through
+ * TestFlight (screenshot and shake).
+ */
+export const SUPPORT_EMAIL = '';
 
 /** One calm line per outcome. Nothing urgent, nothing that blames. */
 export const PURCHASE_COPY = {

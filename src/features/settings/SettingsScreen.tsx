@@ -226,8 +226,12 @@ export function SettingsScreen() {
         <LinkRow label="privacy policy" onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})} />
         <Hairline />
         <LinkRow label="terms" onPress={() => Linking.openURL(TERMS_URL).catch(() => {})} />
-        <Hairline />
-        <LinkRow label="contact" onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})} />
+        {SUPPORT_EMAIL ? (
+          <>
+            <Hairline />
+            <LinkRow label="contact" onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})} />
+          </>
+        ) : null}
       </Group>
 
       {__DEV__ ? <DeveloperSettings /> : null}

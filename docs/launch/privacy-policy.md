@@ -1,7 +1,7 @@
-# Attend: privacy policy (draft for Itai to host)
+# Attend: privacy policy
 
-Draft of 18 Oct 2026. Host it at a stable URL (a `*.vercel.app` page is enough for the beta),
-then put that URL in App Store Connect and in `PRIVACY_URL` (`src/domain/access.ts`).
+The live version is served by the voice server: `server/api/privacy.ts`, at
+https://attend-server-ochre.vercel.app/api/privacy. Keep the two in step.
 Check it against the app before each release. Not legal advice: have it reviewed before the
 paid launch.
 
@@ -49,4 +49,4 @@ usual, or severe, please see a medical professional.
 
 **Changes.** If this policy changes, the new version will be posted here, with its date.
 
-**Contact.** [support email], Itai Agami.
+**Contact.** During the beta, use “Send Beta Feedback” in TestFlight. A support address will be listed here before release.
