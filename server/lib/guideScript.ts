@@ -121,7 +121,7 @@ export const GUIDE_SCRIPT: GuideScript = {
     notice: [
       [
         ['Take a moment to settle in.', 3500],
-        ['Let the phone rest, and let your eyes close.', 4500],
+        ['Let your hands rest, and let your eyes close.', 4500],
         // Scoped to the practice: "nothing you need to fix" said of a body reads as "nothing is wrong".
         ["There's nothing to fix in this practice.", 5500],
       ],
@@ -135,7 +135,7 @@ export const GUIDE_SCRIPT: GuideScript = {
     flare: [
       [
         ["Let's take this slowly.", 3500],
-        ['Let the phone rest, and let your eyes close.', 4500],
+        ['Let your eyes close, or let your gaze rest low.', 4500],
         ["You don't have to make anything go away right now.", 5000],
         ['Let your breath be however it is.', 5000],
       ],

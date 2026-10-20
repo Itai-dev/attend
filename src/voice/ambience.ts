@@ -1,4 +1,4 @@
-import { soundscape, type SoundscapeId } from '../domain/soundscapes';
+import { soundscape, UNDER_VOICE, volumeFor, type Soundscape, type SoundscapeId } from '../domain/soundscapes';
 import type { CrossfadeLoop } from './crossfadeLoop';
 import { loopSoundscape } from './soundscapeAssets';
 import type { SessionStatus } from './VoiceSessionProvider';
@@ -14,12 +14,8 @@ import type { SessionStatus } from './VoiceSessionProvider';
  * the loudest thing an eyes-closed person hears. Paused or ended, it fades away.
  */
 
-const LEVEL: Partial<Record<SessionStatus, number>> = {
-  preparing: 0.14,
-  speaking: 0.1,
-  holding: 0.18,
-  listening: 0.09,
-};
+/** Target loudness per state, in LUFS (domain/soundscapes.ts UNDER_VOICE). */
+const LEVEL: Partial<Record<SessionStatus, number>> = UNDER_VOICE;
 const FADE_MS = 1200;
 /** While the person speaks: a share of the listening level, eased down and back. */
 const DUCK = 0.6;
@@ -35,11 +31,11 @@ export class Ambience {
   private ducked = false;
   private lastVoiceAt = 0;
   private release?: ReturnType<typeof setTimeout>;
-  /** Each sound's own level, so a quiet forest and a full waterfall sit alike under the voice. */
-  private readonly gain: number;
+  /** The sound's own loudness, so a quiet forest and a full waterfall sit alike under the voice. */
+  private readonly sound: Soundscape;
 
   constructor(private readonly source: SoundscapeId = 'tone') {
-    this.gain = soundscape(source)?.gain ?? 1;
+    this.sound = soundscape(source) ?? soundscape('tone')!;
   }
 
   start() {
@@ -86,7 +82,8 @@ export class Ambience {
   }
 
   private level(status: SessionStatus) {
-    return Math.min(1, (LEVEL[status] ?? 0) * this.gain);
+    const target = LEVEL[status];
+    return target === undefined ? 0 : volumeFor(this.sound, target);
   }
 
   private unduck() {

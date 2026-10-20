@@ -20,30 +20,28 @@ export type Soundscape = {
   /** One short line, about the sound itself. Never what it does for the body. */
   line: string;
   /**
-   * Level relative to the original 432 Hz tone, so the session's quiet/fuller levels
-   * (voice/ambience.ts) sound alike whatever plays. Noise reads louder than a pure tone at
-   * the same power, hence the 0.75.
+   * The file's loudness in LUFS (ffmpeg -af ebur128), the measure ears agree with. Every level
+   * below is set in LUFS and turned into a volume here, so a bright rain and a low tone sit at
+   * the same place under the voice.
    */
-  gain: number;
+  lufs: number;
 };
 
 /**
- * Each nature sound's average level after mastering (tools/master-recordings.py writes
- * assets/audio/soundscapes/levels.json). They are real field recordings, mastered with one static
- * gain and no compression; rain sits lower because its single drops are sharp.
+ * Measured on the shipped files: `ffmpeg -nostats -i <file> -af ebur128 -f null -` (integrated
+ * loudness). Re-measure if tools/master-recordings.py changes a file.
  */
-const MASTERED_DB = { rain: -29.4, forest: -26, stream: -26, waterfall: -26, ocean: -26, night: -26, fire: -26 } as const;
-const toneMatch = (rmsDb: number) => Math.round(0.75 * 10 ** ((-14.7 - rmsDb) / 20) * 100) / 100;
+const LUFS = { rain: -25.0, forest: -22.9, stream: -20.9, waterfall: -22.1, ocean: -22.0, night: -19.8, fire: -21.6, tone: -16.1 } as const;
 
 export const SOUNDSCAPES: readonly Soundscape[] = [
-  { id: 'rain', name: 'Soft rain', line: 'Light rain on broad leaves', gain: toneMatch(MASTERED_DB.rain) },
-  { id: 'forest', name: 'Forest', line: 'Wind in the trees, birds far off', gain: toneMatch(MASTERED_DB.forest) },
-  { id: 'stream', name: 'Stream', line: 'Shallow water over stones', gain: toneMatch(MASTERED_DB.stream) },
-  { id: 'waterfall', name: 'Waterfall', line: 'A long fall of water, heard from the path', gain: toneMatch(MASTERED_DB.waterfall) },
-  { id: 'ocean', name: 'Ocean', line: 'Slow waves on a wide shore', gain: toneMatch(MASTERED_DB.ocean) },
-  { id: 'night', name: 'Night', line: 'Crickets and a warm evening', gain: toneMatch(MASTERED_DB.night) },
-  { id: 'fire', name: 'Fireside', line: 'A small fire, settling', gain: toneMatch(MASTERED_DB.fire) },
-  { id: 'tone', name: 'Soft tone', line: 'A low, steady drone', gain: 1 },
+  { id: 'rain', name: 'Soft rain', line: 'Light rain on broad leaves', lufs: LUFS.rain },
+  { id: 'forest', name: 'Forest', line: 'Wind in the trees, birds far off', lufs: LUFS.forest },
+  { id: 'stream', name: 'Stream', line: 'Shallow water over stones', lufs: LUFS.stream },
+  { id: 'waterfall', name: 'Waterfall', line: 'A long fall of water, heard from the path', lufs: LUFS.waterfall },
+  { id: 'ocean', name: 'Ocean', line: 'Slow waves on a wide shore', lufs: LUFS.ocean },
+  { id: 'night', name: 'Night', line: 'Crickets and a warm evening', lufs: LUFS.night },
+  { id: 'fire', name: 'Fireside', line: 'A small fire, settling', lufs: LUFS.fire },
+  { id: 'tone', name: 'Soft tone', line: 'A low, steady drone', lufs: LUFS.tone },
 ];
 
 /** Under a session, for someone who has never chosen: rain is the most even of the sounds. */
@@ -115,7 +113,25 @@ export function timerLabel(timerMin: ListenTimer, elapsedMs = 0): string {
  * to fill the room at a normal phone volume, quiet enough to fall asleep to.
  */
 export function listenLevel(s: Soundscape): number {
-  return Math.min(1, 0.3 * s.gain);
+  return volumeFor(s, LISTEN_LUFS);
+}
+
+/** On its own (Just listen, the Sounds tab), with nothing to sit under. */
+export const LISTEN_LUFS = -24;
+
+/**
+ * The guide's voice as it arrives from the voice server (ElevenLabs, measured on spoken lines:
+ * about -24.5 LUFS) and the sound's place under it (20 Oct 2026: "the sound is too loud compared
+ * to the narration"). While the guide speaks the sound sits about 18 dB under the voice, so
+ * every word is clear; in the silences between lines it comes up to about 12 dB under, enough
+ * to be the room the person is in, never so much that the next line has to climb over it.
+ */
+export const VOICE_LUFS = -24.5;
+export const UNDER_VOICE = { speaking: -43, listening: -44, preparing: -40, holding: -37 } as const;
+
+/** The volume (0..1) that puts a sound at a target loudness. */
+export function volumeFor(s: Soundscape, targetLufs: number): number {
+  return Math.min(1, Math.round(10 ** ((targetLufs - s.lufs) / 20) * 1000) / 1000);
 }
 
 const ease = (t: number) => t * t * (3 - 2 * t);
