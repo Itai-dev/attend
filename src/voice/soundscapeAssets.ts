@@ -3,10 +3,10 @@ import type { SoundscapeId } from '../domain/soundscapes';
 import { CrossfadeLoop } from './crossfadeLoop';
 
 /**
- * The audio behind each soundscape, as AAC (.m4a). A field recording replaces any of them
- * under the same name, `assets/audio/soundscapes/<id>.m4a`; master it with
- * tools/master-soundscapes.py so the levels match (domain/soundscapes.ts sets the final
- * level). Files can be minutes long: the loop is made in the app by two players crossing
+ * The audio behind each soundscape, as AAC (.m4a): real, public-domain field recordings
+ * (assets/audio/soundscapes/SOURCES.md), five minutes each, built by tools/master-recordings.py.
+ * To replace one, add it there and re-run; domain/soundscapes.ts sets the final level from the
+ * measured levels. Files can be minutes long: the loop is made in the app by two players crossing
  * over (voice/crossfadeLoop.ts), so a file needs no seamless ending of its own, and AAC's
  * encoder padding is never heard.
  *

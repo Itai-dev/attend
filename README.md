@@ -16,7 +16,8 @@ pain record (ported from Pattern) to show whether practice is helping. See `docs
 > (follows the iPhone; the session is always dark), lowercase headings, square controls, and
 > misty film-style photographs for every sound and time of day (`design/Photo.tsx`,
 > `tools/grade-photos.py`) — and sound: seven
-> nature soundscapes (AAC `.m4a`, mastered quiet by `tools/master-soundscapes.py`; the app loops
+> nature soundscapes, real public-domain field recordings (`assets/audio/soundscapes/SOURCES.md`,
+> built by `tools/master-recordings.py`; the app loops
 > each one seamlessly with two players crossing over, `voice/crossfadeLoop.ts`, so a recording can
 > be minutes long), chosen under each session or played on their own from the
 > **Sounds** tab with a sleep timer (`voice/listen.ts`). The plan to the App Store and paying

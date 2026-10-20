@@ -27,18 +27,22 @@ export type Soundscape = {
   gain: number;
 };
 
-/** Every nature sound is mastered to this average level (tools/master-soundscapes.py). */
-const MASTERED_DB = -26;
+/**
+ * Each nature sound's average level after mastering (tools/master-recordings.py writes
+ * assets/audio/soundscapes/levels.json). They are real field recordings, mastered with one static
+ * gain and no compression; rain sits lower because its single drops are sharp.
+ */
+const MASTERED_DB = { rain: -29.4, forest: -26, stream: -26, waterfall: -26, ocean: -26, night: -26, fire: -26 } as const;
 const toneMatch = (rmsDb: number) => Math.round(0.75 * 10 ** ((-14.7 - rmsDb) / 20) * 100) / 100;
 
 export const SOUNDSCAPES: readonly Soundscape[] = [
-  { id: 'rain', name: 'Soft rain', line: 'Steady rain on leaves', gain: toneMatch(MASTERED_DB) },
-  { id: 'forest', name: 'Forest', line: 'Wind in the trees, birds far off', gain: toneMatch(MASTERED_DB) },
-  { id: 'stream', name: 'Stream', line: 'Shallow water over stones', gain: toneMatch(MASTERED_DB) },
-  { id: 'waterfall', name: 'Waterfall', line: 'A long fall of water, heard from the path', gain: toneMatch(MASTERED_DB) },
-  { id: 'ocean', name: 'Ocean', line: 'Slow waves on a wide shore', gain: toneMatch(MASTERED_DB) },
-  { id: 'night', name: 'Night', line: 'Crickets and a warm evening', gain: toneMatch(MASTERED_DB) },
-  { id: 'fire', name: 'Fireside', line: 'A small fire, settling', gain: toneMatch(MASTERED_DB) },
+  { id: 'rain', name: 'Soft rain', line: 'Light rain on broad leaves', gain: toneMatch(MASTERED_DB.rain) },
+  { id: 'forest', name: 'Forest', line: 'Wind in the trees, birds far off', gain: toneMatch(MASTERED_DB.forest) },
+  { id: 'stream', name: 'Stream', line: 'Shallow water over stones', gain: toneMatch(MASTERED_DB.stream) },
+  { id: 'waterfall', name: 'Waterfall', line: 'A long fall of water, heard from the path', gain: toneMatch(MASTERED_DB.waterfall) },
+  { id: 'ocean', name: 'Ocean', line: 'Slow waves on a wide shore', gain: toneMatch(MASTERED_DB.ocean) },
+  { id: 'night', name: 'Night', line: 'Crickets and a warm evening', gain: toneMatch(MASTERED_DB.night) },
+  { id: 'fire', name: 'Fireside', line: 'A small fire, settling', gain: toneMatch(MASTERED_DB.fire) },
   { id: 'tone', name: 'Soft tone', line: 'A low, steady drone', gain: 1 },
 ];
 
