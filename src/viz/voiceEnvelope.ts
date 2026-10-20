@@ -76,15 +76,22 @@ export function followEnvelope(
   s: EnvelopeState,
   target: number,
   dtMs: number,
-  attackMs = ATTACK_MS,
-  releaseMs = RELEASE_MS,
-  smoothMs = SMOOTH_MS,
+  attackMs?: number,
+  releaseMs?: number,
+  smoothMs?: number,
 ): EnvelopeState {
   'worklet';
+  // No default parameters in a worklet: on the UI runtime its captured constants are unpacked in
+  // the body, after the parameters are evaluated, so `attackMs = ATTACK_MS` threw a ReferenceError
+  // on the first frame and closed the app as a practice opened (20 Oct 2026). Web runs the plain
+  // JS function and never showed it. tests/sessionVisual.test.ts guards every worklet in src/.
+  const a = attackMs ?? ATTACK_MS;
+  const r = releaseMs ?? RELEASE_MS;
+  const sm = smoothMs ?? SMOOTH_MS;
   const dt = Math.min(Math.max(dtMs, 0), 100);
   const t = target < 0 ? 0 : target > 1 ? 1 : target;
-  const env = onePole(s.env, t, dt, t > s.env ? attackMs : releaseMs);
-  return { env, out: onePole(s.out, env, dt, smoothMs) };
+  const env = onePole(s.env, t, dt, t > s.env ? a : r);
+  return { env, out: onePole(s.out, env, dt, sm) };
 }
 
 /** A repeatable 0..1 from an integer: the synthetic voice's "randomness", the same every run. */
