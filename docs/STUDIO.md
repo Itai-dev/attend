@@ -305,3 +305,82 @@ follows (also in `docs/LAUNCH.md` §7):
 - **Body area:** may go to the voice service for the beta. It is disclosed, declared and
   anonymous. A downloaded voice pack before the public release removes it.
 - **ElevenLabs credits:** the one item only Itai can check.
+
+## Round 5: usability tests (20 Oct 2026)
+
+Itai: "the UX is still not so clear." This time three simulated users drove the real app (the
+web build) with tasks, thinking aloud at every screen. Screenshots are in the scratchpad. The
+users were:
+- **Dana:** first open at 21:30, sceptical.
+- **Tom:** can't sleep, impatient.
+- **Priya:** Day 9 after four missed days, mid-flare, in dark mode.
+
+**What they agreed on**
+1. **Today reads as a course, not as "what do you need now".** The flare and sleep practices
+   are below the fold. After a flare practice, Day 9 still asks for 7 minutes. "Completes the
+   day" reads as homework.
+2. **The first run ignores why the person came.** Tom picked "nights" at 23:40 and was handed
+   "begin day 1" (a lesson called "pain is real"). The sleep practice was a footnote behind
+   "not now".
+3. **Practice and sound are never told apart.** "can't sleep" started a voice when Tom wanted
+   rain. The sound is set in three places.
+4. **One thing has several names.** Day 2 is "an alarm that learns" on Today and "finding the
+   place" on adjust. Unexplained terms: "rests on", "save a moment", "week 4 works toward it"
+   (before the 28 days are mentioned), and "· understand" (reads as an instruction).
+5. **Hidden controls.**
+   - "adjust" looks like a caption, loses changes, and skips the lesson without saying so.
+   - The guide's voice can't be found in Settings.
+   - In the lesson, "read →" reads as "read more".
+6. **"Is this helping?" has no answer and no path to one.** The pain record is the third
+   section of Progress and needs 5 check-in days. Logging pain is at the bottom of Today. A
+   check-in saves with no confirmation, and its save button is below the fold.
+7. **The first minute alarms.** "How it works" is a wall of text whose most prominent words
+   are "chest pain… call emergency".
+8. **Small frictions:**
+   - 24-hour times for a US launch.
+   - The body-area chips look multi-select.
+   - "pause →" and "stop →" look like navigation.
+   - The now-playing card sits below the fold.
+   - Dark mode's white buttons glare.
+   - The session shows no sign it's running.
+
+**Decisions (built now)**
+- **Today = "right now" first, then "your daily practice".**
+  - The moments sit above the fold, each subtitled "voice-guided · N min".
+  - At night, "can't sleep" leads.
+  - After any practice today, the day card goes quiet ("day 9 is here tomorrow too"), with no
+    short-day nag.
+  - The playing sound is pinned at the top.
+  - "log today's pain" moves up, with the record's progress ("1 of 5 days").
+- **First run honours the answer.** At night, with "nights" chosen, the ready screen's main
+  button is the sleep practice and Day 1 waits for tomorrow.
+- **The welcome:**
+  - "How it works" becomes three short lines and a one-line safety note in normal weight.
+    The full note stays in Settings.
+  - The 28 days are named before the goal question.
+  - Times are in 12-hour format.
+  - The body-area chips say "pick the main one".
+- **One name per day.** The day's title is used everywhere, and the week name leaves the kicker.
+  Renamed: "rests on" → "focus on", "save a moment" → "note a small win", "sound under
+  sessions" → "sound under practice".
+- **Lesson:** "next →" is the only big button, with a small "listen instead" that's
+  remembered.
+- **Practice settings.** "adjust" becomes a clear row ("practice settings ›"). Its screen
+  saves voice and sound for good and returns to Today. It never starts a practice or skips
+  the lesson.
+- **Settings and navigation:**
+  - Settings gets a guide voice list and a reminder time.
+  - The gear appears on every tab.
+- **Sounds and players:**
+  - The Sounds tab says "no voice, just the place", and links to the sound under practice.
+  - Listen gets icon controls and is dark at night.
+- **Session.** While the controls are showing, a quiet "about N min left" appears.
+- **Progress:**
+  - The pain record comes first, with "1 of 5 check-in days".
+  - The chart window fits the data and has date labels.
+  - Practice comes next, then the 28 days.
+- **Check-in.** The welcome's area is pre-selected, save stays visible, and a quiet "saved"
+  shows on return.
+- **Night:** primary buttons are softer in dark mode.
+
+Afterwards the same three users test again, to check the fixes worked.
