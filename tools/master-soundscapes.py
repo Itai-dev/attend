@@ -1,6 +1,6 @@
 """Masters the soundscapes in assets/audio/soundscapes/ from source recordings.
-Run: python3 tools/master-soundscapes.py <folder of source WAVs>  (needs numpy; ffmpeg decodes
-the generator's MP3s to WAV first).
+Run: python3 tools/master-soundscapes.py <folder of source WAVs>  (needs numpy and ffmpeg; ffmpeg
+also decodes MP3 or other sources to WAV first).
 
 The sources are ElevenLabs Sound Effects v2 generations (30 s, looping), two takes per sound;
 the calmer take was kept: the one whose loudness moves least and whose seam matches best.
@@ -12,14 +12,19 @@ This pass makes them fit to fall asleep to:
   there);
 - one level for all: every sound sits at the same average loudness (-26 dBFS RMS), so
   switching sounds never surprises, and the app sets the final level (domain/soundscapes.ts);
-- a seamless loop: the last half-second is crossfaded (equal power) into the first, so the
-  player can loop the file without a seam.
+- ends that meet: the last half-second is crossfaded (equal power) into the first, so the
+  FFT resampling below, which treats the file as periodic, rings at neither end.
 
-Stereo, 32 kHz, 16-bit WAV: stereo for headphones, WAV because AAC's encoder padding would
-leave a gap each time the loop comes round.
+Stereo, 32 kHz, written as AAC (.m4a, 128 kbps, by ffmpeg) to keep the app small. The app makes
+the loop itself — two players crossing over a few seconds before each pass ends
+(src/voice/crossfadeLoop.ts) — so a file needs no seamless ending of its own and AAC's encoder
+padding is never heard. That is also what lets a field recording minutes long replace any of
+these under the same name: master it here so its level matches the others.
 """
 import os
+import subprocess
 import sys
+import tempfile
 import wave
 
 import numpy as np
@@ -100,12 +105,15 @@ def level(x):
 
 
 def write(path, x):
+    """16-bit PCM to a temporary WAV, then AAC into `path` (.m4a)."""
     pcm = (np.clip(x, -1, 1) * 32767).astype('<i2')
-    with wave.open(path, 'wb') as w:
-        w.setnchannels(x.shape[1])
-        w.setsampwidth(2)
-        w.setframerate(SR_OUT)
-        w.writeframes(pcm.tobytes())
+    with tempfile.NamedTemporaryFile(suffix='.wav') as tmp:
+        with wave.open(tmp.name, 'wb') as w:
+            w.setnchannels(x.shape[1])
+            w.setsampwidth(2)
+            w.setframerate(SR_OUT)
+            w.writeframes(pcm.tobytes())
+        subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', tmp.name, '-c:a', 'aac', '-b:a', '128k', path], check=True)
 
 
 if __name__ == '__main__':
@@ -122,6 +130,7 @@ if __name__ == '__main__':
         for _ in range(4):
             x = level(limit(level(x), SR_OUT))
         x = np.tanh(x / 0.9) * 0.9  # never a hard clip
-        write(os.path.join(OUT, f'{name}.wav'), x)
+        out = os.path.join(OUT, f'{name}.m4a')
+        write(out, x)
         peak = 20 * np.log10(np.abs(x).max())
-        print(f'{name}: {take}, {len(x) / SR_OUT:.1f}s, peak {peak:.1f} dBFS, {os.path.getsize(os.path.join(OUT, name + ".wav")) / 1e6:.1f} MB')
+        print(f'{name}: {take}, {len(x) / SR_OUT:.1f}s, peak {peak:.1f} dBFS, {os.path.getsize(out) / 1e6:.1f} MB')

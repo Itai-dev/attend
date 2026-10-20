@@ -1,12 +1,12 @@
-import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { soundscape, type SoundscapeId } from '../domain/soundscapes';
-import { SOUNDSCAPE_ASSET } from './soundscapeAssets';
+import type { CrossfadeLoop } from './crossfadeLoop';
+import { loopSoundscape } from './soundscapeAssets';
 import type { SessionStatus } from './VoiceSessionProvider';
 
 /**
  * A sound under the session: rain, forest, water, the 432 Hz tone (domain/soundscapes.ts),
- * each a seamless loop. It is atmosphere, nothing more — the app never calls it healing or
- * says it does anything for pain.
+ * each a seamless loop (two players crossing over: voice/crossfadeLoop.ts). It is atmosphere,
+ * nothing more — the app never calls it healing or says it does anything for pain.
  *
  * It sits well under the voice: quieter while the guide speaks and while listening,
  * and fuller in the silences. When the person actually speaks it dips a little more,
@@ -21,7 +21,6 @@ const LEVEL: Partial<Record<SessionStatus, number>> = {
   listening: 0.09,
 };
 const FADE_MS = 1200;
-const STEP_MS = 60;
 /** While the person speaks: a share of the listening level, eased down and back. */
 const DUCK = 0.6;
 const DUCK_MS = 1400;
@@ -30,13 +29,8 @@ const UNDUCK_MS = 2400;
 const VOICE_LEVEL = 0.3;
 const RELEASE_MS = 1200;
 
-/** Ease in and out, so a fade has no audible corner at either end. */
-const ease = (t: number) => t * t * (3 - 2 * t);
-
 export class Ambience {
-  private player?: AudioPlayer;
-  private target = 0;
-  private timer?: ReturnType<typeof setInterval>;
+  private loop?: CrossfadeLoop;
   private status: SessionStatus = 'idle';
   private ducked = false;
   private lastVoiceAt = 0;
@@ -49,16 +43,14 @@ export class Ambience {
   }
 
   start() {
-    if (this.player) return;
+    if (this.loop) return;
     try {
-      // Pausing must not switch the audio session off under the recogniser (see ElevenLabsSpeechOutput.play).
-      this.player = createAudioPlayer(SOUNDSCAPE_ASSET[this.source], { keepAudioSessionActive: true });
-      this.player.loop = true;
-      this.player.volume = 0;
-      this.player.play();
+      // Silent at first; follow() fades it in. Its players keep the audio session active when
+      // paused, so a pause never switches the session off under the recogniser (loopSoundscape).
+      this.loop = loopSoundscape(this.source, 0);
     } catch {
       // No sound is better than no session.
-      this.player = undefined;
+      this.loop = undefined;
     }
   }
 
@@ -107,38 +99,22 @@ export class Ambience {
   stop(fadeMs = FADE_MS) {
     this.status = 'idle';
     this.unduck();
+    const l = this.loop;
+    // A fade, then release: a follow() during the fade still finds the sound and brings it back.
     this.fadeTo(0, fadeMs, () => {
-      try {
-        this.player?.remove();
-      } catch {}
-      this.player = undefined;
+      l?.release();
+      if (this.loop === l) this.loop = undefined;
     });
   }
 
+  /** Eased by the loop; at nothing it pauses, so a paused session's sound costs nothing. */
   private fadeTo(target: number, ms: number, done?: () => void) {
-    const p = this.player;
-    if (!p) return done?.();
-    this.target = target;
-    if (this.timer) clearInterval(this.timer);
-    if (target > 0 && !p.playing) p.play();
-    const from = p.volume;
-    const steps = Math.max(1, Math.round(ms / STEP_MS));
-    let i = 0;
-    this.timer = setInterval(() => {
-      i++;
-      try {
-        p.volume = from + (this.target - from) * ease(i / steps);
-      } catch {}
-      if (i >= steps) {
-        clearInterval(this.timer);
-        this.timer = undefined;
-        if (this.target === 0) {
-          try {
-            p.pause();
-          } catch {}
-        }
-        done?.();
-      }
-    }, STEP_MS);
+    const l = this.loop;
+    if (!l) return done?.();
+    if (target > 0) l.resume();
+    l.fadeTo(target, ms, () => {
+      if (target === 0) l.pause();
+      done?.();
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { createAudioPlayer, setAudioModeAsync, setIsAudioActiveAsync, type AudioPlayer } from 'expo-audio';
+import { setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
 import { useSyncExternalStore } from 'react';
 import {
   DEFAULT_LISTEN_TIMER,
@@ -8,7 +8,8 @@ import {
   type ListenTimer,
   type SoundscapeId,
 } from '../domain/soundscapes';
-import { SOUNDSCAPE_ASSET } from './soundscapeAssets';
+import type { CrossfadeLoop } from './crossfadeLoop';
+import { loopSoundscape } from './soundscapeAssets';
 
 /**
  * Just listen: one soundscape on its own, with a sleep timer, and nothing to do once it
@@ -18,6 +19,9 @@ import { SOUNDSCAPE_ASSET } from './soundscapeAssets';
  * One listener for the whole app, outside React, so leaving the screen does not stop the
  * sound. A guided session stops it first (VoiceSessionProvider): two sounds at once would be
  * the loudest thing an eyes-closed person hears.
+ *
+ * Each sound is a seamless loop of a long recording, two players crossing over
+ * (voice/crossfadeLoop.ts); switching sounds crosses one loop into the next.
  *
  * Nothing is recorded. Listening is not practice and does not count toward the program.
  */
@@ -43,30 +47,15 @@ function set(patch: Partial<ListenState>) {
   listeners.forEach((l) => l());
 }
 
-let player: AudioPlayer | undefined;
+let player: CrossfadeLoop | undefined;
 /** When the current player began, for its own short fade-in on a switch. */
 let playerStartedAt = 0;
 let ticker: ReturnType<typeof setInterval> | undefined;
 let lastTick = 0;
 
-function release(p: AudioPlayer | undefined, ms: number, then?: () => void) {
+function release(p: CrossfadeLoop | undefined, ms: number, then?: () => void) {
   if (!p) return then?.();
-  const from = p.volume;
-  const steps = Math.max(1, Math.round(ms / 60));
-  let i = 0;
-  const t = setInterval(() => {
-    i++;
-    try {
-      p.volume = from * (1 - i / steps);
-    } catch {}
-    if (i >= steps) {
-      clearInterval(t);
-      try {
-        p.remove();
-      } catch {}
-      then?.();
-    }
-  }, 60);
+  p.release(ms, then);
 }
 
 function tick() {
@@ -82,19 +71,15 @@ function tick() {
   const s = soundscape(state.id);
   if (player && s) {
     const own = Math.min(1, (now - playerStartedAt) / SWITCH_MS);
-    try {
-      player.volume = listenLevel(s) * listenVolumeAt(elapsedMs, state.timer, timerElapsedMs) * own;
-    } catch {}
+    player.setVolume(listenLevel(s) * listenVolumeAt(elapsedMs, state.timer, timerElapsedMs) * own);
   }
   if (dt) set({ elapsedMs, timerElapsedMs });
 }
 
-function newPlayer(id: SoundscapeId): AudioPlayer | undefined {
+function newPlayer(id: SoundscapeId): CrossfadeLoop | undefined {
   try {
-    const p = createAudioPlayer(SOUNDSCAPE_ASSET[id], { keepAudioSessionActive: true });
-    p.loop = true;
-    p.volume = 0;
-    p.play();
+    // Silent at first: the tick raises it.
+    const p = loopSoundscape(id, 0);
     playerStartedAt = Date.now();
     return p;
   } catch {
@@ -131,17 +116,13 @@ export async function startListening(id: SoundscapeId, timer: ListenTimer = stat
 export function pauseListening() {
   if (!state.playing) return;
   tick();
-  try {
-    player?.pause();
-  } catch {}
+  player?.pause();
   set({ playing: false });
 }
 
 export function resumeListening() {
   if (state.playing || !state.id) return;
-  try {
-    player?.play();
-  } catch {}
+  player?.resume();
   lastTick = Date.now();
   set({ playing: true });
 }

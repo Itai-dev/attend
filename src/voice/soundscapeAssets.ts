@@ -1,17 +1,35 @@
+import { createAudioPlayer } from 'expo-audio';
 import type { SoundscapeId } from '../domain/soundscapes';
+import { CrossfadeLoop } from './crossfadeLoop';
 
 /**
- * The audio behind each soundscape: generated recordings mastered by
- * tools/master-soundscapes.py into quiet, seamless loops. A field recording can replace any
- * file under the same name (master it the same way so the levels match).
+ * The audio behind each soundscape, as AAC (.m4a). A field recording replaces any of them
+ * under the same name, `assets/audio/soundscapes/<id>.m4a`; master it with
+ * tools/master-soundscapes.py so the levels match (domain/soundscapes.ts sets the final
+ * level). Files can be minutes long: the loop is made in the app by two players crossing
+ * over (voice/crossfadeLoop.ts), so a file needs no seamless ending of its own, and AAC's
+ * encoder padding is never heard.
+ *
+ * The tone is a synthesized drone: four seamless 30-second periods in one two-minute file, so
+ * its crossfade (where two copies of a steady tone overlap) comes round only every two minutes.
  */
 export const SOUNDSCAPE_ASSET: Record<SoundscapeId, number> = {
-  rain: require('../../assets/audio/soundscapes/rain.wav'),
-  forest: require('../../assets/audio/soundscapes/forest.wav'),
-  stream: require('../../assets/audio/soundscapes/stream.wav'),
-  waterfall: require('../../assets/audio/soundscapes/waterfall.wav'),
-  ocean: require('../../assets/audio/soundscapes/ocean.wav'),
-  night: require('../../assets/audio/soundscapes/night.wav'),
-  fire: require('../../assets/audio/soundscapes/fire.wav'),
-  tone: require('../../assets/audio/tone-432.wav'),
+  rain: require('../../assets/audio/soundscapes/rain.m4a'),
+  forest: require('../../assets/audio/soundscapes/forest.m4a'),
+  stream: require('../../assets/audio/soundscapes/stream.m4a'),
+  waterfall: require('../../assets/audio/soundscapes/waterfall.m4a'),
+  ocean: require('../../assets/audio/soundscapes/ocean.m4a'),
+  night: require('../../assets/audio/soundscapes/night.m4a'),
+  fire: require('../../assets/audio/soundscapes/fire.m4a'),
+  tone: require('../../assets/audio/tone-432.m4a'),
 };
+
+/**
+ * A soundscape playing as a seamless loop, starting at `volume`. Throws if no player can be
+ * made; callers carry on without the sound.
+ */
+export function loopSoundscape(id: SoundscapeId, volume = 0): CrossfadeLoop {
+  // keepAudioSessionActive: pausing a finished pass (or the whole loop) must not switch the
+  // audio session off under the other pass, the guide or the recogniser (see ElevenLabsSpeechOutput.play).
+  return new CrossfadeLoop(() => createAudioPlayer(SOUNDSCAPE_ASSET[id], { keepAudioSessionActive: true }), volume);
+}

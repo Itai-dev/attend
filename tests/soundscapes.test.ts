@@ -15,9 +15,9 @@ import {
 
 const MIN = 60_000;
 
-test('every soundscape has its audio file', () => {
+test('every soundscape has its audio file (AAC: the app makes the loop, voice/crossfadeLoop.ts)', () => {
   for (const s of SOUNDSCAPES) {
-    const file = s.id === 'tone' ? 'assets/audio/tone-432.wav' : `assets/audio/soundscapes/${s.id}.wav`;
+    const file = s.id === 'tone' ? 'assets/audio/tone-432.m4a' : `assets/audio/soundscapes/${s.id}.m4a`;
     assert.ok(existsSync(join(__dirname, '..', file)), `${s.id}: ${file}`);
   }
 });

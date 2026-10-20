@@ -26,6 +26,8 @@ export class KeepAlive {
     try {
       // keepAudioSessionActive: pausing this must not switch the audio session off under the guide's next line.
       const p = createAudioPlayer(SOUNDSCAPE_ASSET.tone, { keepAudioSessionActive: true });
+      // One player's own loop is enough here: at volume 0 the seam (AAC padding) is never heard,
+      // and it still counts as playing. The audible sounds cross over instead (crossfadeLoop.ts).
       p.loop = true;
       p.volume = 0;
       p.play();
