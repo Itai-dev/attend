@@ -134,7 +134,7 @@ export function SettingsScreen() {
           </>
         ) : null}
         <Hairline />
-        {/* "sound", not "sound under practice": with "matched · waterfall" beside it the long label
+        {/* "sound", not "sound under practice": with "matched · 432 Hz" beside it the long label
           wrapped and the value was cut off. VoiceOver still hears the whole of it. */}
         <DisclosureRow
           label="sound"

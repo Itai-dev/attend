@@ -24,6 +24,12 @@ pain record (ported from Pattern) to show whether practice is helping. See `docs
 > **Sounds** tab with a sleep timer (`voice/listen.ts`). The plan to the App Store and paying
 > users is `docs/LAUNCH.md`.
 >
+> **20 Oct 2026:** for now the sounds are six soft tones, named by their pitch (174, 285,
+> 396, 432, 528 and 639 Hz; `tools/make-tones.py`, `assets/audio/tones/`). The nature
+> recordings are paused, not deleted; `voice/soundscapeAssets.ts` says how to bring them back.
+> The names are the numbers people know. The app makes no claim about what a frequency does
+> (`docs/RESEARCH.md` §7).
+>
 > **The flow (18 Oct 2026):** three tabs — **Today** (one button for the day: lesson, then
 > straight into the practice; four one-tap moments: a flare, can't sleep, body scan, worried),
 > **Sounds** (tap one, it plays) and **Progress** (the 28-day path, practice, the pain record).

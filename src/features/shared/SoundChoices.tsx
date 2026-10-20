@@ -14,7 +14,7 @@ export function SoundChoices({ selected, today, onChoose }: { selected: Backgrou
       <Hairline />
       <ChoiceRow
         label="Matched to the practice"
-        detail={`Today: ${(soundscape(today)?.name ?? '').toLowerCase()}`}
+        detail={`Today: ${soundscape(today)?.name ?? ''}`}
         selected={selected === 'matched'}
         onPress={() => onChoose('matched')}
       />

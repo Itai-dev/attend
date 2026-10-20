@@ -3,25 +3,28 @@ import type { SoundscapeId } from '../domain/soundscapes';
 import { CrossfadeLoop } from './crossfadeLoop';
 
 /**
- * The audio behind each soundscape, as AAC (.m4a): real, public-domain field recordings
- * (assets/audio/soundscapes/SOURCES.md), five minutes each, built by tools/master-recordings.py.
- * To replace one, add it there and re-run; domain/soundscapes.ts sets the final level from the
- * measured levels. Files can be minutes long: the loop is made in the app by two players crossing
- * over (voice/crossfadeLoop.ts), so a file needs no seamless ending of its own, and AAC's
- * encoder padding is never heard.
+ * The audio behind each sound, as AAC (.m4a): six soft tones built by tools/make-tones.py, ten
+ * minutes each, so a practice never reaches the loop's seam. domain/soundscapes.ts sets the
+ * final level from each file's measured loudness. The loop is made in the app by two players
+ * crossing over (voice/crossfadeLoop.ts), so a file needs no seamless ending of its own, and
+ * AAC's encoder padding is never heard.
  *
- * The tone is a synthesized drone: four seamless 30-second periods in one two-minute file, so
- * its crossfade (where two copies of a steady tone overlap) comes round only every two minutes.
+ * PAUSED, 20 Oct 2026: the nature recordings (rain, forest, stream, waterfall, ocean, night,
+ * fire). "For now, replace the nature sounds with soft tones." Their files and credits stay in
+ * assets/audio/soundscapes/ (SOURCES.md), out of the bundle because nothing requires them. To
+ * bring them back: add their ids to SoundscapeId and SOUNDSCAPES (domain/soundscapes.ts, with
+ * the LUFS measured when they were mastered: rain -25.0, forest -22.9, stream -20.9, waterfall
+ * -22.1, ocean -22.0, night -19.8, fire -21.6), take them out of LEGACY_NATURE there, add
+ * `rain: require('../../assets/audio/soundscapes/rain.m4a')` and the rest here, and their
+ * photographs in design/Photo.tsx (the files are still in assets/images/photos/).
  */
 export const SOUNDSCAPE_ASSET: Record<SoundscapeId, number> = {
-  rain: require('../../assets/audio/soundscapes/rain.m4a'),
-  forest: require('../../assets/audio/soundscapes/forest.m4a'),
-  stream: require('../../assets/audio/soundscapes/stream.m4a'),
-  waterfall: require('../../assets/audio/soundscapes/waterfall.m4a'),
-  ocean: require('../../assets/audio/soundscapes/ocean.m4a'),
-  night: require('../../assets/audio/soundscapes/night.m4a'),
-  fire: require('../../assets/audio/soundscapes/fire.m4a'),
-  tone: require('../../assets/audio/tone-432.m4a'),
+  hz174: require('../../assets/audio/tones/hz174.m4a'),
+  hz285: require('../../assets/audio/tones/hz285.m4a'),
+  hz396: require('../../assets/audio/tones/hz396.m4a'),
+  hz432: require('../../assets/audio/tones/hz432.m4a'),
+  hz528: require('../../assets/audio/tones/hz528.m4a'),
+  hz639: require('../../assets/audio/tones/hz639.m4a'),
 };
 
 /**

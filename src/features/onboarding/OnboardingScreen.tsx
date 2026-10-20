@@ -376,7 +376,7 @@ export function OnboardingScreen() {
             {sleepNow ? (
               <>
                 <PrimaryButton label="can’t sleep · 10 min, starts now" onPress={() => finish('sleep')} />
-                {/* For someone who wanted rain and not a voice (Tom, round 5). */}
+                {/* For someone who wanted a sound and not a voice (Tom, round 5). */}
                 <QuietButton label={`${justListenLabel(prefs)} →`} accessibilityLabel={`${justListenLabel(prefs)}. Plays the sound on its own`} style={{ alignSelf: 'center' }} onPress={() => finish('listen')} />
                 <View style={styles.pair}>
                   <QuietButton label={`or begin day ${day} now`} onPress={() => finish('lesson')} />

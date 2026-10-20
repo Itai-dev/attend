@@ -15,6 +15,7 @@ import {
   type SoundscapeId,
 } from '@/domain/soundscapes';
 import { startListening } from '@/voice/listen';
+import { noteStart } from '../finish/started';
 import type { Place, SessionType } from '@/domain/types';
 import type { SessionLength } from '@/engine/phases';
 
@@ -103,7 +104,7 @@ export function shortDayPlan(day: number, k: Known): PracticePlan {
 
 /**
  * Today's program practice, as far as its sound goes: what "matched" means today where no plan
- * is at hand (Settings' "Today: fireside", the Sounds tab's footer).
+ * is at hand (Settings' "Today: 285 Hz", the Sounds tab's footer).
  */
 export function todaysPractice(prefs: Prefs, now = Date.now()): PracticeKind {
   const { day } = currentDay(prefs.program ?? EMPTY_PROGRAM, dayKey(now, currentTz(new Date(now))));
@@ -113,6 +114,8 @@ export function todaysPractice(prefs: Prefs, now = Date.now()): PracticeKind {
 
 /** Open the session for a plan. `replace` when coming from a screen that should not be returned to (a lesson, Before). */
 export function startPractice(plan: PracticePlan, how: 'push' | 'replace' = 'push') {
+  // The finish names the body scan, which the saved session can't say (finish/started.ts).
+  noteStart(plan);
   const params = {
     type: plan.type,
     minutes: String(plan.minutes),
@@ -128,20 +131,20 @@ export function startPractice(plan: PracticePlan, how: 'push' | 'replace' = 'pus
 }
 
 /**
- * "or just soft rain, no voice →": the sound under practice on its own, for someone at night who
- * wanted rain and not a guide (Tom, round 5). Plays the sound chosen for practice, or rain when
- * that is "no sound" or "matched" (a listen is not a practice, and rain is what a sleepless night
- * gets matched to), with the last listen's timer, and opens the player. Listening is not
- * practice: nothing is recorded or counted (voice/listen.ts).
+ * "or just 174 Hz, no voice →": the sound under practice on its own, for someone at night who
+ * wanted a sound and not a guide (Tom, round 5). Plays the sound chosen for practice; when that
+ * is "matched", what a sleepless night is matched to (the deepest tone; a listen is not a
+ * practice); when it is "no sound", the middle tone. With the last listen's timer, and opens
+ * the player. Listening is not practice: nothing is recorded or counted (voice/listen.ts).
  */
 export function justListenSound(prefs: Prefs): SoundscapeId {
   const bg = resolveBackground(backgroundFor(prefs), { type: 'sleep' });
   return bg === 'none' ? DEFAULT_BACKGROUND : bg;
 }
 
-/** The link's words: "or just soft rain, no voice". */
+/** The link's words: "or just 174 Hz, no voice". The pitch keeps its unit (Soundscape.name). */
 export function justListenLabel(prefs: Prefs): string {
-  return `or just ${(soundscape(justListenSound(prefs))?.name ?? 'rain').toLowerCase()}, no voice`;
+  return `or just ${soundscape(justListenSound(prefs))?.name ?? 'a tone'}, no voice`;
 }
 
 export function startJustListen(prefs: Prefs, setPrefs: (p: Partial<Prefs>) => unknown, how: 'push' | 'replace' = 'push') {

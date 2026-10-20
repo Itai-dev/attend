@@ -191,12 +191,12 @@ test('listen comes first at night and for Nights; read and listen are both alway
 test('a sleep practice that ran its course rests, and its sound carries on for 30 minutes', () => {
   assert.ok((LISTEN_TIMERS as readonly number[]).includes(SLEEP_TAIL_MINUTES));
   assert.equal(SLEEP_TAIL_MINUTES, 30);
-  assert.deepEqual(afterPractice('sleep', 'completed', 'rain'), { rest: true, sound: 'rain' });
+  assert.deepEqual(afterPractice('sleep', 'completed', 'hz528'), { rest: true, sound: 'hz528' });
   // No sound chosen: dark and quiet, nothing starts.
   assert.deepEqual(afterPractice('sleep', 'completed', 'none'), { rest: true });
   // Ended by the person: they are awake, and After is where they asked to go.
-  assert.deepEqual(afterPractice('sleep', 'ended_early', 'rain'), { rest: false });
-  assert.deepEqual(afterPractice('notice', 'completed', 'rain'), { rest: false });
+  assert.deepEqual(afterPractice('sleep', 'ended_early', 'hz528'), { rest: false });
+  assert.deepEqual(afterPractice('notice', 'completed', 'hz528'), { rest: false });
 });
 
 test('a sleep practice records its guided minutes only, and ends in rest without a wake-up', async () => {

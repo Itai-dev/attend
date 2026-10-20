@@ -7,19 +7,23 @@ import type { SoundscapeId } from '../domain/soundscapes';
  * The app's photographs: misty, overcast, 35mm film, in the manner of daisysound.com. One for
  * each sound and one for each part of the day (tools/grade-photos.py). Places to be, never a
  * picture of a body or of pain.
+ *
+ * The tones (20 Oct 2026) borrow the photographs made for the nature sounds, now paused: the
+ * deeper the tone, the darker the place (night, then the fire, the forest), the brighter, the
+ * lighter (rain, the shore, fog). A photograph is a place to look at while choosing, not a
+ * picture of what the tone is "for". `fog` stands for no sound at all (practice settings).
  */
 
-export type SceneId = SoundscapeId | 'dawn' | 'day' | 'dusk' | 'evening';
+export type SceneId = SoundscapeId | 'fog' | 'dawn' | 'day' | 'dusk' | 'evening';
 
 const PHOTO: Record<SceneId, number> = {
-  rain: require('../../assets/images/photos/rain.jpg'),
-  forest: require('../../assets/images/photos/forest.jpg'),
-  stream: require('../../assets/images/photos/stream.jpg'),
-  waterfall: require('../../assets/images/photos/waterfall.jpg'),
-  ocean: require('../../assets/images/photos/ocean.jpg'),
-  night: require('../../assets/images/photos/night.jpg'),
-  fire: require('../../assets/images/photos/fire.jpg'),
-  tone: require('../../assets/images/photos/tone.jpg'),
+  hz174: require('../../assets/images/photos/night.jpg'),
+  hz285: require('../../assets/images/photos/fire.jpg'),
+  hz396: require('../../assets/images/photos/forest.jpg'),
+  hz432: require('../../assets/images/photos/rain.jpg'),
+  hz528: require('../../assets/images/photos/ocean.jpg'),
+  hz639: require('../../assets/images/photos/tone.jpg'),
+  fog: require('../../assets/images/photos/tone.jpg'),
   dawn: require('../../assets/images/photos/dawn.jpg'),
   day: require('../../assets/images/photos/day.jpg'),
   dusk: require('../../assets/images/photos/dusk.jpg'),
@@ -36,7 +40,7 @@ export function sceneForHour(hour: number): SceneId {
 
 /** Whether type over the photograph's upper half reads best light or dark. */
 export function sceneIsLight(id: SceneId): boolean {
-  return id === 'day' || id === 'tone' || id === 'ocean' || id === 'rain' || id === 'waterfall';
+  return id === 'day' || id === 'fog' || id === 'hz432' || id === 'hz528' || id === 'hz639';
 }
 
 type Props = {

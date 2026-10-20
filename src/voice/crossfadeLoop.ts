@@ -4,9 +4,10 @@ import { crossfadeDone, crossfadeSeconds, loopGains, loopWaitMs, LOOP_TICK_MS, n
 /**
  * One sound playing on and on without a seam, made from two players that take turns.
  *
- * The soundscapes are field recordings minutes long, shipped as AAC (.m4a). A single player
- * with `loop = true` would gap or click each time it came round: AAC's encoder padding puts
- * silence at both ends of the file, and a recording's last second never matches its first.
+ * The sounds are files minutes long (ten-minute tones since 20 Oct 2026; earlier, field
+ * recordings), shipped as AAC (.m4a). A single player with `loop = true` would gap or click
+ * each time it came round: AAC's encoder padding puts silence at both ends of the file, and a
+ * file's last second never matches its first.
  * (The 30-second WAV loops this replaces were WAV for exactly that reason.) So a few seconds
  * before the playing pass ends, the other player starts the file again from the top and the
  * two cross over on an equal-power curve; the finished one is paused, rewound, and waits for

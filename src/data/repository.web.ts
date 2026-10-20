@@ -1,7 +1,7 @@
 import type { EngineDraft } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
 import type { Session, SessionMoment } from '../domain/types';
-import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from './types';
+import { DEFAULT_PREFS, loadPrefs, mergePrefs, type Prefs, type SessionRepository } from './types';
 
 /**
  * Web build only (used for design review and screenshots): the same
@@ -24,7 +24,7 @@ function load(): Store {
     const raw = globalThis.localStorage?.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw) as Store;
-      return { ...s, prefs: mergePrefs(DEFAULT_PREFS, s.prefs ?? {}) };
+      return { ...s, prefs: loadPrefs(s.prefs) };
     }
   } catch {}
   return { sessions: [], moments: {}, prefs: DEFAULT_PREFS, draft: null };

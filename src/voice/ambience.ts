@@ -1,11 +1,10 @@
-import { soundscape, UNDER_VOICE, volumeFor, type Soundscape, type SoundscapeId } from '../domain/soundscapes';
+import { DEFAULT_BACKGROUND, soundscape, UNDER_VOICE, volumeFor, type Soundscape, type SoundscapeId } from '../domain/soundscapes';
 import type { CrossfadeLoop } from './crossfadeLoop';
 import { loopSoundscape } from './soundscapeAssets';
 import type { SessionStatus } from './VoiceSessionProvider';
 
 /**
- * A sound under the session: rain, forest, water, the 432 Hz tone (domain/soundscapes.ts),
- * each a seamless loop (two players crossing over: voice/crossfadeLoop.ts). It is atmosphere,
+ * A sound under the session: one of the soft tones (domain/soundscapes.ts), a seamless loop (two players crossing over: voice/crossfadeLoop.ts). It is atmosphere,
  * nothing more — the app never calls it healing or says it does anything for pain.
  *
  * It sits well under the voice: quieter while the guide speaks and while listening,
@@ -36,11 +35,12 @@ export class Ambience {
   private ducked = false;
   private lastVoiceAt = 0;
   private release?: ReturnType<typeof setTimeout>;
-  /** The sound's own loudness, so a quiet forest and a full waterfall sit alike under the voice. */
+  /** The sound's own loudness, so a low tone and a bright one sit alike under the voice. */
   private readonly sound: Soundscape;
 
-  constructor(private readonly source: SoundscapeId = 'tone') {
-    this.sound = soundscape(source) ?? soundscape('tone')!;
+  constructor(source: SoundscapeId = DEFAULT_BACKGROUND) {
+    // An id this build doesn't have (a sound from an older build, say) plays the middle tone.
+    this.sound = soundscape(source) ?? soundscape(DEFAULT_BACKGROUND)!;
   }
 
   start() {
@@ -48,7 +48,7 @@ export class Ambience {
     try {
       // Silent at first; follow() fades it in. Its players keep the audio session active when
       // paused, so a pause never switches the session off under the recogniser (loopSoundscape).
-      this.loop = loopSoundscape(this.source, 0);
+      this.loop = loopSoundscape(this.sound.id, 0);
     } catch {
       // No sound is better than no session.
       this.loop = undefined;

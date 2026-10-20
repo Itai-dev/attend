@@ -4,6 +4,7 @@ import {
   DEFAULT_LISTEN_TIMER,
   listenLevel,
   listenVolumeAt,
+  migrateListenId,
   soundscape,
   type ListenTimer,
   type SoundscapeId,
@@ -12,7 +13,7 @@ import type { CrossfadeLoop } from './crossfadeLoop';
 import { loopSoundscape } from './soundscapeAssets';
 
 /**
- * Just listen: one soundscape on its own, with a sleep timer, and nothing to do once it
+ * Just listen: one sound on its own, with a sleep timer, and nothing to do once it
  * starts. It keeps playing with the screen locked and fades out slowly when the timer ends
  * (domain/soundscapes.ts), so it can be fallen asleep to.
  *
@@ -20,7 +21,7 @@ import { loopSoundscape } from './soundscapeAssets';
  * sound. A guided session stops it first (VoiceSessionProvider): two sounds at once would be
  * the loudest thing an eyes-closed person hears.
  *
- * Each sound is a seamless loop of a long recording, two players crossing over
+ * Each sound is a seamless loop of a long file, two players crossing over
  * (voice/crossfadeLoop.ts); switching sounds crosses one loop into the next.
  *
  * Nothing is recorded. Listening is not practice and does not count toward the program.
@@ -89,6 +90,8 @@ function newPlayer(id: SoundscapeId): CrossfadeLoop | undefined {
 
 /** Begin listening to `id`, or switch to it (a short crossfade) if something is playing. */
 export async function startListening(id: SoundscapeId, timer: ListenTimer = state.timer) {
+  // A sound remembered by an older build (a nature recording, the old 'tone') plays a tone this build has.
+  id = migrateListenId(id);
   if (state.id && state.playing) {
     if (id === state.id) return;
     release(player, SWITCH_MS);

@@ -22,7 +22,7 @@ export function SoundsScreen() {
   const { width } = useWindowDimensions();
   const { prefs, setPrefs } = useData();
   const live = useListen();
-  // "matched · fireside", "soft rain", "no sound": the same words as Settings' row.
+  // "matched · 285 Hz", "432 Hz", "no sound": the same words as Settings' row.
   const under = backgroundLabel(backgroundFor(prefs), todaysPractice(prefs));
   const tile = (width - space.xl * 2 - space.m) / 2;
   // The remembered timer, on every tile, so a tap's outcome is known before it's made.
@@ -39,9 +39,9 @@ export function SoundsScreen() {
 
   return (
     <TitledScroll title="sounds" right={<SettingsGear />}>
-      {/* Round 5: "can't sleep" started a voice when Tom wanted rain. Here there is no voice. */}
+      {/* Round 5: "can't sleep" started a voice when Tom wanted only a sound. Here there is no voice. */}
       <Txt variant="callout" tone="secondary" style={{ marginTop: -space.m, marginBottom: space.xl }}>
-        No voice, just the place. Plays with the screen locked and fades out on its own.
+        No voice, just a tone. Plays with the screen locked and fades out on its own.
       </Txt>
       <View style={styles.grid}>
         {SOUNDSCAPES.map((s) => {
@@ -66,7 +66,8 @@ export function SoundsScreen() {
                   </View>
                 ) : null}
                 <View style={styles.tileText}>
-                  <Txt variant="headline" style={[styles.onImage, styles.shadow, { textTransform: 'lowercase' }]}>
+                  {/* As written, not lowercased: "432 Hz", since "Hz" is a unit (Soundscape.name). */}
+                  <Txt variant="headline" style={[styles.onImage, styles.shadow]}>
                     {s.name}
                   </Txt>
                   <Txt variant="footnote" numberOfLines={2} style={[styles.onImage, styles.shadow, { opacity: 0.9 }]}>
@@ -94,7 +95,8 @@ export function SoundsScreen() {
         <Txt variant="callout" style={{ textTransform: 'lowercase' }}>
           sound under practice
         </Txt>
-        <Txt variant="callout" tone="secondary" style={{ textTransform: 'lowercase' }}>
+        {/* Already lowercase where it is words; the pitch keeps its "Hz". */}
+        <Txt variant="callout" tone="secondary">
           {under} ›
         </Txt>
       </Pressable>

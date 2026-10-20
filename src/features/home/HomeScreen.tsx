@@ -10,7 +10,7 @@ import { showFirstWeek } from '@/domain/firstWeek';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay } from '@/domain/program';
 import { isNight, NEED_IT, needItSubtitle, presetById, todayMoments } from '@/domain/presets';
 import { buildProgress } from '@/domain/progress';
-import { soundscape, timerLabel } from '@/domain/soundscapes';
+import { DEFAULT_BACKGROUND, soundscape, timerLabel } from '@/domain/soundscapes';
 import { Card, haptic, Icon, IconButton, OutlineButton, PrimaryButton, SectionLabel, Txt, Wordmark } from '@/design/components';
 import { Photo, sceneForHour } from '@/design/Photo';
 import { HIT, radius, space, type Palette } from '@/design/theme';
@@ -30,7 +30,7 @@ import { FirstWeekCard } from './FirstWeekCard';
  *     any practice, only one leads (the welcome's answer, or a flare) and the rest wait under
  *     "more for right now" below the day: four of them pushed the program out of view (round 5
  *     retest). At night, or once something is practiced, they all lead; at night "can't sleep"
- *     first, with a way to just hear the rain.
+ *     first, with a way to just hear a tone, no voice.
  *  2. Your daily practice: the program's day, begun with one tap (the short lesson first if it
  *     hasn't been read, then straight into the practice, eyes closed). After any practice today
  *     it goes quiet: once is enough for a day, and a second ask after a flare reads as homework.
@@ -192,7 +192,7 @@ export function HomeScreen() {
   );
 
   // Practices are text rows; photographs belong to sounds. Two kinds of thing, two looks, so
-  // nobody taps a forest expecting rain and gets a voice — and each row says it's a voice.
+  // nobody taps a sound's photograph and gets a voice — and each row says it's a voice.
   const momentRows = (list: typeof NEED_IT) => (
     <View>
       {list.map((n, i) => {
@@ -222,8 +222,8 @@ export function HomeScreen() {
                 →
               </Txt>
             </Pressable>
-            {/* At night, under "can't sleep": the sound alone, for someone who wanted rain and not a
-                voice (Tom, round 5). Listening records nothing and counts toward nothing. */}
+            {/* At night, under "can't sleep": the sound alone, for someone who wanted a sound and not
+                a voice (Tom, round 5). Listening records nothing and counts toward nothing. */}
             {n.id === 'sleep-10' && night ? (
               <Pressable
                 accessibilityRole="button"
@@ -425,13 +425,13 @@ function useNow(): number {
 function NowPlaying({ listen }: { listen: ReturnType<typeof useListen> }) {
   const color = useColors();
   const styles = useStyles(makeStyles);
-  const s = soundscape(listen.id) ?? soundscape('rain')!;
+  const s = soundscape(listen.id) ?? soundscape(DEFAULT_BACKGROUND)!;
   return (
     <Card label={`${s.name}, ${listen.playing ? 'playing' : 'paused'}. Open`} onPress={() => router.push('/listen')} style={styles.playing}>
       <Photo scene={s.id} width={52} height={52} radius={radius.s} />
       <View style={{ flex: 1 }}>
-        {/* Glanced at, so lowercase, as on every other label (AGENTS.md "App copy"). */}
-        <Txt variant="headline">{s.name.toLowerCase()}</Txt>
+        {/* Glanced at, yet as written: "432 Hz" keeps its unit (Soundscape.name). */}
+        <Txt variant="headline">{s.name}</Txt>
         <Txt variant="footnote" tone="secondary">
           {listen.playing ? timerLabel(listen.timer, listen.timerElapsedMs) : 'paused'}
         </Txt>

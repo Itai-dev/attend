@@ -1,5 +1,11 @@
 # Where the sounds come from
 
+> **Paused (20 Oct 2026).** For now the app plays soft tones instead of these recordings
+> (`assets/audio/tones/`, built by `tools/make-tones.py`). These files are kept but not
+> bundled, because nothing `require`s them. To bring them back, follow the note at the top of
+> `src/voice/soundscapeAssets.ts`: add the ids, the LUFS values and the `require`s, then the
+> photographs.
+
 Real field recordings from radio aporee (aporee.org), as archived on the Internet Archive.
 Each item is marked Public Domain (https://creativecommons.org/publicdomain/mark/1.0/) by its
 recordist, so no attribution is required. We credit them anyway, with thanks. The archive.org
@@ -16,7 +22,7 @@ identifiers.
 | night | Night crickets, La Clapère, Maureillas-las-Illas, France | (aporee recordist) | `aporee_70515_82219` | 2:30–7:30 |
 | fire | Fireplace in the woods, Mierki, Poland | (aporee recordist) | `aporee_54707_62564` | 0:05–4:40 |
 
-The soft tone (`../tone-432.m4a`) is synthesized.
+The soft tones (`../tones/`) are synthesized by `tools/make-tones.py`.
 
 **Processing:**
 - A high-pass filter for wind and traffic rumble.

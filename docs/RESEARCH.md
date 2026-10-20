@@ -109,3 +109,38 @@ their words. No targets, no amounts — Pattern's pacing work stays out of scope
 `AGENTS.md` "Nothing rewards looking at your pain" becomes **"Reward practice, never
 pain"**: streak-style counts, milestones and a program path are allowed when they count
 practice and forgive breaks; anything that grades the pain is still out.
+
+## 7. Frequencies: the names people know, and what is actually known (20 Oct 2026)
+
+For now the sounds are soft tones at six pitches instead of nature recordings
+(174, 285, 396, 432, 528 and 639 Hz). These numbers come with a large online mythology of
+"healing frequencies". People know the tones by those numbers, so the app names them that way.
+It does not repeat the claims.
+
+- **The solfeggio set.** 396, 417, 528, 639, 741 and 852 Hz were put forward by Joseph Puleo
+  and popularized by Leonard Horowitz. 174, 285 and 963 Hz were added later. The story that they
+  come from Gregorian chant is not confirmed by musicologists. Science Feedback found no
+  evidence for the health claims made for them.
+  ([Science Feedback](https://science.feedback.org/review/no-evidence-support-claim-solfeggio-frequencies-remove-toxins-from-body/))
+- **432 Hz.** Only small trials exist. A 2019 pilot was done in nurses. A 2025 randomized
+  cross-over trial in 43 people with cancer found that heart rate fell with music tuned to both
+  432 and 443 Hz. It fell slightly more at 432 Hz, but the difference was not robust.
+  ([PMC11755923](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11755923/))
+- **528 Hz.** In one study with nine participants, cortisol fell while they listened
+  ([Akimoto et al. 2018](https://www.scirp.org/html/2-8204397_87146.htm)). The claims that it
+  repairs DNA are unsupported. Even Calm calls the question unsettled.
+  ([Calm](https://blog.calm.com/blog/528-hz))
+- **40 Hz.** 40 Hz "gamma" stimulation is Alzheimer's research. It uses audiovisual flicker,
+  a light and a sound together. It is not a wellness tone, and Attend has none.
+
+**Decisions:**
+- Each tone is named by its number ("432 Hz"). That is a name, not a promise.
+- The line under each tone describes only how it sounds, for example "Low and warm" or
+  "A little brighter".
+- No copy says a tone heals, balances, opens a chakra, repairs DNA, raises a vibration, or is a
+  frequency "for" anything. The word "solfeggio" never appears in the app. `tests/soundscapes.test.ts`
+  guards the sound copy. This is also an App Store risk: guideline 1.4.1 rejects health
+  claims that are not backed by evidence.
+- Matching a tone to a practice (`soundForPractice`) is done by ear: deeper for rest, the middle
+  of the range for looking around. It is never based on an effect. AGENTS.md "Sounds are
+  atmosphere, not treatment" applies unchanged.

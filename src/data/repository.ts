@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import type { EngineDraft } from '../engine/SessionEngine';
 import { normalizePain, type CheckIn } from '../domain/checkin';
 import type { Session, SessionMoment } from '../domain/types';
-import { DEFAULT_PREFS, mergePrefs, type Prefs, type SessionRepository } from './types';
+import { DEFAULT_PREFS, loadPrefs, mergePrefs, type Prefs, type SessionRepository } from './types';
 
 /**
  * SQLite on the device. The schema follows the domain types closely: maps and
@@ -306,7 +306,7 @@ class SQLiteRepository implements SessionRepository {
 
   async getPrefs(): Promise<Prefs> {
     const stored = await this.getKV<Partial<Prefs>>('prefs');
-    return mergePrefs(DEFAULT_PREFS, stored ?? {});
+    return loadPrefs(stored);
   }
 
   async setPrefs(patch: Partial<Prefs>): Promise<Prefs> {

@@ -3,7 +3,7 @@ import type { CheckIn } from '../domain/checkin';
 import type { SignsReply } from '../domain/firstWeek';
 import type { Moment } from '../domain/engagement';
 import type { ProgramState } from '../domain/program';
-import type { BackgroundPref, ListenTimer, SoundscapeId } from '../domain/soundscapes';
+import { migrateSoundPrefs, type BackgroundPref, type ListenTimer, type SoundscapeId } from '../domain/soundscapes';
 import type { Place, SessionFeeling } from '../domain/types';
 import type { Session, SessionMoment, SessionType } from '../domain/types';
 
@@ -122,4 +122,13 @@ export const DEFAULT_PREFS: Prefs = {
 
 export function mergePrefs(base: Prefs, patch: Partial<Prefs>): Prefs {
   return { ...base, ...patch, dev: { ...base.dev, ...(patch.dev ?? {}) } };
+}
+
+/**
+ * Prefs as stored by any build, ready for this one: defaults filled in, and sounds an older
+ * build stored (the nature recordings, the old 'tone', paused 20 Oct 2026) brought up to date,
+ * so a stored choice never breaks a practice or a listen (domain/soundscapes.ts).
+ */
+export function loadPrefs(stored: Partial<Prefs> | null | undefined): Prefs {
+  return migrateSoundPrefs(mergePrefs(DEFAULT_PREFS, stored ?? {}));
 }

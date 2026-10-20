@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 're
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import { LISTEN_TIMERS, soundscape, SOUNDSCAPES, timerLabel, type ListenTimer, type SoundscapeId } from '@/domain/soundscapes';
+import { DEFAULT_BACKGROUND, LISTEN_TIMERS, migrateListenId, soundscape, SOUNDSCAPES, timerLabel, type ListenTimer, type SoundscapeId } from '@/domain/soundscapes';
 import { haptic, IconButton, Segmented, Txt } from '@/design/components';
 import { radius, space, type Palette } from '@/design/theme';
 import { ForceDark, useColors, useStyles } from '@/design/ThemeProvider';
@@ -52,9 +52,9 @@ function ListenBody({ night }: { night: boolean }) {
   const { width, height } = useWindowDimensions();
   const { prefs, setPrefs } = useData();
   const live = useListen();
-  const [picked, setPicked] = useState<SoundscapeId>(live.id ?? prefs.listen?.id ?? 'rain');
+  const [picked, setPicked] = useState<SoundscapeId>(live.id ?? migrateListenId(prefs.listen?.id));
   const [timer, setTimer] = useState<ListenTimer>(live.id ? live.timer : (prefs.listen?.timer ?? 20));
-  const current = soundscape(live.id ?? picked)!;
+  const current = soundscape(live.id ?? picked) ?? soundscape(DEFAULT_BACKGROUND)!;
   const playing = !!live.id && live.playing;
   const heroH = Math.round(height * 0.46);
 
@@ -119,7 +119,7 @@ function ListenBody({ night }: { night: boolean }) {
                 style={({ pressed }) => [styles.sound, { opacity: pressed ? 0.7 : 1 }]}
               >
                 <Photo scene={s.id} width={THUMB_W} height={THUMB_H} radius={radius.s} style={[on ? styles.thumbOn : undefined, night && !on ? { opacity: 0.6 } : undefined]} />
-                <Txt variant="footnote" tone={on ? 'primary' : 'secondary'} numberOfLines={1} style={{ marginTop: space.s, fontWeight: on ? '600' : '400', textTransform: 'lowercase' }}>
+                <Txt variant="footnote" tone={on ? 'primary' : 'secondary'} numberOfLines={1} style={{ marginTop: space.s, fontWeight: on ? '600' : '400' }}>
                   {s.name}
                 </Txt>
               </Pressable>

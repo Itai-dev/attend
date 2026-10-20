@@ -1,9 +1,9 @@
 /**
  * The arithmetic of a seamless loop made from two players (voice/crossfadeLoop.ts).
  *
- * Why two players: the soundscapes are long field recordings shipped as AAC (.m4a). One
- * player looping such a file leaves a gap or a click at the seam — AAC's encoder padding
- * adds silence at both ends, and a recording's last second never matches its first. So
+ * Why two players: the sounds are long files shipped as AAC (.m4a). One player looping such
+ * a file leaves a gap or a click at the seam — AAC's encoder padding adds silence at both
+ * ends, and a file's last second never matches its first. So
  * a second player starts the file again from the top a few seconds before the first one
  * ends, and the two cross over.
  *
@@ -54,8 +54,9 @@ export function crossfadeProgress(positionS: number, durationS: number, fadeS: n
 }
 
 /**
- * Equal power: the two passes are different moments of rain or water — uncorrelated — so
- * their powers add. cos²+sin² = 1 keeps the loudness level through the crossfade; a linear
+ * Equal power: the two passes are different moments of the sound — mostly uncorrelated — so
+ * their powers add. (Two moments of a tone are partly alike and can partly cancel, a dip of a
+ * few dB; tools/make-tones.py makes the files ten minutes long so a practice never meets it.) cos²+sin² = 1 keeps the loudness level through the crossfade; a linear
  * crossfade would dip about 3 dB in the middle, which is a seam you can hear.
  */
 export function equalPower(progress: number): { out: number; in: number } {
