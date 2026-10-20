@@ -88,7 +88,7 @@ export type Prefs = {
   moments?: Moment[];
   /** Before soundscapes: the soft tone under the session, on unless turned off. Read by backgroundFor(). */
   ambience?: boolean;
-  /** The sound under sessions (domain/soundscapes.ts). Unset: rain, or none if `ambience` was off. */
+  /** The sound under sessions (domain/soundscapes.ts). Unset: matched to each practice, or none if `ambience` was off. */
   background?: BackgroundPref;
   /** Light, dark, or following the phone (unset). */
   appearance?: 'auto' | 'light' | 'dark';

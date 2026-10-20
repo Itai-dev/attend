@@ -3,8 +3,17 @@ import type { Prefs } from '@/data/types';
 import { GUIDE_VOICES } from '@/config';
 import { currentTz, dayKey, latestPlace, type CheckIn } from '@/domain/checkin';
 import { presetTheme, type Preset } from '@/domain/presets';
-import { practiceMinutes, programDay, SHORT_DAY_MINUTES, type PracticeTheme } from '@/domain/program';
-import { backgroundFor, DEFAULT_BACKGROUND, DEFAULT_LISTEN_TIMER, soundscape, type BackgroundPref, type SoundscapeId } from '@/domain/soundscapes';
+import { currentDay, EMPTY_PROGRAM, practiceMinutes, programDay, SHORT_DAY_MINUTES, type PracticeTheme } from '@/domain/program';
+import {
+  backgroundFor,
+  DEFAULT_BACKGROUND,
+  DEFAULT_LISTEN_TIMER,
+  resolveBackground,
+  soundscape,
+  type Background,
+  type PracticeKind,
+  type SoundscapeId,
+} from '@/domain/soundscapes';
 import { startListening } from '@/voice/listen';
 import type { Place, SessionType } from '@/domain/types';
 import type { SessionLength } from '@/engine/phases';
@@ -24,7 +33,12 @@ export type PracticePlan = {
   theme: PracticeTheme;
   day?: number;
   place: Place | null;
-  background: BackgroundPref;
+  /**
+   * The sound under this practice, already resolved: a choice of "matched" becomes the sound
+   * that suits this practice (domain/soundscapes.ts soundForPractice), so /session's params
+   * carry a real sound or 'none'.
+   */
+  background: Background;
   /** The body scan preset's own scan. Never set for a program day, whatever its theme. */
   scan?: 'body';
 };
@@ -49,6 +63,7 @@ export function todaysChoices(prefs: Prefs, now = Date.now()): NonNullable<Prefs
 export function dayPlan(day: number, k: Known): PracticePlan {
   const d = programDay(day);
   const today = todaysChoices(k.prefs);
+  const kind = { type: d.practice.sessionType, theme: d.practice.theme };
   return {
     type: d.practice.sessionType,
     // Today's choice, then the standing length, then the program's (practiceMinutes).
@@ -58,7 +73,7 @@ export function dayPlan(day: number, k: Known): PracticePlan {
     day: d.day,
     // A whole-body day stays whole-body; otherwise a focus chosen today wins over the usual source.
     place: d.practice.theme !== 'open' && today?.place !== undefined ? today.place : placeFor(d.practice.theme, k),
-    background: backgroundFor(k.prefs),
+    background: resolveBackground(backgroundFor(k.prefs), kind),
   };
 }
 
@@ -72,7 +87,7 @@ export function presetPlan(p: Preset, k: Known): PracticePlan {
     voice: k.prefs.voiceId ?? GUIDE_VOICES[0].id,
     theme,
     place: placeFor(theme, k),
-    background: backgroundFor(k.prefs),
+    background: resolveBackground(backgroundFor(k.prefs), { type: p.type, theme }),
     ...(p.scan ? { scan: p.scan } : {}),
   };
 }
@@ -84,6 +99,16 @@ export function presetPlan(p: Preset, k: Known): PracticePlan {
  */
 export function shortDayPlan(day: number, k: Known): PracticePlan {
   return { ...dayPlan(day, k), minutes: SHORT_DAY_MINUTES };
+}
+
+/**
+ * Today's program practice, as far as its sound goes: what "matched" means today where no plan
+ * is at hand (Settings' "Today: fireside", the Sounds tab's footer).
+ */
+export function todaysPractice(prefs: Prefs, now = Date.now()): PracticeKind {
+  const { day } = currentDay(prefs.program ?? EMPTY_PROGRAM, dayKey(now, currentTz(new Date(now))));
+  const d = programDay(day);
+  return { type: d.practice.sessionType, theme: d.practice.theme };
 }
 
 /** Open the session for a plan. `replace` when coming from a screen that should not be returned to (a lesson, Before). */
@@ -104,12 +129,13 @@ export function startPractice(plan: PracticePlan, how: 'push' | 'replace' = 'pus
 
 /**
  * "or just soft rain, no voice →": the sound under practice on its own, for someone at night who
- * wanted rain and not a guide (Tom, round 5). Plays the sound under practice (rain when that is
- * "voice only"), with the last listen's timer, and opens the player. Listening is not practice:
- * nothing is recorded or counted (voice/listen.ts).
+ * wanted rain and not a guide (Tom, round 5). Plays the sound chosen for practice, or rain when
+ * that is "no sound" or "matched" (a listen is not a practice, and rain is what a sleepless night
+ * gets matched to), with the last listen's timer, and opens the player. Listening is not
+ * practice: nothing is recorded or counted (voice/listen.ts).
  */
 export function justListenSound(prefs: Prefs): SoundscapeId {
-  const bg = backgroundFor(prefs);
+  const bg = resolveBackground(backgroundFor(prefs), { type: 'sleep' });
   return bg === 'none' ? DEFAULT_BACKGROUND : bg;
 }
 

@@ -10,7 +10,7 @@ import { currentTz, dayKey, latestPlace } from '../domain/checkin';
 import { completePractice, EMPTY_PROGRAM, type PracticeTheme } from '../domain/program';
 import type { SpokenLine } from '../domain/lessonVoice';
 import { buildMemory } from '../domain/memory';
-import { afterPractice, backgroundFor, SLEEP_TAIL_MINUTES, type BackgroundPref } from '../domain/soundscapes';
+import { afterPractice, backgroundFor, resolveBackground, SLEEP_TAIL_MINUTES, type Background, type BackgroundPref, type PracticeKind } from '../domain/soundscapes';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
 import { applyOpening, applyScript, ARRIVE, arrivalSafetyTexts, SCAN_BODY, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
@@ -21,7 +21,7 @@ import { SessionEngine, type ScanBank } from '../engine/SessionEngine';
 import { SessionRunner, type PauseReason, type RunnerStatus } from '../engine/SessionRunner';
 import { WelcomeRunner, type WelcomeResult } from '../engine/WelcomeRunner';
 import type { GuideBrain } from '../engine/types';
-import { Ambience } from './ambience';
+import { Ambience, SWAP_FADE_MS } from './ambience';
 import { endSessionAudio } from './audioSession';
 import { KeepAlive } from './keepAlive';
 import { saveAgents, savedAgents, saveScript, savedScript } from './savedGuide';
@@ -65,6 +65,15 @@ type VoiceSessionValue = {
    * 30-minute listen, and the session screen stays dark instead of moving to After.
    */
   resting: boolean;
+  /** The sound under the running session, resolved ('none': only the voice). Undefined between sessions. */
+  background?: Background;
+  /**
+   * Change the sound under this practice only (the session's "sound ›" sheet). The new sound
+   * rises from nothing to wherever the session is and the old one fades out, both over about
+   * two seconds; the guide never pauses for it. Prefs are not touched. 'matched' resolves for
+   * the running practice.
+   */
+  setBackground(pref: BackgroundPref): void;
   /** Session time excluding pauses, read on demand by the timer. */
   activeMs(): number;
   /** The session's planned length in ms (the engine's plan), or 0 before one starts. Read-only: for "about N min left". */
@@ -257,13 +266,16 @@ export type StartOptions = {
   theme?: PracticeTheme;
   place?: Place | null;
   programDay?: number;
-  /** The sound under this session, chosen on Before. Otherwise the one in Settings. */
-  background?: BackgroundPref;
+  /**
+   * The sound under this session, already resolved (start.ts plans resolve "matched"). Otherwise
+   * the one in Settings, resolved for this practice.
+   */
+  background?: Background;
   /** The body scan preset's own scan (SCAN_BODY). */
   scan?: ScanBank;
 };
 
-function ambienceFor(pref: BackgroundPref): Ambience | undefined {
+function ambienceFor(pref: Background): Ambience | undefined {
   return pref === 'none' ? undefined : new Ambience(pref);
 }
 
@@ -289,6 +301,12 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const starting = useRef(false);
   /** The lesson being read aloud, if one is. */
   const speaking = useRef<AbortController | null>(null);
+  const [background, setBackgroundState] = useState<Background | undefined>();
+  /**
+   * The session's sound, held here rather than in start()'s closure so setBackground() can swap
+   * it mid-practice: the runner's callbacks and the cleanup always reach the one now playing.
+   */
+  const ambience = useRef<{ sound?: Ambience; background: Background; practice: PracticeKind; status: SessionStatus; hadSound: boolean } | null>(null);
 
   const start = useCallback(
     async (type: SessionType, minutes?: SessionLength, voiceId?: string, opts: StartOptions = {}) => {
@@ -365,7 +383,11 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       const sleepy = type === 'sleep';
       // A sound playing on its own (Just listen) gives way to the session's.
       stopListening(600, true);
-      const ambience = ambienceFor(opts.background ?? backgroundFor(prefs));
+      const practice: PracticeKind = { type, theme: opts.theme };
+      const bg = opts.background ?? resolveBackground(backgroundFor(prefs), practice);
+      const sound = ambienceFor(bg);
+      ambience.current = { sound, background: bg, practice, status: 'idle', hadSound: !!sound };
+      setBackgroundState(bg);
       const keepAlive = mode === 'guided' ? new KeepAlive() : undefined;
       const r = new SessionRunner({
         engine,
@@ -379,13 +401,17 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
           // instead of fading to nothing, while the screen says what happened.
           // Sleep: the voice going quiet at the end is not the room going quiet; the sound stays at
           // the silences' level until it is handed to Just listen below.
-          ambience?.follow((s.status === 'paused' && s.pausedBy === 'error') || (sleepy && s.status === 'complete') ? 'holding' : s.status);
+          const a = ambience.current;
+          if (a) {
+            a.status = (s.status === 'paused' && s.pausedBy === 'error') || (sleepy && s.status === 'complete') ? 'holding' : s.status;
+            a.sound?.follow(a.status);
+          }
           if (s.status === 'speaking' || s.status === 'holding' || s.status === 'listening') keepAlive?.start();
           else if (s.status === 'paused') keepAlive?.pause();
           if (s.error) setError(s.error);
         },
         onLevel: (l) => {
-          ambience?.hear(l);
+          ambience.current?.sound?.hear(l);
           // Smoothed on the UI thread so the visual follows the voice without flicker.
           level.value = withTiming(l, { duration: 160 });
         },
@@ -408,7 +434,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         // A sleep practice that ran to its end (not one the person ended: they are awake, and
         // After is where they asked to go). Only guided minutes are recorded: the session is
         // already final, the sound's tail is not part of it.
-        const after = afterPractice(type, session.outcome, opts.background ?? backgroundFor(prefs));
+        // The sound playing now: if it was changed mid-practice, that is the one that carries on.
+        const after = afterPractice(type, session.outcome, ambience.current?.background ?? 'none');
         if (after.rest) {
           setResting(true);
           if (after.sound) {
@@ -447,19 +474,38 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         // The listen is already playing (it keeps the app alive with the phone locked), so the
         // silent keep-alive can go; the session's sound fades out under the listen's fade-in.
         keepAlive?.stop();
-        ambience?.stop(handedOver ? SLEEP_HANDOVER_FADE_MS : undefined);
+        const a = ambience.current;
+        ambience.current = null;
+        setBackgroundState(undefined);
+        a?.sound?.stop(handedOver ? SLEEP_HANDOVER_FADE_MS : undefined);
         // After the tone's fade-out: releasing the audio session stops every player at once.
         // Skipped if another session has started by then, or the listen has the audio (it lets
         // go itself when its timer ends).
         if (!handedOver)
           setTimeout(() => {
             if (!runner.current && !starting.current && !speaking.current) endSessionAudio().catch(() => {});
-          }, ambience ? 1400 : 0);
+            // A sound swapped out just before the end is still fading: wait for it too.
+          }, a?.hadSound ? SWAP_FADE_MS + 200 : 0);
         level.value = 0;
       }
     },
     [level],
   );
+
+  const setBackground = useCallback((pref: BackgroundPref) => {
+    const a = ambience.current;
+    if (!a || !(runner.current instanceof SessionRunner)) return;
+    const next = resolveBackground(pref, a.practice);
+    if (next === a.background) return;
+    const old = a.sound;
+    a.sound = ambienceFor(next);
+    a.background = next;
+    if (a.sound) a.hadSound = true;
+    setBackgroundState(next);
+    old?.stop(SWAP_FADE_MS);
+    // From nothing to wherever the session is now; paused, it waits silently for resume.
+    a.sound?.follow(a.status, SWAP_FADE_MS);
+  }, []);
 
   const startWelcome = useCallback(async (): Promise<WelcomeResult> => {
     if (runner.current) return { answers: {}, ended: true };
@@ -479,7 +525,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     }
     const welcomeVoice = GUIDE_VOICES[0];
     stopListening(600, true);
-    const ambience = ambienceFor(backgroundFor(prefs));
+    // The welcome is not a practice: "matched" gets the fallback sound (rain).
+    const sound = ambienceFor(resolveBackground(backgroundFor(prefs)));
     const r = new WelcomeRunner({
       input,
       outputFor: (voiceId) => chooseOutput(voiceId),
@@ -488,10 +535,10 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       onState: (s) => {
         setStatus(s.status);
         setPausedBy(s.pausedBy);
-        ambience?.follow(s.status);
+        sound?.follow(s.status);
       },
       onLevel: (l) => {
-        ambience?.hear(l);
+        sound?.hear(l);
         level.value = withTiming(l, { duration: 160 });
       },
       onDebug: __DEV__ ? (e) => setDebug((prev) => [...prev.slice(-80), { ...e, at: Date.now() }]) : undefined,
@@ -504,10 +551,10 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       runner.current = null;
       deactivateKeepAwake('attend-session');
       input.dispose();
-      ambience?.stop();
+      sound?.stop();
       setTimeout(() => {
         if (!runner.current) endSessionAudio().catch(() => {});
-      }, ambience ? 1400 : 0);
+      }, sound ? 1400 : 0);
       level.value = 0;
       setStatus('idle');
     }
@@ -595,6 +642,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       sessionMode,
       completedSessionId,
       resting,
+      background,
+      setBackground,
       activeMs: () => runner.current?.activeMs ?? 0,
       targetMs: () => (runner.current instanceof SessionRunner ? runner.current.engine.plan.targetMs : 0),
       level,
@@ -621,7 +670,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         setSessionMode(undefined);
       },
     }),
-    [status, error, pausedBy, sessionType, sessionMode, completedSessionId, resting, level, labels, debug, devInput, start, warm, startWelcome, speakLines, stopSpeaking],
+    [status, error, pausedBy, sessionType, sessionMode, completedSessionId, resting, background, setBackground, level, labels, debug, devInput, start, warm, startWelcome, speakLines, stopSpeaking],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

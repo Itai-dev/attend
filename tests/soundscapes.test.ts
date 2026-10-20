@@ -4,9 +4,17 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { GUIDE_SCRIPT } from '../server/lib/guideScript';
 import { FORBIDDEN_GUIDE_LANGUAGE } from '../src/domain/safety';
+import { PRESETS, presetTheme } from '../src/domain/presets';
+import { PROGRAM, type PracticeTheme } from '../src/domain/program';
+import type { SessionType } from '../src/domain/types';
 import {
+  afterPractice,
   backgroundFor,
+  backgroundLabel,
   DEFAULT_BACKGROUND,
+  resolveBackground,
+  soundForPractice,
+  soundscape,
   listenLevel,
   listenVolumeAt,
   LISTEN_FADE_IN_MS,
@@ -26,14 +34,63 @@ test('every soundscape has its audio file (AAC: the app makes the loop, voice/cr
   }
 });
 
-test('the sound under sessions: an explicit choice wins, and a tone turned off stays off', () => {
-  assert.equal(backgroundFor({}), DEFAULT_BACKGROUND);
-  assert.equal(backgroundFor({ ambience: true }), DEFAULT_BACKGROUND);
+test('the sound under sessions: matched unless chosen, an explicit choice wins, and a tone turned off stays off', () => {
+  // 20 Oct 2026: someone who never chose gets a sound matched to each practice.
+  assert.equal(backgroundFor({}), 'matched');
+  assert.equal(backgroundFor({ ambience: true }), 'matched');
   assert.equal(backgroundFor({ ambience: false }), 'none');
   assert.equal(backgroundFor({ ambience: false, background: 'forest' }), 'forest');
   assert.equal(backgroundFor({ background: 'none' }), 'none');
+  assert.equal(backgroundFor({ background: 'matched' }), 'matched');
   // Something stored by a later build that this one doesn't know falls back, not to silence-by-accident.
-  assert.equal(backgroundFor({ background: 'birdsong' as never }), DEFAULT_BACKGROUND);
+  assert.equal(backgroundFor({ background: 'birdsong' as never }), 'matched');
+});
+
+const THEMES: PracticeTheme[] = ['settle', 'locate', 'breath', 'edges', 'moves', 'texture', 'curious', 'brace', 'fear', 'urge', 'kind', 'pleasant', 'activity', 'flare', 'open'];
+const TYPES: SessionType[] = ['notice', 'flare', 'sleep', 'fear'];
+
+test('every practice is matched to a real sound', () => {
+  for (const theme of THEMES) assert.ok(soundscape(soundForPractice({ theme })), theme);
+  for (const type of TYPES) assert.ok(soundscape(soundForPractice({ type })), type);
+  for (const d of PROGRAM) assert.ok(soundscape(soundForPractice({ type: d.practice.sessionType, theme: d.practice.theme })), `day ${d.day}`);
+  for (const p of PRESETS) assert.ok(soundscape(soundForPractice({ type: p.type, theme: presetTheme(p) })), p.id);
+  // Nothing known about the practice: rain.
+  assert.equal(soundForPractice(), DEFAULT_BACKGROUND);
+  assert.equal(soundForPractice({ theme: 'unknown' as never }), DEFAULT_BACKGROUND);
+});
+
+test('matched: a flare gets the ocean, sleep the rain, settling the fire', () => {
+  assert.equal(soundForPractice({ type: 'flare' }), 'ocean');
+  assert.equal(soundForPractice({ type: 'flare', theme: 'flare' }), 'ocean');
+  assert.equal(soundForPractice({ type: 'sleep', theme: 'open' }), 'rain'); // the type speaks first
+  assert.equal(soundForPractice({ type: 'fear', theme: 'fear' }), 'stream');
+  assert.equal(soundForPractice({ type: 'notice', theme: 'settle' }), 'fire');
+  assert.equal(soundForPractice({ type: 'notice', theme: 'open' }), 'forest'); // the body scan
+  assert.equal(soundForPractice({ type: 'notice', theme: 'breath' }), 'ocean');
+  assert.equal(soundForPractice({ type: 'notice', theme: 'activity' }), 'waterfall');
+});
+
+test('an explicit sound or no sound overrides matching; matched resolves per practice', () => {
+  const flare = { type: 'flare', theme: 'flare' } as const;
+  assert.equal(resolveBackground('matched', flare), 'ocean');
+  assert.equal(resolveBackground('fire', flare), 'fire');
+  assert.equal(resolveBackground('none', flare), 'none');
+  assert.equal(resolveBackground(undefined, { type: 'sleep' }), 'rain');
+  // Legacy prefs: the tone turned off stays off, a chosen sound stays chosen, unset is matched.
+  assert.equal(resolveBackground(backgroundFor({ ambience: false }), flare), 'none');
+  assert.equal(resolveBackground(backgroundFor({ background: 'tone' }), flare), 'tone');
+  assert.equal(resolveBackground(backgroundFor({}), { type: 'notice', theme: 'settle' }), 'fire');
+});
+
+test('the choice reads plainly where it is glanced at', () => {
+  assert.equal(backgroundLabel('matched', { type: 'notice', theme: 'settle' }), 'matched · fireside');
+  assert.equal(backgroundLabel('rain'), 'soft rain');
+  assert.equal(backgroundLabel('none'), 'no sound');
+});
+
+test('after a sleep practice, a matched sound carries on as its own listen', () => {
+  assert.deepEqual(afterPractice('sleep', 'completed', 'matched'), { rest: true, sound: 'rain' });
+  assert.deepEqual(afterPractice('sleep', 'completed', 'forest'), { rest: true, sound: 'forest' });
 });
 
 test('a timed listen rises slowly, holds, and fades to nothing by the end', () => {

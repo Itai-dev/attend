@@ -7,7 +7,7 @@ import { useData } from '@/data/store';
 import { currentTz, dayKey, WHERE_REGIONS } from '@/domain/checkin';
 import { programDay } from '@/domain/program';
 import { REGIONS } from '@/domain/regions';
-import { backgroundFor, soundscape, SOUNDSCAPES } from '@/domain/soundscapes';
+import { backgroundFor, backgroundLabel, soundForPractice } from '@/domain/soundscapes';
 import type { Place } from '@/domain/types';
 import { ChoiceRow, DisclosureRow, haptic, Hairline, IconButton, PrimaryButton, RowGroup, SectionLabel, Txt } from '@/design/components';
 import { radius, space, type Palette } from '@/design/theme';
@@ -15,6 +15,7 @@ import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
 import { Photo } from '@/design/Photo';
+import { SoundChoices } from '../shared/SoundChoices';
 import { dayPlan } from '../shared/start';
 
 /**
@@ -54,7 +55,8 @@ export function BeforeScreen() {
   const plan = dayPlan(day.day, { prefs, checkIns });
   const wholeBodyDay = plan.theme === 'open';
   const background = backgroundFor(prefs);
-  const soundName = background === 'none' ? 'voice only' : (soundscape(background)?.name ?? '').toLowerCase();
+  const practice = { type: day.practice.sessionType, theme: day.practice.theme };
+  const soundName = backgroundLabel(background, practice);
   const voice = GUIDE_VOICES.find((v) => v.id === plan.voice) ?? GUIDE_VOICES[0];
   const toggle = (k: Open) => setOpen(open === k ? null : k);
   const lessonRead = !!prefs.program?.read?.includes(day.day);
@@ -101,7 +103,7 @@ export function BeforeScreen() {
 
       <ScrollView contentContainerStyle={styles.body}>
         {/* The place the practice's sound comes from: changes as the sound does. */}
-        <Photo scene={background === 'none' ? 'tone' : background} height={150} radius={radius.s} />
+        <Photo scene={plan.background === 'none' ? 'tone' : plan.background} height={150} radius={radius.s} />
         <Txt variant="title" accessibilityRole="header" style={{ marginTop: space.xl }}>
           {day.lesson.title}
         </Txt>
@@ -207,18 +209,17 @@ export function BeforeScreen() {
               ))
             : null}
           <Hairline />
-          <DisclosureRow label="sound under practice" value={soundName} open={open === 'sound'} onPress={() => toggle('sound')} />
+          {/* "sound", not "sound under practice": with "matched · waterfall" beside it the long label
+            wrapped and the value was cut off. VoiceOver still hears the whole of it. */}
+          <DisclosureRow
+            label="sound"
+            value={soundName}
+            accessibilityLabel={`Sound under practice: ${soundName.replace(' · ', ' to the practice, today ')}`}
+            open={open === 'sound'}
+            onPress={() => toggle('sound')}
+          />
           {open === 'sound' ? (
-            <>
-              {SOUNDSCAPES.map((sc) => (
-                <View key={sc.id}>
-                  <Hairline />
-                  <ChoiceRow label={sc.name} detail={sc.line} selected={background === sc.id} onPress={() => setPrefs({ background: sc.id })} />
-                </View>
-              ))}
-              <Hairline />
-              <ChoiceRow label="Voice only" detail="Only the guide’s voice" selected={background === 'none'} onPress={() => setPrefs({ background: 'none' })} />
-            </>
+            <SoundChoices selected={background} today={soundForPractice(practice)} onChoose={(b) => setPrefs({ background: b })} />
           ) : null}
         </RowGroup>
         <Txt variant="footnote" tone="tertiary" style={styles.note}>

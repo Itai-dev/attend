@@ -10,9 +10,20 @@
  * The audio files themselves are mapped in voice/soundscapeAssets.ts.
  */
 
+import type { PracticeTheme } from './program';
+import type { SessionType } from './types';
+
 export type SoundscapeId = 'rain' | 'forest' | 'stream' | 'waterfall' | 'ocean' | 'night' | 'fire' | 'tone';
-/** What plays under a session: one of the sounds, or only the guide's voice. */
-export type BackgroundPref = SoundscapeId | 'none';
+/**
+ * The standing choice of what plays under a practice: one of the sounds, only the guide's voice,
+ * or a sound matched to each practice (20 Oct 2026, the default: "fire will fit a certain
+ * session, and rain another").
+ */
+export type BackgroundPref = SoundscapeId | 'none' | 'matched';
+/** What plays under one practice, once 'matched' is resolved for it. */
+export type Background = SoundscapeId | 'none';
+/** What a practice is, as far as its sound is concerned. */
+export type PracticeKind = { type?: SessionType; theme?: PracticeTheme };
 
 export type Soundscape = {
   id: SoundscapeId;
@@ -44,7 +55,10 @@ export const SOUNDSCAPES: readonly Soundscape[] = [
   { id: 'tone', name: 'Soft tone', line: 'A low, steady drone', lufs: LUFS.tone },
 ];
 
-/** Under a session, for someone who has never chosen: rain is the most even of the sounds. */
+/**
+ * The fallback sound: for a practice nothing below matches, and for Just listen when the
+ * practice's sound is "no sound". Rain is the most even of the sounds.
+ */
 export const DEFAULT_BACKGROUND: SoundscapeId = 'rain';
 
 export function soundscape(id: string | undefined): Soundscape | undefined {
@@ -52,13 +66,73 @@ export function soundscape(id: string | undefined): Soundscape | undefined {
 }
 
 /**
- * What plays under a session. An explicit choice wins; before soundscapes existed the only
- * setting was the tone on or off, and "off" must stay off.
+ * The standing choice of what plays under a session. An explicit choice wins; before
+ * soundscapes existed the only setting was the tone on or off, and "off" must stay off.
+ * Someone who never chose gets a sound matched to each practice.
  */
 export function backgroundFor(prefs: { background?: BackgroundPref; ambience?: boolean }): BackgroundPref {
-  if (prefs.background === 'none' || soundscape(prefs.background)) return prefs.background!;
+  if (prefs.background === 'none' || prefs.background === 'matched' || soundscape(prefs.background)) return prefs.background!;
   if (prefs.ambience === false) return 'none';
-  return DEFAULT_BACKGROUND;
+  return 'matched';
+}
+
+/*
+ * Matched sounds (20 Oct 2026). Each pairing is about the room the practice is in, never about
+ * what the sound does for the body: no copy anywhere says a sound settles, eases or lowers pain.
+ * The session type speaks first (a flare is a flare whatever its theme); then the theme.
+ */
+const TYPE_SOUND: Partial<Record<SessionType, SoundscapeId>> = {
+  // Before sleep: soft rain, the most even of the sounds, with nothing in it to follow.
+  sleep: 'rain',
+  // A flare: slow waves on a wide shore, a long rise and fall at the pace of a slow breath.
+  flare: 'ocean',
+  // A worried moment: shallow water, gently and steadily on the move.
+  fear: 'stream',
+};
+
+const THEME_SOUND: Record<PracticeTheme, SoundscapeId> = {
+  // Arriving, letting a brace go, kindness: a small fire, a warm room to sit in.
+  settle: 'fire',
+  brace: 'fire',
+  kind: 'fire',
+  // Looking around — finding the place, curiosity, what is pleasant, the body as a whole: open
+  // air, wind in the trees, plenty of room.
+  locate: 'forest',
+  curious: 'forest',
+  pleasant: 'forest',
+  open: 'forest',
+  // The breath: waves that rise and fall at about its pace.
+  breath: 'ocean',
+  // Edges, movement, texture: water over stones, always moving, never quite the same twice.
+  edges: 'stream',
+  moves: 'stream',
+  texture: 'stream',
+  // An urge that comes and goes: rain, which arrives and passes on its own.
+  urge: 'rain',
+  // Practice taken into moving about: the fuller sound of a waterfall heard from the path.
+  activity: 'waterfall',
+  // The same as their session types.
+  fear: 'stream',
+  flare: 'ocean',
+};
+
+/** The sound that suits a practice: by its type, then its theme, else rain. */
+export function soundForPractice(p: PracticeKind = {}): SoundscapeId {
+  return (p.type && TYPE_SOUND[p.type]) || (p.theme && THEME_SOUND[p.theme]) || DEFAULT_BACKGROUND;
+}
+
+/** What plays under this practice: the choice, with 'matched' (or anything unknown) resolved for it. */
+export function resolveBackground(pref: BackgroundPref | undefined, practice?: PracticeKind): Background {
+  if (pref === 'none') return 'none';
+  if (pref !== 'matched' && soundscape(pref)) return pref!;
+  return soundForPractice(practice);
+}
+
+/** The choice as a row's value, glanced at: "matched · fireside", "soft rain", "no sound". */
+export function backgroundLabel(pref: BackgroundPref, practice?: PracticeKind): string {
+  if (pref === 'none') return 'no sound';
+  const name = (soundscape(resolveBackground(pref, practice))?.name ?? '').toLowerCase();
+  return pref === 'matched' ? `matched · ${name}` : name;
 }
 
 /** Sleep-timer lengths for Just listen, in minutes. `0` plays until stopped. */
@@ -78,7 +152,8 @@ export const SLEEP_TAIL_MINUTES = 30 as const satisfies ListenTimer;
  */
 export function afterPractice(type: string, outcome: string, background: BackgroundPref): { rest: boolean; sound?: SoundscapeId } {
   if (type !== 'sleep' || outcome !== 'completed') return { rest: false };
-  return background === 'none' ? { rest: true } : { rest: true, sound: background };
+  const sound = resolveBackground(background, { type: 'sleep' });
+  return sound === 'none' ? { rest: true } : { rest: true, sound };
 }
 
 /** How long the sound takes to fade in, and to fade out at the end of a timer. */

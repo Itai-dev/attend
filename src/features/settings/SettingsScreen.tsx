@@ -10,7 +10,7 @@ import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/domain/access';
 import { currentTz } from '@/domain/checkin';
 import { practiceStats } from '@/domain/engagement';
 import { REMINDER_TIMES } from '@/domain/reminderPlan';
-import { backgroundFor, soundscape, SOUNDSCAPES } from '@/domain/soundscapes';
+import { backgroundFor, backgroundLabel, soundForPractice } from '@/domain/soundscapes';
 import { ChoiceRow as Choice, DisclosureRow, Hairline, QuietButton, RowGroup as Group, SectionLabel, Segmented, Txt } from '@/design/components';
 import { HIT, radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
@@ -19,6 +19,8 @@ import { remindersAvailable, requestReminderPermission, scheduleReminders } from
 import { speechModule } from '@/voice/speechModule';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
 import { clock12 } from '../shared/format';
+import { SoundChoices } from '../shared/SoundChoices';
+import { todaysPractice } from '../shared/start';
 
 /**
  * Settings, kept short. The guide's voice and the sound under practice first (the same prefs
@@ -74,7 +76,9 @@ export function SettingsScreen() {
   useEffect(() => stopPreview, []);
 
   const voice = GUIDE_VOICES.find((v) => v.id === prefs.voiceId) ?? GUIDE_VOICES[0];
-  const soundName = background === 'none' ? 'voice only' : (soundscape(background)?.name ?? '').toLowerCase();
+  // "Matched" means a different sound on different days: today's is the one named.
+  const today = todaysPractice(prefs);
+  const soundName = backgroundLabel(background, today);
   const reminder = prefs.reminder;
   const time = reminder ? clock12(reminder.hour, reminder.minute) : clock12(20, 30);
 
@@ -130,19 +134,16 @@ export function SettingsScreen() {
           </>
         ) : null}
         <Hairline />
-        <DisclosureRow label="sound under practice" value={soundName} open={open === 'sound'} onPress={() => toggle('sound')} />
-        {open === 'sound' ? (
-          <>
-            {SOUNDSCAPES.map((sc) => (
-              <View key={sc.id}>
-                <Hairline />
-                <Choice label={sc.name} detail={sc.line} selected={background === sc.id} onPress={() => setPrefs({ background: sc.id })} />
-              </View>
-            ))}
-            <Hairline />
-            <Choice label="Voice only" detail="Only the guide’s voice" selected={background === 'none'} onPress={() => setPrefs({ background: 'none' })} />
-          </>
-        ) : null}
+        {/* "sound", not "sound under practice": with "matched · waterfall" beside it the long label
+          wrapped and the value was cut off. VoiceOver still hears the whole of it. */}
+        <DisclosureRow
+          label="sound"
+          value={soundName}
+          accessibilityLabel={`Sound under practice: ${soundName.replace(' · ', ' to the practice, today ')}`}
+          open={open === 'sound'}
+          onPress={() => toggle('sound')}
+        />
+        {open === 'sound' ? <SoundChoices selected={background} today={soundForPractice(today)} onChoose={(b) => setPrefs({ background: b })} /> : null}
       </Group>
 
       <SectionLabel style={styles.section}>Daily reminder</SectionLabel>

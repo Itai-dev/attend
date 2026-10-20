@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useData } from '@/data/store';
-import { backgroundFor, DEFAULT_LISTEN_TIMER, SOUNDSCAPES, soundscape, timerLabel, type SoundscapeId } from '@/domain/soundscapes';
+import { backgroundFor, backgroundLabel, DEFAULT_LISTEN_TIMER, SOUNDSCAPES, timerLabel, type SoundscapeId } from '@/domain/soundscapes';
 import { haptic, Icon, SettingsGear, TitledScroll, Txt } from '@/design/components';
 import { Photo, PhotoFade } from '@/design/Photo';
 import { radius, space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { startListening, useListen } from '@/voice/listen';
+import { todaysPractice } from '../shared/start';
 
 /**
  * Sounds: one tap plays. No choosing a timer first — the last one used (twenty minutes the
@@ -21,7 +22,8 @@ export function SoundsScreen() {
   const { width } = useWindowDimensions();
   const { prefs, setPrefs } = useData();
   const live = useListen();
-  const under = soundscape(backgroundFor(prefs));
+  // "matched · fireside", "soft rain", "no sound": the same words as Settings' row.
+  const under = backgroundLabel(backgroundFor(prefs), todaysPractice(prefs));
   const tile = (width - space.xl * 2 - space.m) / 2;
   // The remembered timer, on every tile, so a tap's outcome is known before it's made.
   const timer = prefs.listen?.timer ?? DEFAULT_LISTEN_TIMER;
@@ -85,7 +87,7 @@ export function SoundsScreen() {
       {/* The sound under a practice is a different thing from these: one row, to the one place it's set. */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Sound under practice: ${under ? under.name : 'voice only'}. Change in Settings`}
+        accessibilityLabel={`Sound under practice: ${under.replace(' · ', ' to the practice, today ')}. Change in Settings`}
         onPress={() => router.push({ pathname: '/settings', params: { open: 'sound' } })}
         style={({ pressed }) => [styles.underRow, { opacity: pressed ? 0.6 : 1 }]}
       >
@@ -93,7 +95,7 @@ export function SoundsScreen() {
           sound under practice
         </Txt>
         <Txt variant="callout" tone="secondary" style={{ textTransform: 'lowercase' }}>
-          {under ? under.name : 'voice only'} ›
+          {under} ›
         </Txt>
       </Pressable>
     </TitledScroll>

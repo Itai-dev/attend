@@ -19,7 +19,8 @@ pain record (ported from Pattern) to show whether practice is helping. See `docs
 > nature soundscapes, real public-domain field recordings (`assets/audio/soundscapes/SOURCES.md`,
 > built by `tools/master-recordings.py`; the app loops
 > each one seamlessly with two players crossing over, `voice/crossfadeLoop.ts`, so a recording can
-> be minutes long), chosen under each session or played on their own from the
+> be minutes long), matched to each practice under a session (or chosen, or none; changeable
+> mid-practice from the session's controls, 20 Oct 2026), or played on their own from the
 > **Sounds** tab with a sleep timer (`voice/listen.ts`). The plan to the App Store and paying
 > users is `docs/LAUNCH.md`.
 >

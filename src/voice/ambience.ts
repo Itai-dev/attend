@@ -17,6 +17,11 @@ import type { SessionStatus } from './VoiceSessionProvider';
 /** Target loudness per state, in LUFS (domain/soundscapes.ts UNDER_VOICE). */
 const LEVEL: Partial<Record<SessionStatus, number>> = UNDER_VOICE;
 const FADE_MS = 1200;
+/**
+ * Changing the sound mid-practice (the session's "sound ›" sheet): the old one fades out and the
+ * new one in over this long, so the room changes rather than cuts. The guide carries on.
+ */
+export const SWAP_FADE_MS = 2000;
 /** While the person speaks: a share of the listening level, eased down and back. */
 const DUCK = 0.6;
 const DUCK_MS = 1400;
@@ -50,15 +55,18 @@ export class Ambience {
     }
   }
 
-  /** Follow the session: the level for this status, faded rather than jumped. */
-  follow(status: SessionStatus) {
+  /**
+   * Follow the session: the level for this status, faded rather than jumped. A sound swapped in
+   * mid-practice follows the status it joins over `fadeMs` (SWAP_FADE_MS), rising from nothing.
+   */
+  follow(status: SessionStatus, fadeMs = FADE_MS) {
     if (status === this.status) return;
     this.status = status;
     this.unduck();
     const level = this.level(status);
     // Started on the first audible state, after the runner has set the audio session (silent switch, speaker).
     if (level > 0) this.start();
-    this.fadeTo(level, FADE_MS);
+    this.fadeTo(level, fadeMs);
   }
 
   /** The microphone level while listening: dip under the person's voice, come back after they stop. */

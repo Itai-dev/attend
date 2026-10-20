@@ -1,14 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { AccessibilityInfo, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
+import { AccessibilityInfo, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
 import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import type { PracticeTheme } from '@/domain/program';
-import { soundscape, type BackgroundPref } from '@/domain/soundscapes';
+import { resolveBackground, soundscape, SOUNDSCAPES, type Background, type BackgroundPref } from '@/domain/soundscapes';
 import type { Place, SessionType } from '@/domain/types';
-import { haptic, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
+import { ChoiceRow, haptic, Hairline, IconButton, PrimaryButton, QuietButton, RowGroup, Txt } from '@/design/components';
 import { space, type Palette } from '@/design/theme';
 import { useColors, useStyles } from '@/design/ThemeProvider';
 import { SESSION_LENGTHS } from '@/engine/phases';
@@ -33,7 +33,18 @@ import { DevPanel } from './DevPanel';
  * While the controls are showing, a quiet "about N min left" sits under the status word (round 5:
  * the session showed no sign it was running). Only then: a person who reached for the phone gets
  * an answer, and the faded screen stays a breathing form with no clock to watch.
+ *
+ * Under pause and end, with them and only with them, a quiet "sound · ocean ›" (20 Oct 2026: "an
+ * option to change the background or remove the background sound"). It opens a small list of
+ * the sounds and "no sound"; a choice crosses over in about two seconds while the guide carries
+ * on. It is for this practice only — practice settings is where it is kept — so trying a sound
+ * mid-practice never changes the next one behind the person's back.
  */
+
+/** The control's words: "sound · ocean", "sound · none". */
+export function soundControlLabel(b: Background): string {
+  return `sound · ${b === 'none' ? 'none' : (soundscape(b)?.name ?? '').toLowerCase()}`;
+}
 
 /**
  * The status word, only where it tells the person something: the session is getting
@@ -95,6 +106,8 @@ export function SessionScreen() {
   const sawThisSession = useRef(false);
   const [hint, setHint] = useState(true);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  /** The "sound ›" list is open: the controls stay while it is. */
+  const [soundSheet, setSoundSheet] = useState(false);
 
   useEffect(() => {
     if (started.current) return;
@@ -108,11 +121,14 @@ export function SessionScreen() {
     } catch {
       place = undefined;
     }
+    const theme = params.theme as PracticeTheme | undefined;
+    // Plans send a resolved sound; a "matched" from anywhere else is resolved for this practice.
+    const bg = params.background;
     vs.start(type, minutes, params.voice, {
-      theme: params.theme as PracticeTheme | undefined,
+      theme,
       programDay: params.day ? Number(params.day) || undefined : undefined,
       place,
-      background: params.background === 'none' || soundscape(params.background) ? (params.background as BackgroundPref) : undefined,
+      background: bg === 'none' || bg === 'matched' || soundscape(bg) ? resolveBackground(bg as BackgroundPref, { type, theme }) : undefined,
       scan: params.scan === 'body' ? 'body' : undefined,
     });
     const t = setTimeout(() => setHint(false), 6000);
@@ -166,7 +182,7 @@ export function SessionScreen() {
   // While paused the controls are what the person needs (resume), so they stay. With VoiceOver
   // on they never fade: iOS drops a view at opacity 0 from VoiceOver and from touch, and a
   // VoiceOver user must be able to find pause and end at any moment.
-  const keepControls = paused || blocked || confirmEnd || screenReader;
+  const keepControls = paused || blocked || confirmEnd || screenReader || soundSheet;
 
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled()
@@ -408,6 +424,53 @@ export function SessionScreen() {
               />
             </View>
           </View>
+          {/* Inside the fading controls, so it is there only when they are. A faded tap only reveals. */}
+          {running && vs.background ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Sound under this practice: ${vs.background === 'none' ? 'none' : soundscape(vs.background)?.name}. Change`}
+              hitSlop={8}
+              onPress={act(() => {
+                haptic('select');
+                setSoundSheet(true);
+              })}
+              style={({ pressed }) => [styles.sound, { opacity: pressed ? 0.5 : 1 }]}
+            >
+              <Txt variant="footnote" tone="tertiary" style={styles.soundText}>
+                {`${soundControlLabel(vs.background)} ›`}
+              </Txt>
+            </Pressable>
+          ) : null}
+        </Animated.View>
+      ) : null}
+
+      {soundSheet && vs.background ? (
+        <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(250)} style={StyleSheet.absoluteFill}>
+          {/* Outside the list: close, back to the session as it was. */}
+          <Pressable style={[StyleSheet.absoluteFill, styles.scrim]} onPress={() => setSoundSheet(false)} accessibilityLabel="Close" accessibilityRole="button" />
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + space.l, maxHeight: height - insets.top - space.xl }]} accessibilityViewIsModal>
+            <View style={styles.sheetTop}>
+              <Txt variant="footnote" tone="tertiary" style={styles.soundText} accessibilityRole="header">
+                sound under this practice
+              </Txt>
+              <QuietButton label="done" tone="primary" onPress={() => setSoundSheet(false)} />
+            </View>
+            <ScrollView>
+              <RowGroup>
+                {SOUNDSCAPES.map((sc, i) => (
+                  <View key={sc.id}>
+                    {i ? <Hairline /> : null}
+                    <ChoiceRow label={sc.name} selected={vs.background === sc.id} onPress={() => vs.setBackground(sc.id)} />
+                  </View>
+                ))}
+                <Hairline />
+                <ChoiceRow label="no sound" selected={vs.background === 'none'} onPress={() => vs.setBackground('none')} />
+              </RowGroup>
+              <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.s, paddingHorizontal: space.xs }}>
+                To keep it for every practice: practice settings.
+              </Txt>
+            </ScrollView>
+          </View>
         </Animated.View>
       ) : null}
 
@@ -427,5 +490,10 @@ const makeStyles = (color: Palette) =>
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
   buttons: { flexDirection: 'row', gap: space.xxl },
   confirm: { marginBottom: space.m },
+  sound: { marginTop: space.l, minHeight: 32, paddingHorizontal: space.m, justifyContent: 'center' },
+  soundText: { fontSize: 13, letterSpacing: 0.2 },
+  scrim: { backgroundColor: 'rgba(0,0,0,0.55)' },
+  sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.l, paddingTop: space.s, backgroundColor: color.bgElevated, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
+  sheetTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: space.xs, marginBottom: space.xs },
   blocked: { position: 'absolute', left: space.xl, right: space.xl, top: '30%' },
 });
