@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { GUIDE_VOICES } from '../src/config';
-import { PRESET_CATEGORIES, PRESETS, recommendedPreset } from '../src/domain/presets';
+import { PRESET_CATEGORIES, PRESETS, recommendedPreset, SESSION_VOICES, voiceFor } from '../src/domain/presets';
 import { violatesGuideLanguage } from '../src/domain/safety';
 import { SESSION_LENGTHS } from '../src/engine/phases';
 import { nextStep, WELCOME } from '../src/domain/welcome';
@@ -15,6 +15,14 @@ test('every preset speaks in a voice the app offers, at a length the engine plan
   assert.equal(new Set(PRESETS.map((p) => p.id)).size, PRESETS.length);
 });
 
+test('every session of one type speaks in that type’s voice', () => {
+  for (const p of PRESETS) assert.equal(p.voiceId, SESSION_VOICES[p.type].voiceId, p.id);
+  assert.equal(new Set(Object.values(SESSION_VOICES).map((v) => v.voiceId)).size, 4);
+  assert.equal(voiceFor('sleep'), SESSION_VOICES.sleep.voiceId);
+  assert.equal(voiceFor('sleep', { flare: 'x' }), SESSION_VOICES.sleep.voiceId);
+  assert.equal(voiceFor('flare', { flare: 'x' }), 'x');
+});
+
 test('every category has sessions, and every session type is offered', () => {
   for (const c of PRESET_CATEGORIES) assert.ok(PRESETS.some((p) => p.category === c.id), c.id);
   for (const t of ['notice', 'flare', 'sleep', 'fear'] as const) assert.ok(PRESETS.some((p) => p.type === t), t);
@@ -26,7 +34,7 @@ test('Today offers the welcome’s focus and length, in the voice chosen there',
   assert.equal(p.minutes, 3);
   assert.equal(p.voiceName, 'Brian');
   // "Let each session choose": the preset's own voice.
-  assert.equal(recommendedPreset({ focus: 'flare', minutes: 5, voiceId: 'later' }).voiceName, 'Matilda');
+  assert.equal(recommendedPreset({ focus: 'flare', minutes: 5, voiceId: 'later' }).voiceName, 'Brian');
   assert.equal(recommendedPreset({}).type, 'notice');
 });
 

@@ -68,3 +68,20 @@ test('a place is ignored by a conversation, which finds its own', async () => {
   assert.equal(r.session.place, undefined);
   assert.ok(r.asks.length > 0);
 });
+
+// 21 Oct 2026: the practice is where the person relaxes. A warning mid-practice ("if it's an
+// emergency…") undoes that, so the safety note lives in writing (onboarding, Settings), and a
+// guided session — which hears nothing, so has nothing to react to — never speaks one.
+test('a guided session never speaks a warning, and no program theme asks a question', async () => {
+  const themes = ['settle', 'locate', 'breath', 'edges', 'moves', 'texture', 'curious', 'brace', 'fear', 'urge', 'kind', 'pleasant', 'activity', 'flare', 'open'] as const;
+  for (const type of ['notice', 'flare', 'sleep', 'fear'] as const) {
+    for (const theme of themes) {
+      for (const minutes of [3, 10] as const) {
+        const r = await runSession({}, { mode: 'guided', type, theme, place: LOWER_BACK, minutes, maxTurns: 200 });
+        const said = r.spoken.join(' ');
+        assert.doesNotMatch(said, /emergenc|urgent|danger|doctor|medical|crisis|severe|stop at any time|seek (help|care)/i, `${type}/${theme}`);
+        assert.ok(!r.spoken.some((l) => l.trim().endsWith('?')), `${type}/${theme}: ${r.spoken.filter((l) => l.endsWith('?')).join(' | ')}`);
+      }
+    }
+  }
+});

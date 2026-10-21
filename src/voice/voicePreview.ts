@@ -15,7 +15,7 @@ export async function previewVoice(voiceId: string) {
     await beginSessionAudio(false);
     const base = config.apiUrl.replace(/\/$/, '');
     const player = createAudioPlayer({
-      uri: `${base}/tts?voice=${encodeURIComponent(voiceId)}&text=${encodeURIComponent(SAMPLE)}`,
+      uri: `${base}/tts?v=2&voice=${encodeURIComponent(voiceId)}&speed=0.85&stability=1&text=${encodeURIComponent(SAMPLE)}`,
       headers: apiHeaders(),
     });
     current = player;

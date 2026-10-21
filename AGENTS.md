@@ -66,7 +66,7 @@ done (minutes, days, the program) and never how the sensation was. Its one optio
 no "you're safe", no "it's your brain". In conversation mode, possibly-new
 symptoms get one neutral familiarity question and, if new, a gentle end with a suggestion
 to see a professional; safety is screened locally on every utterance and a remote model
-can only raise the level, never lower it. The welcome's safety note covers guided mode. Lessons explain the alarm model and invite
+can only raise the level, never lower it. Guided sessions speak no warnings (21 Oct 2026): no "if it's an emergency", no "you can stop at any time" — a warning mid-practice undoes the settling the practice is for. The safety note is written, in onboarding and Settings (tests/guided.test.ts guards this). Lessons explain the alarm model and invite
 the person to weigh their own signs; they never conclude for them that their pain is safe
 (tests/program.test.ts guards the wording).
 `FORBIDDEN_GUIDE_LANGUAGE` guards every line, local or remote.
