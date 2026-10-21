@@ -95,10 +95,14 @@ sessions, real nature recordings (`tools/make-ambience.py`). The experience stay
 own — no album pages, shelves, "now playing" or play buttons; this is not a media app.
 
 **Just listen is not practice (21 Oct 2026, from PR #19).** One of the same recordings on its
-own, no voice, on a sleep timer (`domain/sounds.ts`, `voice/listen.ts`, reached from Today and
-Program). It is never recorded and never counts toward days, minutes or milestones; its copy
+own, no voice, on a sleep timer (`domain/sounds.ts`, `voice/listen.ts`, the Sounds tab). It is never recorded and never counts toward days, minutes or milestones; its copy
 describes the place, never what a sound does for pain or the body (tests/sounds.test.ts). It
 keeps playing with the screen locked, and a session or the welcome stops it before speaking.
+
+**Three tabs (21 Oct 2026).** Today (what to do now, the any-time sessions, Settings behind the
+gear), Sounds, Progress (the program path first, then practice and the pain record). No You tab,
+no Program tab. The body map and journey come from conversation mode, so they are reachable only
+from the developer section of Settings.
 
 **Colour is never a verdict.** Calm, no red anywhere, including the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.

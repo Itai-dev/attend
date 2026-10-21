@@ -39,7 +39,6 @@ function RootStack() {
       <Stack.Screen name="lesson/[day]" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="before" options={{ presentation: 'modal' }} />
       <Stack.Screen name="moment" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="listen" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

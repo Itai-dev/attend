@@ -6,23 +6,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { currentTz, dayKey, latestPlace } from '@/domain/checkin';
 import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
-import { voiceFor } from '@/domain/presets';
+import { PRESETS, voiceFor } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { speakPlace } from '@/domain/regions';
-import { Card, haptic, Icon, PrimaryButton, Txt } from '@/design/components';
+import { Card, haptic, Icon, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { Pill } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { greeting } from '../shared/format';
-import { ListenCard } from '../shared/ListenCard';
+import { PresetCard } from '../shared/PresetCard';
 import { WeekStrip } from '../shared/WeekStrip';
 
 /**
  * Today: one next step. The day's lesson and practice, this week's practice days, a way in
- * for a flare, a check-in, and the person's goal. The pain record isn't here — Today is
+ * for a flare, a check-in, the person's goal, then the any-time sessions. Settings behind the gear. The pain record isn't here — Today is
  * about doing, Progress is for looking back (docs/RESEARCH.md §5).
  */
+
+const ANYTIME = PRESETS.filter((p) => p.category !== 'familiar' || p.id === 'notice-10');
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -65,6 +67,8 @@ export function HomeScreen() {
           {greeting()}
         </Txt>
         <Pill label={finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`} />
+        {/* Settings sits behind the gear, not in a tab (three tabs, 21 Oct 2026). */}
+        <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={color.textSecondary} style={{ marginRight: -space.s }} />
       </View>
 
       <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xl }}>
@@ -138,9 +142,6 @@ export function HomeScreen() {
           </Txt>
         </Card>
       </View>
-      <View style={{ marginTop: space.m }}>
-        <ListenCard />
-      </View>
 
       {prefs.goal ? (
         <Card style={styles.goal}>
@@ -157,6 +158,19 @@ export function HomeScreen() {
           </Pressable>
         </Card>
       ) : null}
+
+      {/* The ready-made sessions, moved here when the Program tab went (21 Oct 2026). */}
+      <Txt variant="title2" accessibilityRole="header" style={{ marginTop: space.xxl, marginBottom: space.xs }}>
+        Any time
+      </Txt>
+      <Txt variant="footnote" tone="secondary" style={{ marginBottom: space.m }}>
+        For a flare, for sleep, for a worried moment
+      </Txt>
+      <View style={{ gap: space.m }}>
+        {ANYTIME.map((p) => (
+          <PresetCard key={p.id} preset={p} />
+        ))}
+      </View>
     </ScrollView>
   );
 }
