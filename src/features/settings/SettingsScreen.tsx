@@ -138,7 +138,7 @@ export function SettingsScreen() {
 
       <Section>Background</Section>
       <Group>
-        <Choice label="Soft background" detail="A quiet bed under the voice, one for each kind of session" selected={prefs.ambience !== false} onPress={() => setPrefs({ ambience: true })} />
+        <Choice label="Soft background" detail="Nature under the voice: a stream, waves, rain or wind" selected={prefs.ambience !== false} onPress={() => setPrefs({ ambience: true })} />
         <Hairline />
         <Choice label="Silence" detail="Only the guide’s voice" selected={prefs.ambience === false} onPress={() => setPrefs({ ambience: false })} />
       </Group>

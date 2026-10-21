@@ -3,11 +3,11 @@ import type { SessionType } from '../domain/types';
 import type { SessionStatus } from './VoiceSessionProvider';
 
 /**
- * A soft bed under the session, one per session type (assets/audio/ambience-<type>.wav,
- * seamless 40-second loops made by tools/make-ambience.py, which says why they sound as they
- * do). Notice: an open, slowly breathing chord. Flare: a slow tide. Sleep: darker and slower.
- * Fear: a close, warm chord. It is atmosphere, nothing more: the app never calls it healing
- * or says it does anything for pain.
+ * Nature under the session, one recording per session type (assets/audio/ambience-<type>.wav,
+ * seamless 40-second loops cut from public-domain field recordings by tools/make-ambience.py,
+ * credited in assets/audio/CREDITS.md). Notice: a mountain stream. Flare: slow waves. Sleep:
+ * rain at night. Fear: wind in pines. It is atmosphere, nothing more: the app never calls it
+ * healing or says it does anything for pain.
  *
  * It sits well under the voice: quieter while the guide speaks and while listening,
  * and fuller in the silences. When the person actually speaks it dips a little more,
@@ -15,11 +15,13 @@ import type { SessionStatus } from './VoiceSessionProvider';
  * the loudest thing an eyes-closed person hears. Paused or ended, it fades away.
  */
 
+// The recordings are levelled to -24 dBFS RMS, quieter than the old synthesised beds, so these
+// sit a little higher; still well under the voice.
 const LEVEL: Partial<Record<SessionStatus, number>> = {
-  preparing: 0.14,
-  speaking: 0.1,
-  holding: 0.18,
-  listening: 0.09,
+  preparing: 0.24,
+  speaking: 0.17,
+  holding: 0.3,
+  listening: 0.15,
 };
 const FADE_MS = 1200;
 const STEP_MS = 60;

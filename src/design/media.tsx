@@ -3,7 +3,7 @@ import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { ART, glowSpots, type ArtKey } from './art';
 import { haptic, Txt } from './components';
-import { color, radius, space } from './theme';
+import { color, radius, space, useColors } from './theme';
 
 /**
  * Colour fields and small chrome: a colour field (a diagonal gradient with soft light), the
@@ -57,10 +57,11 @@ function withAlpha(hex: string, a: number) {
 
 /** The page header's colour, fading from the cover's hue into the background. */
 export function HeaderGradient({ art, height, width }: { art: ArtKey; height: number; width: number }) {
+  const bg = useColors().bg;
   return (
     <Canvas style={{ position: 'absolute', left: 0, top: 0, width, height }} pointerEvents="none">
       <Rect x={0} y={0} width={width} height={height}>
-        <LinearGradient start={vec(0, 0)} end={vec(0, height)} colors={[ART[art].header, color.bg]} />
+        <LinearGradient start={vec(0, 0)} end={vec(0, height)} colors={[ART[art].header, bg]} />
       </Rect>
     </Canvas>
   );

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
@@ -9,9 +9,8 @@ import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { voiceFor } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { speakPlace } from '@/domain/regions';
-import { WEEK_ART } from '@/design/art';
 import { Card, haptic, Icon, PrimaryButton, Txt } from '@/design/components';
-import { HeaderGradient, Pill } from '@/design/media';
+import { Pill } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
@@ -55,17 +54,11 @@ export function HomeScreen() {
     else router.push({ pathname: '/before', params: { day: String(day) } });
   };
 
-  const { width } = useWindowDimensions();
-
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.bg }}
       contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.l }}
     >
-      {/* The week's colour, washed in at the top: where in the program you are, felt before it is read. */}
-      <View style={{ position: 'absolute', top: 0, left: 0, opacity: 0.55 }} pointerEvents="none">
-        <HeaderGradient art={WEEK_ART[today.week]} width={width} height={insets.top + 300} />
-      </View>
       <View style={styles.head}>
         <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
           {greeting()}
@@ -166,7 +159,7 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space.m },
-  today: { marginTop: space.xl, padding: space.l, gap: space.m, borderRadius: radius.l, backgroundColor: 'rgba(31,31,31,0.92)' },
+  today: { marginTop: space.xl, padding: space.l + 4, gap: space.m, borderRadius: radius.l },
   kicker: { color: color.practice, letterSpacing: 1.4 },
   step: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: HIT },
   mark: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: color.text, alignItems: 'center', justifyContent: 'center' },

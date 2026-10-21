@@ -13,7 +13,7 @@ import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/component
 import { color, HIT, radius, space } from '@/design/theme';
 import { SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
-import { BreathingField } from '@/viz/BreathingField';
+import { Enso } from '@/viz/Enso';
 
 /**
  * Before a session: everything decided with the eyes open, so nothing needs deciding once
@@ -103,7 +103,7 @@ export function BeforeScreen() {
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={{ alignItems: 'center' }}>
-          <BreathingField width={170} height={170} mode="idle" dim={0.85} />
+          <Enso width={170} height={170} mode="idle" dim={0.85} />
         </View>
         <Txt variant="title" align="center" style={{ marginTop: space.s }}>
           {plan.title}

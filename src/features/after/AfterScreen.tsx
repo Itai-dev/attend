@@ -11,7 +11,7 @@ import type { Session, SessionFeeling } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { BreathingField } from '@/viz/BreathingField';
+import { Enso } from '@/viz/Enso';
 
 /**
  * After a guided session: a soft completion moment. What was done (minutes, days this
@@ -75,7 +75,7 @@ export function AfterScreen({ session }: { session: Session }) {
         }}
       >
         <Animated.View entering={FadeIn.duration(1400)} style={{ alignItems: 'center' }}>
-          <BreathingField width={150} height={150} mode="idle" dim={0.95} />
+          <Enso width={150} height={150} mode="idle" dim={0.95} />
           <Txt
             variant="caption"
             style={{

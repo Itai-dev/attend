@@ -1,119 +1,92 @@
 """
-The soft beds under a session, one per session type: assets/audio/ambience-<type>.wav.
+The soft bed under each session type: assets/audio/ambience-<type>.wav.
 
     python3 tools/make-ambience.py
 
-Why they sound like this (21 Oct 2026). The first tone was four pure, unchanging sine waves
-(108/162/216/432 Hz). A phone speaker can't play 108 Hz, so what was left was a thin, beep-like
-216/432 Hz that never moved, which is what made it harsh. These are instead:
+Real field recordings (21 Oct 2026), replacing the synthesised beds the founder found harsh.
+All four are from the radio aporee ::: maps archive on the Internet Archive, released under the
+Creative Commons Public Domain Mark: free to use, no attribution required (credited anyway, in
+assets/audio/CREDITS.md).
 
-  - pads: each note is several soft harmonics on three slightly detuned voices, with harmonics
-    falling away steeply, so it is warm rather than pure; notes are in just intonation on
-    A = 432 Hz (108, 162, 216, 270, 324 Hz), so they blend without beating;
-  - slow movement: every note swells and fades over 10 to 40 seconds, so the ear has no fixed
-    tone to fixate on;
-  - shaped noise (pink or brown, low-passed), the sound of air, tide or distant rain;
-  - for flares and fear, a swell every 10 seconds: six a minute, a slow, calm breathing pace,
-    there to lean on, never mentioned.
+  notice  a mountain stream over stones   Pitões das Júnias, Portugal   aporee_69234_80475
+  flare   slow ocean waves on a beach     Cox's Bazar, Bangladesh       aporee_55131_63018
+  sleep   rain through the night          Serrinha do Alambari, Brazil  aporee_54335_62155
+  fear    wind in a pine forest           Miren, Slovenia               aporee_51715_59066
 
-No claim is made for 432 Hz or any frequency: the evidence that a tuning does anything for pain
-is thin (small, uncontrolled studies). The tuning stays only because it's familiar; what matters
-here is soft, low, moving and quiet under the voice.
+For each, the script downloads the recording, finds its steadiest 45 seconds (no sudden sound
+rising more than a few dB above the rest), softens the top end so nothing hisses, levels it,
+and folds the last five seconds into the first with an equal-power crossfade, so the 40-second
+loop has no seam. No claim is made that any of these does anything for pain: they are there so
+the silence between the guide's lines feels like a place, not a gap.
 
-Every component repeats exactly every LOOP seconds (whole cycles only, noise built in the
-frequency domain), so the file loops with no seam. Needs numpy only.
+Needs ffmpeg and numpy. Downloads go to a temporary folder outside the repo.
 """
 
 import os
-import wave
+import subprocess
+import tempfile
+import urllib.request
 
 import numpy as np
 
-SR = 16_000  # The beds have almost nothing above 2 kHz; 16 kHz keeps each file small.
-LOOP = 40  # seconds; every frequency and swell below completes whole cycles in this time.
-N = SR * LOOP
-t = np.arange(N) / SR
+SR = 22050  # Water and rain have detail up to ~10 kHz; 22 kHz keeps it and keeps files small.
+LOOP = 40
+FADE = 5
 OUT = os.path.join(os.path.dirname(__file__), '..', 'assets', 'audio')
 
-
-def whole(f: float) -> float:
-    """Round a frequency to whole cycles per loop, so the loop has no seam."""
-    return round(f * LOOP) / LOOP
-
-
-def swell(period: float, depth: float, phase: float) -> np.ndarray:
-    """A slow rise and fall between 1 - depth and 1."""
-    assert (LOOP / period).is_integer()
-    return 1 - depth * (0.5 + 0.5 * np.cos(2 * np.pi * t / period + phase))
+BEDS = {
+    'notice': ('aporee_69234_80475', '11pitoesdejunias1108250938.mp3', 7000),
+    'flare': ('aporee_55131_63018', 'coxbazarsea.mp3', 6500),
+    'sleep': ('aporee_54335_62155', 'PluiependantlanuitSerrinhaORTF2239242044560264BR2108310248kHz20min.mp3', 5500),
+    'fear': ('aporee_51715_59066', 'Pineforestinthewind.mp3', 7000),
+}
 
 
-def pad(f: float, rolloff: float, rng: np.random.Generator) -> np.ndarray:
-    """One warm note: soft harmonics on three slightly detuned voices."""
-    out = np.zeros(N)
-    for detune in (0.0, 0.1, -0.075):
-        for k in range(1, 9):
-            fk = whole(k * f + detune)
-            if fk > 2400:
-                break
-            out += np.sin(2 * np.pi * fk * t + rng.uniform(0, 2 * np.pi)) / k**rolloff
-    return out / 3
+def decode(path: str, lowpass: int) -> np.ndarray:
+    raw = subprocess.run(
+        ['ffmpeg', '-v', 'error', '-i', path, '-ac', '1', '-ar', str(SR), '-af', f'highpass=f=60,lowpass=f={lowpass}', '-f', 'f32le', '-'],
+        capture_output=True,
+        check=True,
+    ).stdout
+    return np.frombuffer(raw, dtype=np.float32).astype(np.float64)
 
 
-def noise(color: float, lowpass: float, rng: np.random.Generator, highpass: float = 40) -> np.ndarray:
-    """Noise with a 1/f^color spectrum, band-limited, periodic over the loop."""
-    f = np.fft.rfftfreq(N, 1 / SR)
-    f[0] = 1
-    mag = f ** (-color / 2) / (1 + (f / lowpass) ** 4) / (1 + (highpass / f) ** 4)
-    mag[0] = 0
-    spec = mag * np.exp(1j * rng.uniform(0, 2 * np.pi, len(f)))
-    x = np.fft.irfft(spec, n=N)
-    return x / np.sqrt(np.mean(x**2))
+def steadiest(x: np.ndarray, seconds: int) -> np.ndarray:
+    """The window whose loudness varies least and never jumps far above its own median."""
+    hop = SR // 10
+    frames = x[: len(x) // hop * hop].reshape(-1, hop)
+    db = 20 * np.log10(np.sqrt((frames**2).mean(1)) + 1e-9)
+    w = seconds * 10
+    best, at = None, 0
+    for s in range(0, len(db) - w, 10):
+        win = db[s : s + w]
+        score = win.std() + max(0.0, (win.max() - np.median(win)) - 6) * 2
+        if best is None or score < best:
+            best, at = score, s
+    start = at * hop
+    return x[start : start + seconds * SR]
 
 
-def norm(x: np.ndarray, rms_db: float) -> np.ndarray:
+def loop(x: np.ndarray) -> np.ndarray:
+    """Fold the tail into the head with an equal-power crossfade: the end flows into the start."""
+    body, tail = x[: LOOP * SR], x[LOOP * SR : (LOOP + FADE) * SR]
+    t = np.linspace(0, np.pi / 2, len(tail))
+    out = body.copy()
+    out[: len(tail)] = body[: len(tail)] * np.sin(t) + tail * np.cos(t)
+    return out
+
+
+def level(x: np.ndarray, rms_db: float = -24) -> np.ndarray:
     x = x / np.sqrt(np.mean(x**2)) * 10 ** (rms_db / 20)
     peak = np.max(np.abs(x))
-    return x if peak < 0.85 else x * 0.85 / peak
-
-
-def notes(spec, rolloff, rng):
-    """spec: (frequency, level, swell period, swell depth)."""
-    return sum(level * pad(f, rolloff, rng) * swell(period, depth, rng.uniform(0, 2 * np.pi)) for f, level, period, depth in spec)
-
-
-def notice(rng):
-    # Open and even: a wide A chord, slowly breathing, with a little air.
-    chord = notes([(108, 1.0, 40, 0.3), (162, 0.8, 20, 0.4), (216, 0.55, 40 / 3, 0.5), (270, 0.25, 10, 0.6), (324, 0.2, 20, 0.6)], 2.0, rng)
-    air = noise(1.0, 1200, rng)
-    return norm(chord, -20) + norm(air, -34)
-
-
-def flare(rng):
-    # A slow tide: brown noise swelling six times a minute, over a low, quiet root and fifth.
-    tide = noise(1.7, 1000, rng) * swell(10, 0.65, 0) ** 1.5
-    ground = notes([(108, 1.0, 40, 0.2), (162, 0.6, 20, 0.3)], 2.4, rng)
-    return norm(tide, -20) + norm(ground, -27)
-
-
-def sleep(rng):
-    # Darker and slower: lower notes, steeper harmonics, the slowest swells, distant soft rain.
-    chord = notes([(81, 0.9, 40, 0.25), (108, 1.0, 40, 0.3), (162, 0.6, 20, 0.4), (216, 0.25, 40, 0.5)], 2.6, rng)
-    rain = noise(1.0, 1600, rng, highpass=200)
-    return norm(chord, -21) + norm(rain, -33)
-
-
-def fear(rng):
-    # Close and warm: a full major chord with a gentle breath-paced swell.
-    chord = notes([(108, 1.0, 40, 0.2), (162, 0.8, 20, 0.3), (216, 0.6, 40, 0.3), (270, 0.45, 20, 0.4)], 2.2, rng)
-    chord = chord * swell(10, 0.25, 0)
-    air = noise(1.5, 1000, rng)
-    return norm(chord, -20) + norm(air, -33)
+    return x if peak < 0.7 else x * 0.7 / peak
 
 
 def write(name: str, x: np.ndarray):
-    x = norm(x, -17)
-    pcm = (x * 32767).astype(np.int16)
+    pcm = (np.clip(x, -1, 1) * 32767).astype(np.int16)
     path = os.path.join(OUT, f'ambience-{name}.wav')
+    import wave
+
     with wave.open(path, 'wb') as w:
         w.setnchannels(1)
         w.setsampwidth(2)
@@ -123,5 +96,8 @@ def write(name: str, x: np.ndarray):
 
 
 if __name__ == '__main__':
-    for i, (name, make) in enumerate([('notice', notice), ('flare', flare), ('sleep', sleep), ('fear', fear)]):
-        write(name, make(np.random.default_rng(432 + i)))
+    with tempfile.TemporaryDirectory() as tmp:
+        for name, (ident, file, lowpass) in BEDS.items():
+            src = os.path.join(tmp, file)
+            urllib.request.urlretrieve(f'https://archive.org/download/{ident}/{file}', src)
+            write(name, level(loop(steadiest(decode(src, lowpass), LOOP + FADE))))

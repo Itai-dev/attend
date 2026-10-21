@@ -13,7 +13,7 @@ import { Chip, haptic, PrimaryButton, QuietButton, Txt } from '@/design/componen
 import { CoverArt } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
 import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
-import { BreathingField } from '@/viz/BreathingField';
+import { Enso } from '@/viz/Enso';
 
 /**
  * The welcome: four screens, about a minute and a half. A promise (pain can change), how it
@@ -117,7 +117,7 @@ export function OnboardingScreen() {
         {step === 0 ? (
           <Animated.View key="0" entering={FadeIn.duration(700)} style={{ flex: 1 }}>
             <View style={styles.orb}>
-              <BreathingField width={240} height={240} mode="idle" dim={0.9} />
+              <Enso width={240} height={240} mode="idle" dim={0.9} />
             </View>
             <Txt variant="display">Pain is real.{'\n'}And it can change.</Txt>
             <Txt variant="body" tone="secondary" style={{ marginTop: space.l }}>

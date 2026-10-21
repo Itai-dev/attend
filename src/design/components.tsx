@@ -14,6 +14,7 @@ import {
   type TextProps,
   type TextStyle,
   type ViewStyle,
+  type ColorValue,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,14 +42,25 @@ const TONES = {
   inverse: color.onAccent,
 };
 
-/** System type, scaled with Dynamic Type (large titles capped so layouts hold). */
+const SERIF_VARIANTS = new Set<TypeVariant>(['display', 'title', 'title2', 'headline']);
+
+/**
+ * Type scaled with Dynamic Type (large titles capped so layouts hold). Serif variants are one
+ * font file per weight, so a weight passed in style is dropped rather than faked as bold:
+ * titles stay light.
+ */
 export function Txt({ variant = 'body', tone = 'primary', align, style, maxFontSizeMultiplier, ...rest }: TxtProps) {
   const cap = maxFontSizeMultiplier ?? (variant === 'display' || variant === 'title' ? 1.35 : 2);
+  let extra = style;
+  if (SERIF_VARIANTS.has(variant) && style) {
+    const { fontWeight: _drop, ...flat } = StyleSheet.flatten(style) ?? {};
+    extra = flat;
+  }
   return (
     <Text
       {...rest}
       maxFontSizeMultiplier={cap}
-      style={[type[variant], { color: TONES[tone], textAlign: align }, style]}
+      style={[type[variant], { color: TONES[tone], textAlign: align }, extra]}
     />
   );
 }
@@ -91,7 +103,7 @@ export function PrimaryButton({ label, detail, style, onPress, ...rest }: Button
       }}
       style={[styles.primary, p.style, style]}
     >
-      <Txt variant="headline" tone="inverse" style={{ fontSize: 17, fontWeight: '800' }}>
+      <Txt variant="body" tone="inverse" style={{ fontSize: 17, fontWeight: '600' }}>
         {label}
       </Txt>
       {detail ? (
@@ -155,7 +167,7 @@ const GLYPHS: Record<string, string> = {
   wind: '≋',
 };
 
-export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: string; weight?: SymbolViewProps['weight'] }) {
+export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: ColorValue; weight?: SymbolViewProps['weight'] }) {
   if (Platform.OS === 'ios') {
     return (
       <SymbolView
@@ -185,7 +197,7 @@ export function IconButton({
   onPress: () => void;
   size?: number;
   iconSize?: number;
-  tint?: string;
+  tint?: ColorValue;
   variant?: 'plain' | 'filled';
   style?: StyleProp<ViewStyle>;
 }) {
@@ -329,7 +341,7 @@ export function Chip({
       }}
       style={[styles.chip, selected && styles.chipOn, p.style, style]}
     >
-      <Txt variant="headline" tone={selected ? 'inverse' : 'primary'} style={{ fontWeight: '500' }}>
+      <Txt variant="body" tone={selected ? 'inverse' : 'primary'} style={{ fontWeight: '500' }}>
         {label}
       </Txt>
       <View style={[styles.chipDot, selected && styles.chipDotOn]} />
@@ -422,17 +434,21 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: color.surfacePressed,
   },
   chipDotOn: {
     backgroundColor: color.onAccent,
     borderWidth: 5,
     borderColor: color.accent,
   },
+  // Paper on paper: a soft shadow by day (transparent at night), never a drawn border.
   card: {
-    borderRadius: radius.m,
+    borderRadius: radius.l,
     backgroundColor: color.surface,
-    overflow: 'hidden',
+    shadowColor: color.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    shadowOpacity: 1,
   },
   badge: {
     borderWidth: StyleSheet.hairlineWidth,

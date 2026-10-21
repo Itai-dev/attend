@@ -21,5 +21,6 @@ export function effect(name: 'body' | 'breath'): SkRuntimeEffect | null {
   return cache[name]!;
 }
 
-// Must match color.bg, so the shaders fade into the screen with no visible edge.
-export const BG_RGB: [number, number, number] = [18 / 255, 18 / 255, 18 / 255];
+// The body map is drawn as a dark picture in both appearances: Sumi's charcoal, so at night it
+// fades into the screen with no visible edge, and by day it reads as an inset image on the paper.
+export const BG_RGB: [number, number, number] = [28 / 255, 26 / 255, 23 / 255];

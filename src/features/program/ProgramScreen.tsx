@@ -108,7 +108,7 @@ export function ProgramScreen() {
 
 const styles = StyleSheet.create({
   week: { padding: space.l, gap: space.m, borderRadius: radius.l },
-  weekNow: { backgroundColor: color.surfaceStrong, borderColor: 'rgba(255,255,255,0.18)' },
+  weekNow: { backgroundColor: color.surfaceStrong, borderColor: color.hairline },
   weekHead: { flexDirection: 'row', alignItems: 'center', gap: space.m },
   days: { flexDirection: 'row', gap: space.s },
   day: { flex: 1, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
