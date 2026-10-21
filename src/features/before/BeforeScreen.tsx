@@ -1,24 +1,26 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GUIDE_VOICES, hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import { latestPlace, WHERE_REGIONS } from '@/domain/checkin';
-import { presetById, voiceFor } from '@/domain/presets';
-import { programDay, type PracticeTheme } from '@/domain/program';
+import { presetById, PRESETS, voiceFor } from '@/domain/presets';
+import { programDay, WEEKS, type PracticeTheme } from '@/domain/program';
 import { REGIONS } from '@/domain/regions';
 import type { Place, SessionType } from '@/domain/types';
-import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
+import { CATEGORY_ART, WEEK_ART, type ArtKey } from '@/design/art';
+import { haptic, IconButton, Txt } from '@/design/components';
+import { CoverArt, HeaderGradient, ListRow, Pill, PlayButton } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
 import { SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
-import { BreathingField } from '@/viz/BreathingField';
+import { DayCover } from '../home/HomeScreen';
 
 /**
  * Before a session: everything decided with the eyes open, so nothing needs deciding once
- * they close. Where attention will rest (from the latest check-in or onboarding, changeable),
- * how long, which voice. Then one button.
+ * they close. Laid out like an episode page in a listening app: the cover, the title, what
+ * it is, one play button, then the options (where attention rests, how long, which voice).
  */
 
 const BLURB: Record<PracticeTheme, string> = {
@@ -43,9 +45,12 @@ function cap(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+const ART_SIZE = 240;
+
 export function BeforeScreen() {
   const params = useLocalSearchParams<{ day?: string; preset?: string }>();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { prefs, checkIns, setPrefs } = useData();
   useEffect(() => stopPreview, []);
 
@@ -53,12 +58,26 @@ export function BeforeScreen() {
     const preset = presetById(params.preset);
     if (preset) {
       const theme: PracticeTheme = preset.type === 'flare' ? 'flare' : preset.type === 'fear' ? 'fear' : preset.type === 'sleep' ? 'open' : 'curious';
-      return { title: preset.title, kicker: 'ANY TIME', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: voiceFor(preset.type, prefs.voices), day: undefined };
+      return {
+        title: preset.title,
+        kicker: 'ANY TIME',
+        meta: 'Any time',
+        art: CATEGORY_ART[preset.category] as ArtKey,
+        seed: PRESETS.indexOf(preset) + 11,
+        theme,
+        type: preset.type as SessionType,
+        minutes: preset.minutes as SessionLength,
+        voice: voiceFor(preset.type, prefs.voices),
+        day: undefined,
+      };
     }
     const d = programDay(Number(params.day) || 1);
     return {
       title: d.practice.title,
       kicker: `DAY ${d.day} · WEEK ${d.week}`,
+      meta: `Day ${d.day} · Week ${d.week} · ${WEEKS[d.week].name}`,
+      art: WEEK_ART[d.week],
+      seed: d.day,
       theme: d.practice.theme,
       type: d.practice.sessionType,
       minutes: d.practice.minutes as SessionLength,
@@ -85,6 +104,7 @@ export function BeforeScreen() {
         minutes: String(minutes),
         voice,
         theme: plan.theme,
+        title: plan.title,
         ...(plan.day ? { day: String(plan.day) } : {}),
         place: place ? JSON.stringify(place) : 'none',
       },
@@ -92,47 +112,68 @@ export function BeforeScreen() {
   };
 
   return (
-    <View style={[styles.root, { paddingBottom: insets.bottom + space.l }]}>
-      <View style={styles.top}>
-        <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
-        <Txt variant="footnote" tone="tertiary">
-          {plan.kicker}
-        </Txt>
-        <View style={{ width: HIT }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.body}>
-        <View style={{ alignItems: 'center' }}>
-          <BreathingField width={170} height={170} mode="idle" dim={0.85} />
+    <View style={styles.root}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}>
+        <HeaderGradient art={plan.art} width={width} height={insets.top + ART_SIZE + 160} />
+        <View style={[styles.top, { paddingTop: insets.top + space.s }]}>
+          <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.text} />
+          <Txt variant="caption" tone="secondary" style={{ letterSpacing: 1.4 }}>
+            {plan.kicker}
+          </Txt>
+          <View style={{ width: HIT }} />
         </View>
-        <Txt variant="title" align="center" style={{ marginTop: space.s }}>
-          {plan.title}
-        </Txt>
-        <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.s }}>
-          {BLURB[plan.theme]} Nothing to answer. Just listen.
-        </Txt>
 
-        <View style={styles.group}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Rests on ${place ? REGIONS[place.region].label : 'the whole body'}. Change`}
+        <View style={styles.cover}>
+          {/* A program day wears the same numbered cover it has on Today; an any-time session its own. */}
+          <View style={styles.coverShadow}>
+            {plan.day ? <DayCover day={plan.day} week={programDay(plan.day).week} size={ART_SIZE} /> : <CoverArt art={plan.art} seed={plan.seed} size={ART_SIZE} />}
+          </View>
+        </View>
+
+        <View style={styles.body}>
+          <Txt variant="title" accessibilityRole="header">
+            {plan.title}
+          </Txt>
+          <Txt variant="footnote" tone="secondary" style={{ marginTop: space.xs, fontWeight: '600' }}>
+            {plan.meta}
+          </Txt>
+          <Txt variant="callout" tone="secondary" style={{ marginTop: space.m }}>
+            {BLURB[plan.theme]} Nothing to answer. Just listen.
+          </Txt>
+
+          <View style={styles.action}>
+            <View style={{ flex: 1 }}>
+              <Txt variant="footnote" tone="secondary">
+                {minutes} min · {voiceName}
+              </Txt>
+              <Txt variant="footnote" tone="tertiary" style={{ marginTop: 2 }}>
+                Headphones on · Sit or lie down · Eyes closed
+              </Txt>
+            </View>
+            <PlayButton label={`Begin. ${minutes} minutes`} onPress={begin} size={56} />
+          </View>
+        </View>
+
+        <View style={styles.options}>
+          <ListRow
+            title="Rests on"
+            label={`Rests on ${place ? REGIONS[place.region].label : 'the whole body'}. Change`}
             onPress={() => setChoosing(!choosing)}
-            style={styles.row}
-          >
-            <Txt variant="body">Rests on</Txt>
-            <Txt variant="body" tone="secondary">
-              {place ? cap(REGIONS[place.region].label) : 'Whole body'} ›
-            </Txt>
-          </Pressable>
+            right={
+              <Txt variant="callout" tone="secondary">
+                {place ? cap(REGIONS[place.region].label) : 'Whole body'} ›
+              </Txt>
+            }
+          />
           {choosing ? (
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => {
                 const on = r === 'whole_body' ? !place : place?.region === r;
                 return (
-                  <Chip
+                  <Pill
                     key={r}
                     label={cap(REGIONS[r].label)}
-                    selected={on}
+                    on={on}
                     onPress={() => {
                       setPlace(r === 'whole_body' ? null : { region: r });
                       setChoosing(false);
@@ -142,9 +183,10 @@ export function BeforeScreen() {
               })}
             </View>
           ) : null}
-          <View style={styles.hair} />
-          <View style={styles.row}>
-            <Txt variant="body">Length</Txt>
+          <View style={styles.lengthRow}>
+            <Txt variant="body" style={{ fontWeight: '500', flex: 1 }}>
+              Length
+            </Txt>
             <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Length in minutes">
               {SESSION_LENGTHS.map((m) => (
                 <Pressable
@@ -152,65 +194,52 @@ export function BeforeScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ checked: m === minutes }}
                   accessibilityLabel={`${m} minutes`}
+                  hitSlop={4}
                   onPress={() => {
                     haptic('select');
                     setMinutes(m);
                   }}
                   style={[styles.len, m === minutes && styles.lenOn]}
                 >
-                  <Txt variant="callout" tone={m === minutes ? 'inverse' : 'secondary'} style={{ fontWeight: '600' }}>
+                  <Txt variant="footnote" style={{ fontWeight: '700', color: m === minutes ? color.onAccent : color.text }}>
                     {String(m)}
                   </Txt>
                 </Pressable>
               ))}
             </View>
           </View>
-          <View style={styles.hair} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Voice: ${voiceName}. Tap for the next voice`}
+          <ListRow
+            title="Voice"
+            label={`Voice: ${voiceName}. Tap for the next voice`}
             onPress={() => {
               const i = GUIDE_VOICES.findIndex((v) => v.id === voice);
               const next = GUIDE_VOICES[(i + 1) % GUIDE_VOICES.length];
               setVoice(next.id);
               if (hasRemote) previewVoice(next.id);
             }}
-            style={styles.row}
-          >
-            <Txt variant="body">Voice</Txt>
-            <Txt variant="body" tone="secondary">
-              {voiceName} ›
-            </Txt>
-          </Pressable>
+            right={
+              <Txt variant="callout" tone="secondary">
+                {voiceName} ›
+              </Txt>
+            }
+          />
         </View>
-
-        <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>
-          Headphones on · Sit or lie down · Eyes closed
-        </Txt>
       </ScrollView>
-
-      <View style={{ paddingHorizontal: space.xl }}>
-        <PrimaryButton label="Begin" detail={`${minutes} minutes`} onPress={begin} />
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.s, paddingTop: space.m },
-  body: { padding: space.xl, paddingTop: space.s },
-  group: {
-    marginTop: space.xl,
-    borderRadius: radius.m,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
-  },
-  row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.l },
-  hair: { height: StyleSheet.hairlineWidth, backgroundColor: color.hairline, marginHorizontal: space.l },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, padding: space.l, paddingTop: 0 },
-  lengths: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: radius.pill, backgroundColor: color.surfaceStrong },
-  len: { minWidth: 46, minHeight: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  lenOn: { backgroundColor: color.text },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.s },
+  cover: { alignItems: 'center', marginTop: space.l },
+  coverShadow: { shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
+  body: { paddingHorizontal: space.l, marginTop: space.xl },
+  action: { flexDirection: 'row', alignItems: 'center', gap: space.m, marginTop: space.l },
+  options: { marginTop: space.xl, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.hairline, paddingTop: space.s },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, paddingHorizontal: space.l, paddingBottom: space.m },
+  lengthRow: { flexDirection: 'row', alignItems: 'center', minHeight: 64, paddingHorizontal: space.l },
+  lengths: { flexDirection: 'row', gap: space.s },
+  len: { minWidth: 44, minHeight: 32, paddingHorizontal: space.s, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: color.surfaceStrong },
+  lenOn: { backgroundColor: color.accent },
 });

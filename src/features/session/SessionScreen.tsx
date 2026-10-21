@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GUIDE_VOICES } from '@/config';
 import { useData } from '@/data/store';
-import type { PracticeTheme } from '@/domain/program';
+import { programDay, type PracticeTheme } from '@/domain/program';
 import type { Place, SessionType } from '@/domain/types';
 import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
-import { color, space } from '@/design/theme';
+import { PlayButton } from '@/design/media';
+import { color, HIT, radius, space } from '@/design/theme';
 import { SESSION_LENGTHS } from '@/engine/phases';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import { BreathingField, type BreathMode } from '@/viz/BreathingField';
@@ -16,9 +18,10 @@ import { clock } from '../shared/format';
 import { DevPanel } from './DevPanel';
 
 /**
- * The session. The person's eyes are closed; this screen should feel almost
- * unnecessary. A breathing form, a single quiet word, pause and end. No
- * transcript, no questions written out, no body diagram.
+ * The session, laid out like a listening app's Now Playing screen. The person's eyes are
+ * closed, so the screen should feel almost unnecessary: the breathing form fills it, and on
+ * top sit only what a glance needs — what this is, how far along, a single quiet word, pause
+ * and end. No transcript, no questions written out, no body diagram.
  */
 
 export const STATUS_WORD: Partial<Record<SessionStatus, string>> = {
@@ -37,7 +40,7 @@ export function breathMode(s: SessionStatus): BreathMode {
 }
 
 export function SessionScreen() {
-  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string }>();
+  const params = useLocalSearchParams<{ type?: string; minutes?: string; voice?: string; theme?: string; day?: string; place?: string; title?: string }>();
   const type = (['notice', 'flare', 'sleep', 'fear'].includes(params.type ?? '') ? params.type : 'notice') as SessionType;
   const minutes = SESSION_LENGTHS.find((m) => String(m) === params.minutes);
   const vs = useVoiceSession();
@@ -96,6 +99,20 @@ export function SessionScreen() {
     return () => clearTimeout(t);
   }, [confirmEnd]);
 
+  const day = params.day ? programDay(Number(params.day) || 1) : undefined;
+  const kicker = day ? `DAY ${day.day} · WEEK ${day.week}` : 'ANY TIME';
+  const title = params.title || day?.practice.title || 'Practice';
+  const voiceName = GUIDE_VOICES.find((v) => v.id === params.voice)?.name;
+  const targetMs = (minutes ?? 5) * 60_000;
+  // The session closes gently around its length, so it can run a little over: the bar stops full.
+  const shown = Math.min(elapsed, targetMs);
+  const end = () => {
+    if (confirmEnd) {
+      setConfirmEnd(false);
+      vs.end();
+    } else setConfirmEnd(true);
+  };
+
   const paused = vs.status === 'paused';
   const blocked = vs.status === 'unavailable' || (vs.status === 'error' && !!vs.error);
   const word = STATUS_WORD[vs.status];
@@ -106,13 +123,21 @@ export function SessionScreen() {
       {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
       <BreathingField width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
-        <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="none">
-          {word ?? ' '}
-        </Txt>
-        <Txt variant="caption" tone="tertiary" style={[styles.status, { opacity: 0.6 }]}>
-          {elapsed > 0 ? clock(elapsed) : ' '}
-        </Txt>
+      <View style={[styles.top, { paddingTop: insets.top + space.s }]}>
+        {!blocked ? (
+          <IconButton icon="chevron.down" label={confirmEnd ? 'Confirm end session' : 'End session'} onPress={end} tint={color.text} iconSize={20} />
+        ) : (
+          <View style={{ width: HIT }} />
+        )}
+        <View style={styles.topText} pointerEvents="none">
+          <Txt variant="caption" tone="secondary" style={styles.kicker}>
+            {kicker}
+          </Txt>
+          <Txt variant="footnote" style={{ fontWeight: '700' }} accessibilityLiveRegion="none">
+            {word ?? ' '}
+          </Txt>
+        </View>
+        <View style={{ width: HIT }} />
       </View>
 
       {hint && !blocked ? (
@@ -162,37 +187,50 @@ export function SessionScreen() {
 
       {!blocked ? (
         <View style={[styles.controls, { paddingBottom: insets.bottom + space.xl }]}>
-          {confirmEnd ? (
-            <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.confirm}>
-              <Txt variant="footnote" tone="secondary">
-                Tap again to end
-              </Txt>
-            </Animated.View>
-          ) : null}
+          <Txt variant="title2" numberOfLines={2}>
+            {title}
+          </Txt>
+          <Txt variant="callout" tone="secondary" style={{ marginTop: 2 }}>
+            {[voiceName, `${minutes ?? 5} min`].filter(Boolean).join(' · ')}
+          </Txt>
+
+          <View
+            style={styles.track}
+            accessibilityRole="progressbar"
+            accessibilityLabel="Time in this session"
+            accessibilityValue={{ min: 0, max: Math.round(targetMs / 1000), now: Math.round(shown / 1000) }}
+          >
+            <View style={[styles.fill, { width: `${(shown / targetMs) * 100}%` }]} />
+          </View>
+          <View style={styles.times}>
+            <Txt variant="caption" tone="secondary" style={styles.time}>
+              {clock(shown)}
+            </Txt>
+            <Txt variant="caption" tone="secondary" style={styles.time}>
+              -{clock(targetMs - shown)}
+            </Txt>
+          </View>
+
           <View style={styles.buttons}>
-            <IconButton
-              icon={paused ? 'play.fill' : 'pause.fill'}
+            <View style={styles.side}>
+              <IconButton icon="xmark" label={confirmEnd ? 'Confirm end session' : 'End session'} onPress={end} tint={color.textSecondary} iconSize={20} />
+            </View>
+            <PlayButton
+              size={68}
+              playing={!paused}
               label={paused ? 'Resume session' : 'Pause session'}
-              variant="filled"
-              size={60}
-              iconSize={20}
-              tint={color.textSecondary}
               onPress={() => (paused ? vs.resume() : vs.pause())}
             />
-            <IconButton
-              icon="xmark"
-              label={confirmEnd ? 'Confirm end session' : 'End session'}
-              variant="filled"
-              size={60}
-              iconSize={18}
-              tint={color.textSecondary}
-              onPress={() => {
-                if (confirmEnd) {
-                  setConfirmEnd(false);
-                  vs.end();
-                } else setConfirmEnd(true);
-              }}
-            />
+            <View style={styles.side} />
+          </View>
+          <View style={styles.confirm}>
+            {confirmEnd ? (
+              <Animated.View entering={FadeIn} exiting={FadeOut}>
+                <Txt variant="footnote" tone="secondary" align="center">
+                  Tap again to end
+                </Txt>
+              </Animated.View>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -204,11 +242,17 @@ export function SessionScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
-  status: { letterSpacing: 2, textTransform: 'uppercase', fontSize: 11 },
-  hint: { position: 'absolute', left: space.xl, right: space.xl, top: '62%', gap: 2 },
-  controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
-  buttons: { flexDirection: 'row', gap: space.xxl },
-  confirm: { marginBottom: space.m },
+  top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.s },
+  topText: { flex: 1, alignItems: 'center', gap: 2 },
+  kicker: { letterSpacing: 1.4 },
+  hint: { position: 'absolute', left: space.xl, right: space.xl, top: '36%', gap: 2 },
+  controls: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.l },
+  track: { height: 4, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.22)', marginTop: space.xl, overflow: 'hidden' },
+  fill: { height: 4, borderRadius: radius.pill, backgroundColor: color.text },
+  times: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.s },
+  time: { fontWeight: '500', letterSpacing: 0, fontVariant: ['tabular-nums'] },
+  buttons: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.l },
+  side: { width: 72, alignItems: 'flex-start' },
+  confirm: { height: 22, marginTop: space.s, justifyContent: 'center' },
   blocked: { position: 'absolute', left: space.xl, right: space.xl, top: '30%' },
 });
