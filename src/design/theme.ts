@@ -1,54 +1,66 @@
 import { Platform, type TextStyle } from 'react-native';
 
 /**
- * Attend's visual language: near-black ink, warm white type, and colour that
- * appears only inside the body fields — soft, luminous, never alarming.
- * No red anywhere: red would read as "bad", and nothing on these screens is
- * a verdict.
+ * Attend's visual language (21 Oct 2026): a listening app, so it borrows the grammar of the
+ * best one, Spotify, on Apple foundations. A near-black base, opaque grey surfaces that step
+ * up in brightness to show depth, bold system type with tight tracking, generated cover art
+ * for every practice, and one bright accent reserved for play.
  *
- * Dark only, by design. The product is used with the eyes closed, often at
- * night; a bright screen is the wrong first thing to see on opening them.
+ * Colour lives in the cover art and the accent. No red anywhere: red would read as "bad",
+ * and nothing on these screens is a verdict.
+ *
+ * Dark only, by design. The product is used with the eyes closed, often at night; a bright
+ * screen is the wrong first thing to see on opening them.
  */
 
 export const color = {
-  bg: '#09090B',
-  bgElevated: '#111114',
-  surface: 'rgba(255,255,255,0.045)',
-  surfaceStrong: 'rgba(255,255,255,0.085)',
-  hairline: 'rgba(255,255,255,0.09)',
-  text: '#F2F0EB',
-  textSecondary: 'rgba(242,240,235,0.66)',
-  textTertiary: 'rgba(242,240,235,0.46)',
-  accent: '#F2F0EB',
+  bg: '#121212',
+  bgElevated: '#181818',
+  /** Cards, tiles, rows: opaque, so stacked surfaces never muddy. */
+  surface: '#1F1F1F',
+  surfaceStrong: '#2A2A2A',
+  /** Pressed state of a surface. */
+  surfacePressed: '#333333',
+  hairline: 'rgba(255,255,255,0.08)',
+  text: '#FFFFFF',
+  textSecondary: '#B3B3B3',
+  textTertiary: '#7A7A7A',
+  /** Play, begin, the one thing to do next. Never used for decoration. */
+  accent: '#B9A8FF',
   onAccent: '#0B0B0D',
-  focusRing: '#CFC6FF',
+  focusRing: '#B9A8FF',
   /** The program's colour: days done, the week strip, the path. Practice, never pain. */
-  practice: '#CFC6FF',
-  practiceSoft: 'rgba(207,198,255,0.14)',
+  practice: '#B9A8FF',
+  practiceSoft: 'rgba(185,168,255,0.16)',
   /** Milestones and the person's goal: warm, and only ever about what they did. */
   milestone: '#F2C48D',
-  milestoneSoft: 'rgba(242,196,141,0.10)',
+  milestoneSoft: 'rgba(242,196,141,0.12)',
 } as const;
 
 export { fieldColor, familyColor } from './palette';
 
 export const space = { xxs: 2, xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32, xxxl: 48, huge: 72 } as const;
-export const radius = { s: 12, m: 18, l: 28, pill: 999 } as const;
+/** Small radii, as on Spotify: cover art and cards are near-square; only buttons and chips are round. */
+export const radius = { xs: 4, s: 6, m: 8, l: 12, pill: 999 } as const;
 
 /** Minimum touch target (Apple HIG). */
 export const HIT = 44;
 
 const family = Platform.select({ web: 'system-ui, -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif', default: undefined });
 
+/**
+ * Bold and tight at the top, plain and open at the bottom: tracking is negative on large
+ * sizes and near zero on small ones, and hierarchy comes from weight as much as size.
+ */
 export const type = {
-  display: { fontFamily: family, fontSize: 38, lineHeight: 43, fontWeight: '300', letterSpacing: -0.8 },
-  title: { fontFamily: family, fontSize: 28, lineHeight: 34, fontWeight: '300', letterSpacing: -0.5 },
-  title2: { fontFamily: family, fontSize: 22, lineHeight: 28, fontWeight: '400', letterSpacing: -0.35 },
-  headline: { fontFamily: family, fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: -0.2 },
-  body: { fontFamily: family, fontSize: 17, lineHeight: 25, fontWeight: '400', letterSpacing: -0.2 },
-  callout: { fontFamily: family, fontSize: 15, lineHeight: 21, fontWeight: '400', letterSpacing: -0.1 },
-  footnote: { fontFamily: family, fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: 0 },
-  caption: { fontFamily: family, fontSize: 12, lineHeight: 16, fontWeight: '500', letterSpacing: 0.4 },
+  display: { fontFamily: family, fontSize: 32, lineHeight: 36, fontWeight: '800', letterSpacing: -1.1 },
+  title: { fontFamily: family, fontSize: 24, lineHeight: 29, fontWeight: '800', letterSpacing: -0.7 },
+  title2: { fontFamily: family, fontSize: 20, lineHeight: 25, fontWeight: '700', letterSpacing: -0.45 },
+  headline: { fontFamily: family, fontSize: 16, lineHeight: 21, fontWeight: '700', letterSpacing: -0.2 },
+  body: { fontFamily: family, fontSize: 16, lineHeight: 23, fontWeight: '400', letterSpacing: -0.15 },
+  callout: { fontFamily: family, fontSize: 14, lineHeight: 19, fontWeight: '400', letterSpacing: -0.05 },
+  footnote: { fontFamily: family, fontSize: 13, lineHeight: 17, fontWeight: '400', letterSpacing: 0 },
+  caption: { fontFamily: family, fontSize: 11, lineHeight: 14, fontWeight: '700', letterSpacing: 0.6 },
 } satisfies Record<string, TextStyle>;
 
 export type TypeVariant = keyof typeof type;

@@ -21,4 +21,5 @@ export function effect(name: 'body' | 'breath'): SkRuntimeEffect | null {
   return cache[name]!;
 }
 
-export const BG_RGB: [number, number, number] = [9 / 255, 9 / 255, 11 / 255];
+// Must match color.bg, so the shaders fade into the screen with no visible edge.
+export const BG_RGB: [number, number, number] = [18 / 255, 18 / 255, 18 / 255];

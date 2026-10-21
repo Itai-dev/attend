@@ -75,7 +75,7 @@ type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   style?: StyleProp<ViewStyle>;
 };
 
-/** The one big, light button. There is usually only one per screen. */
+/** The one accent pill: begin, continue, done. There is usually only one per screen. */
 export function PrimaryButton({ label, detail, style, onPress, ...rest }: ButtonProps) {
   const p = usePressScale();
   return (
@@ -91,7 +91,7 @@ export function PrimaryButton({ label, detail, style, onPress, ...rest }: Button
       }}
       style={[styles.primary, p.style, style]}
     >
-      <Txt variant="headline" tone="inverse" style={{ fontSize: 18 }}>
+      <Txt variant="headline" tone="inverse" style={{ fontSize: 17, fontWeight: '800' }}>
         {label}
       </Txt>
       {detail ? (
@@ -141,6 +141,17 @@ const GLYPHS: Record<string, string> = {
   checkmark: '✓',
   'lock.fill': '⌂',
   'star.fill': '✦',
+  'chevron.down': '⌄',
+  'checkmark.circle.fill': '✓',
+  'person.fill': '●',
+  'book.fill': '❐',
+  'moon.fill': '☾',
+  'flame.fill': '◆',
+  'heart.text.square.fill': '♡',
+  'bell.fill': '◔',
+  'speaker.wave.2.fill': '♪',
+  'plus': '+',
+  'square.and.pencil': '✎',
 };
 
 export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: string; weight?: SymbolViewProps['weight'] }) {
@@ -224,7 +235,7 @@ export function TitledScroll({
       {...rest}
       style={{ flex: 1, backgroundColor: color.bg }}
       contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={[{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }, contentStyle]}
+      contentContainerStyle={[{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.l }, contentStyle]}
     >
       {onBack ? <IconButton icon="chevron.left" label="Back" onPress={onBack} tint={color.textSecondary} style={{ marginLeft: -space.m }} /> : null}
       <View style={styles.titleRow}>
@@ -358,7 +369,7 @@ export function SampleBadge() {
 
 const styles = StyleSheet.create({
   primary: {
-    minHeight: 64,
+    minHeight: 54,
     borderRadius: radius.pill,
     backgroundColor: color.accent,
     alignItems: 'center',
@@ -374,7 +385,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: space.xl,
+    marginBottom: space.l,
     gap: space.m,
   },
   segmented: {
@@ -397,14 +408,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-end',
     gap: space.m,
-    minHeight: 52,
+    minHeight: 48,
     paddingLeft: space.xl,
     paddingRight: space.l,
     borderRadius: radius.pill,
     backgroundColor: color.surfaceStrong,
   },
   chipOn: {
-    backgroundColor: color.text,
+    backgroundColor: color.accent,
   },
   chipDot: {
     width: 18,
@@ -415,13 +426,11 @@ const styles = StyleSheet.create({
   chipDotOn: {
     backgroundColor: color.onAccent,
     borderWidth: 5,
-    borderColor: color.text,
+    borderColor: color.accent,
   },
   card: {
-    borderRadius: radius.l,
+    borderRadius: radius.m,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
     overflow: 'hidden',
   },
   badge: {

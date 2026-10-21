@@ -34,9 +34,10 @@ even when it looks like an improvement.
 **Sessions are guided, not a conversation (12 Oct 2026).** The guide speaks and holds
 silence; it never asks, and the session never listens. Answering questions mid-practice
 pulled people out of it. Once a session starts it must be completable with the eyes
-closed: no tap to continue, no body-part picker, no reading. The session screen shows a
-breathing form, one quiet status word, pause and end. Never a transcript, never text of
-what the guide says. The conversational engine is kept behind `mode: 'conversation'`;
+closed: no tap to continue, no body-part picker, no reading. The session screen is a
+"now playing" screen (21 Oct 2026): the breathing form full-bleed, the practice's title, a
+progress line with time, one quiet status word, play/pause and end. Never a transcript,
+never text of what the guide says. The conversational engine is kept behind `mode: 'conversation'`;
 the app runs `mode: 'guided'`.
 
 **The pain number is what the person entered (from Pattern).** Pain is 0–10 with five
@@ -84,6 +85,12 @@ turn. Arrival, closing and all safety lines are fixed text and never sent to a m
 sessions use no microphone. Speech, where it is used (the welcome), is recognised on the
 device and audio is never stored. No analytics. Changing what leaves the phone means
 updating the privacy copy in Settings and the README first.
+
+**Design: a listening app (21 Oct 2026).** The app borrows Spotify's grammar on Apple
+foundations (system type, SF Symbols, native tabs, springs without bounce): near-black base,
+opaque grey surfaces, bold tight type, generated cover art for every practice
+(`design/art.ts`, `design/media.tsx`), shelves and tiles, one accent kept for play and the
+one next step. Cover colours name a week or a kind of session, never anything about pain.
 
 **Colour is never a verdict.** Dark, calm, no red in the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.

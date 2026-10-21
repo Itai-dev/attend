@@ -10,11 +10,11 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: 'rgba(14,14,17,0.96)', borderTopColor: color.hairline },
+        tabBarStyle: { backgroundColor: 'rgba(18,18,18,0.94)', borderTopWidth: 0 },
         tabBarActiveTintColor: color.text,
         tabBarInactiveTintColor: color.textTertiary,
         tabBarIconStyle: { display: 'none' },
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '500', marginBottom: 6 },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600', marginBottom: 6 },
         sceneStyle: { backgroundColor: color.bg },
       }}
     >
