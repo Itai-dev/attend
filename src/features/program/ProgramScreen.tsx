@@ -6,6 +6,7 @@ import { PRESETS } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE, programDay, WEEKS } from '@/domain/program';
 import { Card, Icon, TitledScroll, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
+import { ListenCard } from '../shared/ListenCard';
 import { PresetCard } from '../shared/PresetCard';
 
 /**
@@ -95,12 +96,13 @@ export function ProgramScreen() {
         Any time
       </Txt>
       <Txt variant="footnote" tone="secondary" style={{ marginBottom: space.m }}>
-        For a flare, for sleep, for a worried moment
+        For a flare, for sleep, for a worried moment, or just to listen
       </Txt>
       <View style={{ gap: space.m }}>
         {anytime.map((p) => (
           <PresetCard key={p.id} preset={p} />
         ))}
+        <ListenCard />
       </View>
     </TitledScroll>
   );

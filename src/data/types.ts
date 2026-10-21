@@ -2,6 +2,7 @@ import type { EngineDraft } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
 import type { Moment } from '../domain/engagement';
 import type { ProgramState } from '../domain/program';
+import type { ListenTimer, SoundId } from '../domain/sounds';
 import type { Place, SessionFeeling } from '../domain/types';
 import type { Session, SessionMoment, SessionType } from '../domain/types';
 
@@ -71,6 +72,8 @@ export type Prefs = {
   moments?: Moment[];
   /** The soft tone under the session. On unless turned off in Settings. */
   ambience?: boolean;
+  /** Just listen's last sound and timer (domain/sounds.ts). Remembered so the next listen starts the same way. */
+  listen?: { id: SoundId; timer: ListenTimer };
   /** Developer settings. Ignored outside development builds. */
   dev: {
     inputMode: InputModePref;

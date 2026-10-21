@@ -100,6 +100,8 @@ server/lib/agents.ts        The ElevenLabs agents (one per session type). Edit p
                             spoken at "Robust" stability with a fixed seed so a session keeps one voice.
 tools/make-ambience.py      Nature under each session type: public-domain field recordings cut into
                             seamless loops (assets/audio/ambience-*.wav, credited in CREDITS.md).
+                            The same loops play on their own in Just listen (src/domain/sounds.ts,
+                            src/voice/listen.ts): no voice, a sleep timer, never counted as practice.
 server/lib/guideScript.ts   Everything the guide says. Edit and commit: the next session on every
                             phone uses it, no rebuild. Safety lines stay fixed in the app.
 tests/                      node:test, run through tsx.

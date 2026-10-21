@@ -21,6 +21,7 @@ import { SessionRunner, type PauseReason, type RunnerStatus } from '../engine/Se
 import { WelcomeRunner, type WelcomeResult } from '../engine/WelcomeRunner';
 import type { GuideBrain } from '../engine/types';
 import { Ambience } from './ambience';
+import { stopListening } from './listen';
 import { endSessionAudio } from './audioSession';
 import { DevTextInput } from './input/DevTextInput';
 import { NoInput } from './input/NoInput';
@@ -223,6 +224,8 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const start = useCallback(
     async (type: SessionType, minutes?: SessionLength, voiceId?: string, opts: StartOptions = {}) => {
       if (runner.current) return;
+      // A listen still playing hands over: the guide never speaks over a second sound.
+      stopListening(600, true);
       const prefs = dataRef.current.prefs;
       setError(undefined);
       setCompleted(undefined);
@@ -349,6 +352,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
 
   const startWelcome = useCallback(async (): Promise<WelcomeResult> => {
     if (runner.current) return { answers: {}, ended: true };
+    stopListening(600, true);
     const prefs = dataRef.current.prefs;
     setError(undefined);
     setDebug([]);

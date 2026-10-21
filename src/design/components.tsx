@@ -146,6 +146,7 @@ const GLYPHS: Record<string, string> = {
   'chevron.left': '‹',
   'figure.stand': '◯',
   'waveform': '≈',
+  'water.waves': '≈',
   'circle.dotted': '◌',
   'trash': '⌫',
   'ellipsis': '…',

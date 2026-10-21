@@ -15,6 +15,7 @@ import { color, HIT, radius, space } from '@/design/theme';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { greeting } from '../shared/format';
+import { ListenCard } from '../shared/ListenCard';
 import { WeekStrip } from '../shared/WeekStrip';
 
 /**
@@ -136,6 +137,9 @@ export function HomeScreen() {
             How it is today, and where
           </Txt>
         </Card>
+      </View>
+      <View style={{ marginTop: space.m }}>
+        <ListenCard />
       </View>
 
       {prefs.goal ? (
