@@ -143,6 +143,26 @@ export function SettingsScreen() {
         <Choice label="Silence" detail="Only the guide’s voice" selected={prefs.ambience === false} onPress={() => setPrefs({ ambience: false })} />
       </Group>
 
+      {/* Was on the You tab; the welcome again, to change the place, goal or practice time. */}
+      <Section>Your plan</Section>
+      <Group>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setPrefs({ onboarded: false }).then(() => router.replace('/onboarding'))}
+          style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.surfaceStrong }]}
+        >
+          <View style={{ flex: 1 }}>
+            <Txt variant="body">Change your plan</Txt>
+            <Txt variant="footnote" tone="tertiary">
+              Where it hurts, your goal, your practice time
+            </Txt>
+          </View>
+          <Txt variant="body" tone="tertiary">
+            ›
+          </Txt>
+        </Pressable>
+      </Group>
+
       <Section>Privacy</Section>
       <Group>
         <View style={styles.textBlock}>
@@ -249,6 +269,16 @@ function DeveloperSettings() {
           <Txt variant="body">Keep transcripts</Txt>
           <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" />
         </View>
+        <Hairline />
+        {/* The body map and journey come from conversational sessions, which the app doesn't run:
+            developers only, as on the three-tab design (21 Oct 2026). */}
+        <Pressable accessibilityRole="button" onPress={() => router.push('/body')} style={styles.row}>
+          <Txt variant="body">Body map (conversation mode)</Txt>
+        </Pressable>
+        <Hairline />
+        <Pressable accessibilityRole="button" onPress={() => router.push('/journey')} style={styles.row}>
+          <Txt variant="body">Journey (conversation mode)</Txt>
+        </Pressable>
         <Hairline />
         <View style={styles.textBlock}>
           <Txt variant="footnote" tone="tertiary">

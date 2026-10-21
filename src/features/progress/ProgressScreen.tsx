@@ -4,15 +4,16 @@ import { Alert, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } 
 import { useData } from '@/data/store';
 import { currentTz, formatPain, MIN_DAYS_FOR_PICTURE, PAIN_MAX, type CheckIn } from '@/domain/checkin';
 import { milestones, practiceStats } from '@/domain/engagement';
-import { EMPTY_PROGRAM } from '@/domain/program';
+import { EMPTY_PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE } from '@/domain/program';
 import { buildProgress, PROGRESS_MEANING, type ProgressDay } from '@/domain/progress';
 import { REGIONS } from '@/domain/regions';
 import { Card, Hairline, Icon, PrimaryButton, TitledScroll, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
+import { ProgramPath } from '../program/ProgramPath';
 import { sessionDate } from '../shared/format';
 
 /**
- * Progress, in two halves that never mix. What you did — practice days, minutes, lessons,
+ * Progress: the 28-day path first, then two halves that never mix. What you did — practice days, minutes, lessons,
  * milestones, the moments you saved — is celebrated. The pain record is shown, not judged:
  * pain over weeks, beside the days practised. The picture is the person's to read;
  * the screen draws it and says what it does not mean, and never says which way it went.
@@ -100,7 +101,11 @@ export function ProgressScreen() {
 
   return (
     <TitledScroll title="Progress">
-      <Section first>Your practice</Section>
+      {/* The program path leads: what is done and what comes next (three tabs, 21 Oct 2026). */}
+      <Section first>{`${PROGRAM_TITLE} · ${PROGRAM_DAYS} days`}</Section>
+      <ProgramPath />
+
+      <Section>Your practice</Section>
       <View style={styles.tiles}>
         {[
           [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],

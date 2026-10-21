@@ -3,7 +3,11 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useData } from '@/data/store';
 import { color } from '@/design/theme';
 
-/** Four places: Today (the day's lesson and practice), Program (the 28 days and any-time sessions), Progress (practice and the pain record), You. */
+/**
+ * Three places, each with one job (21 Oct 2026, back from the look-and-sound design): Today
+ * (what to do now, Settings behind the gear), Sounds (just listen), Progress (the program path,
+ * practice and the pain record). Four tabs and a You page made people ask where to start.
+ */
 export default function TabsLayout() {
   const { prefs } = useData();
   if (!prefs.onboarded) return <Redirect href="/onboarding" />;
@@ -13,17 +17,13 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'circle.circle', selected: 'circle.circle.fill' }} md="radio_button_checked" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="program">
-        <NativeTabs.Trigger.Label>Program</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'point.topleft.down.to.point.bottomright.curvepath', selected: 'point.topleft.down.to.point.bottomright.curvepath.fill' }} md="route" />
+      <NativeTabs.Trigger name="sounds">
+        <NativeTabs.Trigger.Label>Sounds</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'leaf', selected: 'leaf.fill' }} md="eco" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="progress">
         <NativeTabs.Trigger.Label>Progress</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} md="bar_chart" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="you">
-        <NativeTabs.Trigger.Label>You</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} md="person" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

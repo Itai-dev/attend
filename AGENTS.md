@@ -88,11 +88,21 @@ updating the privacy copy in Settings and the README first.
 **Design: a quiet Japanese clinic (21 Oct 2026).** Washi by day (warm paper, sumi ink)
 and Sumi at night (warm charcoal, rice-paper text), following the phone's appearance so a
 session opened at night never starts bright. Ma — room around everything, soft corners,
-soft shadows, few boxes. A light serif for titles (Newsreader), the system sans for the rest.
+soft shadows, few boxes. San Francisco throughout (21 Oct 2026: no serif); titles a little light.
 One leading colour, moss, for the one next step and practice done, chosen for calm (green,
 never red; see `design/theme.ts`). The ensō is the breathing form (`viz/Enso.tsx`). Under
 sessions, real nature recordings (`tools/make-ambience.py`). The experience stays Attend's
 own — no album pages, shelves, "now playing" or play buttons; this is not a media app.
+
+**Just listen is not practice (21 Oct 2026, from PR #19).** One of the same recordings on its
+own, no voice, on a sleep timer (`domain/sounds.ts`, `voice/listen.ts`, the Sounds tab). It is never recorded and never counts toward days, minutes or milestones; its copy
+describes the place, never what a sound does for pain or the body (tests/sounds.test.ts). It
+keeps playing with the screen locked, and a session or the welcome stops it before speaking.
+
+**Three tabs (21 Oct 2026).** Today (what to do now, the any-time sessions, Settings behind the
+gear), Sounds, Progress (the program path first, then practice and the pain record). No You tab,
+no Program tab. The body map and journey come from conversation mode, so they are reachable only
+from the developer section of Settings.
 
 **Colour is never a verdict.** Calm, no red anywhere, including the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.
