@@ -1,4 +1,5 @@
-// GET /api/tts?text=&voice=&speed=&stability=&similarity=  →  audio/mpeg from ElevenLabs.
+// GET /api/tts?text=&voice=&speed=&stability=&similarity=&v=  →  audio/mpeg from ElevenLabs.
+// v is the app's cache version: unused here, but part of the URL, so bumping it re-records every line.
 // voice and the settings come from the session type's ElevenLabs agent (see api/agent.ts).
 // The ElevenLabs key lives only in this project's environment (ELEVENLABS_API_KEY).
 // Responses are cached at Vercel's edge: the same line in the same voice is fetched
@@ -24,45 +25,52 @@ export async function GET(request: Request): Promise<Response> {
   if (!text) return Response.json({ error: 'no text' }, { status: 400 });
   const requested = url.searchParams.get('voice') ?? DEFAULT_VOICE;
   const voice = VOICE_ID.test(requested) ? requested : DEFAULT_VOICE;
+  const model = process.env.ATTEND_TTS_MODEL ?? 'eleven_v4';
+  // v3/v4 read delivery tags like [softly] [slowly]; older models would speak them aloud.
+  const tagged = /^eleven_v[34]/.test(model);
+  const spoken = tagged ? text : text.replace(/\[[^\]]*\]\s*/g, '').trim();
+  const stability = param(url, 'stability', 0, 1, 1);
   const settings = {
-    stability: param(url, 'stability', 0, 1, 0.5),
+    // The v3 family takes only Creative (0), Natural (0.5) or Robust (1); anything else is
+    // refused, and the refusal used to drop every setting, speed included.
+    stability: tagged ? (stability >= 0.75 ? 1 : stability >= 0.25 ? 0.5 : 0) : stability,
     similarity_boost: param(url, 'similarity', 0, 1, 0.8),
     style: 0,
     use_speaker_boost: true,
     speed: param(url, 'speed', 0.7, 1.2, 0.85),
   };
-  const model = process.env.ATTEND_TTS_MODEL ?? 'eleven_v4';
-  // v3/v4 read delivery tags like [softly] [slowly]; older models would speak them aloud.
-  const tagged = /^eleven_v[34]/.test(model);
-  const spoken = tagged ? text : text.replace(/\[[^\]]*\]\s*/g, '').trim();
+  // A fixed seed per voice: the model samples the same way for every line, so a session
+  // doesn't drift between takes that sound like different moods.
+  const seed = [...voice].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7) % 4_294_967_295;
 
-  const speak = async (v: string) => {
-    const call = (voice_settings?: Record<string, unknown>) =>
-      fetch(`https://api.elevenlabs.io/v1/text-to-speech/${v}?output_format=mp3_44100_128`, {
-        method: 'POST',
-        headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
-        body: JSON.stringify({ text: spoken, model_id: model, ...(voice_settings ? { voice_settings } : {}) }),
-      });
-    // Slow and steady: a little under normal speed, high stability. Settings a model
-    // doesn't accept (400/422) fall back to the voice's own defaults rather than failing.
-    const r = await call(settings);
-    return r.status === 400 || r.status === 422 ? call() : r;
-  };
-
-  let res = await speak(voice);
-  // Library voices need a paid ElevenLabs plan (402). The app has no other voice to fall back
-  // on, so a refused voice is spoken as River instead of failing the session.
-  const substituted = !res.ok && voice !== DEFAULT_VOICE;
-  if (substituted) res = await speak(DEFAULT_VOICE);
+  const call = (extra: Record<string, unknown>) =>
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
+      method: 'POST',
+      headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
+      body: JSON.stringify({ text: spoken, model_id: model, ...extra }),
+    });
+  // Slow and steady. A setting a model doesn't accept (400/422) is dropped, one step at a time,
+  // rather than failing the line. The step is decided by the model, not the line, so every
+  // line of a session lands on the same one.
+  const steps: Record<string, unknown>[] = [
+    { voice_settings: settings, seed },
+    { voice_settings: { stability: settings.stability, similarity_boost: settings.similarity_boost }, seed },
+    { seed },
+    {},
+  ];
+  let res = await call(steps[0]);
+  for (const step of steps.slice(1)) {
+    if (res.status !== 400 && res.status !== 422) break;
+    res = await call(step);
+  }
+  // No other voice is ever swapped in: a session that changes voice between lines is worse
+  // than one that pauses. The app retries, then pauses the session.
   if (!res.ok || !res.body) return Response.json({ error: `voice ${res.status}` }, { status: 502 });
   return new Response(res.body, {
-    headers: substituted
-      ? // Not cached: once the plan covers the chosen voice, the next request should get it.
-        { 'content-type': 'audio/mpeg', 'cache-control': 'no-store' }
-      : {
-          'content-type': 'audio/mpeg',
-          'cache-control': 'public, max-age=2592000, immutable',
-          'cdn-cache-control': 'public, s-maxage=31536000, immutable',
-        },
+    headers: {
+      'content-type': 'audio/mpeg',
+      'cache-control': 'public, max-age=2592000, immutable',
+      'cdn-cache-control': 'public, s-maxage=31536000, immutable',
+    },
   });
 }

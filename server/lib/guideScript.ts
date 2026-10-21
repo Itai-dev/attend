@@ -115,11 +115,13 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let the phone rest, and let your eyes close.', 4500],
+        ['Let the next breath out be a little longer than the one before.', 6500],
         ["There's nothing you need to fix right now.", 5500],
       ],
       [
         ['Take a moment to settle in.', 3500],
         ['Get comfortable, and let your eyes close.', 5000],
+        ['Feel the weight of your body, resting on whatever is holding it.', 6500],
         ["There's nothing you need to fix right now.", 5500],
       ],
     ],
@@ -127,14 +129,15 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ["Let's take this slowly.", 3500],
         ['Let the phone rest, and let your eyes close.', 4500],
-        ["You don't have to make anything go away right now.", 5000],
-        ['Let your breath be however it is.', 5000],
+        ['Let the breath out be slow, like a quiet sigh.', 6500],
+        ["You don't have to make anything go away right now.", 5500],
       ],
     ],
     sleep: [
       [
         ["Get comfortable, wherever you're lying.", 5000],
         ['Let your eyes close.', 5000],
+        ['Let the bed take your weight. All of it.', 7000],
         ["There's nothing to do now except notice.", 6500],
       ],
     ],
@@ -142,7 +145,8 @@ export const GUIDE_SCRIPT: GuideScript = {
       [
         ['Take a moment to settle in.', 3500],
         ['Let your eyes close.', 4000],
-        ["We'll go slowly. You can stop at any time.", 5500],
+        ["We'll go slowly.", 4000],
+        ['Feel where your body is held. The chair, the bed, the floor.', 7000],
       ],
     ],
   },
@@ -163,7 +167,7 @@ export const GUIDE_SCRIPT: GuideScript = {
     ],
     [
       ['Now the hips, the belly, and the lower back.', 6000],
-      ['Notice what is there, without changing anything.', 9000],
+      ['Notice what is there. Warmth, pressure, tingling, or not much at all. Not much is fine too.', 9000],
     ],
     [
       ['Let attention move up, through the chest and upper back, into the shoulders and arms.', 9000],
@@ -176,7 +180,8 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Bring your attention to your feet. The soles, the toes, where they rest.', 12000],
     ],
     [
-      ['Now let it rise into your ankles and calves, your knees, your thighs.', 12000],
+      ['Now let it rise into your ankles and calves, your knees, your thighs.', 6000],
+      ['If you find tension, you don\'t need to do anything with it. Notice it, and move on.', 8000],
     ],
     [
       ['Into the hips and the pelvis.', 6000],
@@ -287,7 +292,14 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Let your attention rest on {place}.', 6000],
       ["You don't need to name what you find. Just notice it.", 10000],
     ],
+    [
+      ['Now bring your attention to {place}, slowly, the way you would walk into a quiet room.', 8000],
+      ['Notice what is there, before deciding anything about it.', 10000],
+    ],
   ],
+  // Somatic tracking: the sensation's qualities, watched with curiosity and a light touch,
+  // with nothing needing to change (outcome independence). Statements only: a guided
+  // session never asks, not even a question it doesn't wait for.
   GUIDED_OBSERVE: [
     [
       ['If there is a sensation there, notice its edges.', 8000],
@@ -303,12 +315,40 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Notice whether it stays the same, moment to moment, or shifts a little.', 14000],
     ],
     [
+      ['Notice its temperature. Warm, cool, or neither.', 12000],
+    ],
+    [
+      ['Notice how deep it seems. Near the surface, or further in.', 12000],
+    ],
+    [
+      ['Notice its size.', 5000],
+      ['Then notice whether the size stays the same.', 12000],
+    ],
+    [
+      ['Notice whether it is one sensation, or several, close together.', 12000],
+    ],
+    [
       ['If your attention wanders, that is fine.', 5000],
       ['Gently bring it back to {place}.', 12000],
     ],
     [
       ['Let your breath be easy.', 6000],
       ['Let the sensation be there, with the breath moving around it.', 12000],
+    ],
+    [
+      ['Let the muscles around it soften, even slightly.', 6000],
+      ['The sensation can stay. The area around it can rest.', 12000],
+    ],
+    [
+      ['See if you can watch it with a little lightness.', 6000],
+      ['The way you might listen to rain against a window.', 12000],
+    ],
+    [
+      ['If it grows, or eases, or stays the same, all of it is fine to watch.', 14000],
+    ],
+    [
+      ['Let your attention move away from it, to a part of the body that feels neutral. Your hands, perhaps.', 10000],
+      ['Rest there for a few breaths. Then come back, slowly.', 12000],
     ],
     [
       ['Nothing here needs an answer.', 6000],
@@ -332,22 +372,26 @@ export const GUIDE_SCRIPT: GuideScript = {
       ['Notice the air on your skin. Its temperature. Its stillness.', 12000],
     ],
     [
+      ['Notice a place that feels ordinary, or easy. The hands, the feet, the face.', 12000],
+    ],
+    [
       ['If your attention wanders, that is fine.', 5000],
       ['Gently bring it back to the breath.', 12000],
     ],
   ],
   // The program's themes (src/domain/program.ts). After settling on {place}, a guided session
   // speaks its day's theme first, then the general banks above. No line may assume the person
-  // said anything, and none may claim the sensation is safe or harmless.
+  // said anything, none may ask, and none may claim the sensation is safe or harmless.
   GUIDED_THEMES: {
     settle: [
       [['Let your attention rest there, the way a hand rests on a table.', 8000], ['No effort. Just resting.', 12000]],
       [['Notice that you can be here with it, for this moment.', 12000]],
+      [['Let each breath out be a little slower.', 8000], ['Nothing else is needed.', 12000]],
     ],
     locate: [
       [['Find the place where it is clearest.', 8000], ['Not to judge it. Just to know where it is.', 12000]],
-      [['Is it near the surface, or deeper in?', 6000], ['You don’t need an answer. Just look.', 12000]],
-      [['Notice how big the area is. Smaller than a coin? Larger than a hand?', 12000]],
+      [['Notice whether it sits near the surface, or deeper in.', 6000], ['You don’t need an answer. Just look.', 12000]],
+      [['Notice how big the area is. Smaller than a coin, or larger than a hand.', 12000]],
     ],
     breath: [
       [['Let the breath come and go on its own.', 8000], ['Imagine it moving around {place}, and out again.', 12000]],
@@ -355,9 +399,9 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Notice the pause at the end of each breath out.', 12000]],
     ],
     edges: [
-      [['Look for the edge of the sensation.', 6000], ['Where does it stop, and something easier begin?', 12000]],
+      [['Look for the edge of the sensation.', 6000], ['Where it stops, and something easier begins.', 12000]],
       [['Trace the outline slowly, as if with a fingertip.', 14000]],
-      [['Is the edge sharp, or does it fade gradually?', 6000], ['Either is fine. Just notice.', 12000]],
+      [['Notice whether the edge is sharp, or fades gradually.', 6000], ['Either is fine. Just notice.', 12000]],
       [['Rest your attention just outside the edge, in what feels neutral.', 12000]],
     ],
     moves: [
@@ -371,7 +415,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Notice whether the texture is the same all the way through.', 12000]],
     ],
     curious: [
-      [['Look at it as if for the first time.', 6000], ['What is actually here, right now?', 12000]],
+      [['Look at it as if for the first time.', 6000], ['Just what is here, right now.', 12000]],
       [['See if a little curiosity can sit beside it.', 6000], ['Even a small wondering is enough.', 12000]],
       [['Watch it the way you might watch a cloud.', 14000]],
     ],
@@ -381,7 +425,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Let the place around the sensation be a little looser.', 14000]],
     ],
     fear: [
-      [['If there is fear here, notice it too.', 6000], ['Where in the body is the fear?', 12000]],
+      [['If there is fear here, notice it too.', 6000], ['Notice where it lives in the body. The chest, the throat, the belly.', 12000]],
       [['Let the fear and the sensation sit side by side.', 6000], ['You don’t need to push either away.', 12000]],
       [['Fear makes sense. Meet it the way you would meet a frightened friend.', 14000]],
     ],
@@ -391,7 +435,7 @@ export const GUIDE_SCRIPT: GuideScript = {
       [['Nothing needs fixing in this moment.', 12000]],
     ],
     kind: [
-      [['Imagine the sensation belongs to someone you care about.', 6000], ['How would you speak to them?', 12000]],
+      [['Imagine the sensation belongs to someone you care about.', 6000], ['Notice the tone you would use with them.', 12000]],
       [['Offer yourself the same tone.', 5000], ['This is hard. And you are here.', 12000]],
       [['Let a little warmth be there, beside it.', 14000]],
     ],
@@ -509,16 +553,27 @@ export const GUIDE_SCRIPT: GuideScript = {
   ],
   REACT_BOUNDARY: [[['Notice the edges softening.', 6000], ['Let them be as clear, or as blurry, as they are.', 5000]]],
   REACT_QUALITY: [[['Notice that {noun}.', 5000], ['Let it be whatever it is now.', 4500]]],
+  // Reappraisal, as PRT means it: meeting the sensation with less alarm and more interest.
+  // An invitation, never a conclusion: nothing here says the sensation is safe or explained.
+  // Index 0 opens the phase in most sessions, index 2 in a fear session.
   REAPPRAISE_CORE: [
     [
       ["You don't need to solve the sensation right now.", 5000],
-      ['See if you can notice it without immediately treating it as an emergency.', 9000],
+      ['See if you can meet it with a little less alarm, and a little more interest.', 10000],
     ],
     [
-      ['Can you allow it to be a sensation for a moment, rather than a problem that needs to be fixed?', 10000],
+      ['Let it be a sensation for a moment, rather than a problem that needs to be fixed.', 10000],
     ],
     [
       ['Notice the difference between feeling something, and needing to react to it.', 10000],
+    ],
+    [
+      ['Meeting it with interest, instead of alarm, is the whole practice.', 6000],
+      ['Nothing more is needed.', 12000],
+    ],
+    [
+      ['Let the breath out be slow.', 5000],
+      ['Let the body feel there is time. Nothing needs to happen.', 12000],
     ],
   ],
   REAPPRAISE_URGE: [

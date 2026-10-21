@@ -113,8 +113,8 @@ export function SettingsScreen() {
       <SectionLabel style={styles.section}>Background</SectionLabel>
       <Group>
         <Choice
-          label="Soft tone"
-          detail="A low 432 Hz drone under the voice"
+          label="Soft background"
+          detail="A quiet bed under the voice, one for each kind of session"
           selected={prefs.ambience !== false}
           onPress={() => setPrefs({ ambience: true })}
         />

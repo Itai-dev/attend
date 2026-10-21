@@ -45,8 +45,14 @@ export type Prefs = {
   onboarded: boolean;
   samplesSeeded: boolean;
   voiceOutput: VoiceOutputPref;
-  /** The voice chosen in the welcome, used for the session Today offers. Presets carry their own. */
+  /**
+   * Older builds saved whichever voice a program day started with, chosen or not. No longer
+   * read: each session type has its own voice (SESSION_VOICES), and `voices` holds the person's
+   * own picks.
+   */
   voiceId?: string;
+  /** A voice the person picked on the Before screen, per session type. */
+  voices?: Partial<Record<SessionType, string>>;
   /** What the person said brings them here, in the welcome. Shapes the session Today offers. */
   focus?: SessionType;
   /** Last length picked on Home, offered again next time. */

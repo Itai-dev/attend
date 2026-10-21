@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { currentTz, dayKey, latestPlace } from '@/domain/checkin';
 import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
+import { voiceFor } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { speakPlace } from '@/domain/regions';
 import { Card, haptic, Icon, PrimaryButton, SectionLabel, Txt } from '@/design/components';
@@ -44,7 +45,7 @@ export function HomeScreen() {
 
   const { warm } = useVoiceSession();
   // Ready the practice while the person reads Today, so Begin goes straight to the guide's first words.
-  useEffect(() => warm(today.practice.sessionType, prefs.voiceId), [today.practice.sessionType, prefs.voiceId, warm]);
+  useEffect(() => warm(today.practice.sessionType, voiceFor(today.practice.sessionType, prefs.voices)), [today.practice.sessionType, prefs.voices, warm]);
 
   const go = () => {
     haptic('soft');

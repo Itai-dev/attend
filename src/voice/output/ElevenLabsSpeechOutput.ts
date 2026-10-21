@@ -32,6 +32,13 @@ export type ElevenLabsConfig = {
 };
 
 const PREFETCH = 3;
+/**
+ * Bumped when every line must be re-recorded so a session never mixes old and new takes.
+ * 2 (21 Oct 2026): older caches could hold a line spoken by a substitute voice (the server
+ * used to swap in River when a voice was refused) or by an older model, so one session
+ * could change voice between lines. Sent to the server too, so its edge cache starts over.
+ */
+const CACHE_VERSION = 2;
 const FETCH_TIMEOUT_MS = 10_000;
 const ATTEMPTS = 3;
 
@@ -73,7 +80,12 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
   private ensureDir() {
     if (this.dir) return;
     try {
-      const d = new Directory(Paths.cache, 'guide-voice', this.cfg.voiceId);
+      try {
+        // The old cache, before CACHE_VERSION 2: never read again.
+        const old = new Directory(Paths.cache, 'guide-voice');
+        if (old.exists) old.delete();
+      } catch {}
+      const d = new Directory(Paths.cache, `guide-voice-${CACHE_VERSION}`, this.cfg.voiceId);
       d.create({ intermediates: true, idempotent: true });
       this.dir = d;
     } catch {
@@ -97,7 +109,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       .filter((k) => typeof s[k] === 'number')
       .map((k) => `&${k}=${s[k]}`)
       .join('');
-    return `${base}/tts?voice=${encodeURIComponent(this.cfg.voiceId)}${extra}&text=${encodeURIComponent(text)}`;
+    return `${base}/tts?v=${CACHE_VERSION}&voice=${encodeURIComponent(this.cfg.voiceId)}${extra}&text=${encodeURIComponent(text)}`;
   }
 
   /** Local file URI for a line, downloading it if needed. Null if it can't be had. */

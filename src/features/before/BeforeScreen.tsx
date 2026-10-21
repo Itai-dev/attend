@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GUIDE_VOICES, hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import { latestPlace, WHERE_REGIONS } from '@/domain/checkin';
-import { presetById } from '@/domain/presets';
+import { presetById, voiceFor } from '@/domain/presets';
 import { programDay, type PracticeTheme } from '@/domain/program';
 import { REGIONS } from '@/domain/regions';
 import type { Place, SessionType } from '@/domain/types';
@@ -53,7 +53,7 @@ export function BeforeScreen() {
     const preset = presetById(params.preset);
     if (preset) {
       const theme: PracticeTheme = preset.type === 'flare' ? 'flare' : preset.type === 'fear' ? 'fear' : preset.type === 'sleep' ? 'open' : 'curious';
-      return { title: preset.title, kicker: 'ANY TIME', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: preset.voiceId, day: undefined };
+      return { title: preset.title, kicker: 'ANY TIME', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: voiceFor(preset.type, prefs.voices), day: undefined };
     }
     const d = programDay(Number(params.day) || 1);
     return {
@@ -62,10 +62,10 @@ export function BeforeScreen() {
       theme: d.practice.theme,
       type: d.practice.sessionType,
       minutes: d.practice.minutes as SessionLength,
-      voice: prefs.voiceId ?? GUIDE_VOICES[0].id,
+      voice: voiceFor(d.practice.sessionType, prefs.voices),
       day: d.day,
     };
-  }, [params.day, params.preset, prefs.voiceId]);
+  }, [params.day, params.preset, prefs.voices]);
 
   const known = latestPlace(checkIns) ?? prefs.place;
   const [place, setPlace] = useState<Place | null>(plan.theme === 'open' ? null : (known ?? null));
@@ -76,7 +76,8 @@ export function BeforeScreen() {
 
   const begin = () => {
     stopPreview();
-    if (plan.day && voice !== prefs.voiceId) setPrefs({ voiceId: voice });
+    // Kept only when the person picked another voice here, and only for this kind of session.
+    if (voice !== plan.voice) setPrefs({ voices: { ...prefs.voices, [plan.type]: voice } });
     router.replace({
       pathname: '/session',
       params: {

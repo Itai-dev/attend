@@ -9,6 +9,7 @@ import { DESCRIPTORS } from '../domain/lexicon';
 import { currentTz, dayKey, latestPlace } from '../domain/checkin';
 import { completeDay, EMPTY_PROGRAM, type PracticeTheme } from '../domain/program';
 import { buildMemory } from '../domain/memory';
+import { voiceFor } from '../domain/presets';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
 import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
@@ -59,7 +60,7 @@ type VoiceSessionValue = {
   labels: { input: string; output: string; brain: string };
   debug: DebugEntry[];
   devInput?: DevTextInput;
-  /** `voiceId` is the preset's voice; without one, the person's own choice, then the session type's agent. */
+  /** `voiceId` is the voice picked before the session; without one, the session type's own (SESSION_VOICES). */
   start(type: SessionType, minutes?: SessionLength, voiceId?: string, opts?: StartOptions): Promise<void>;
   /** Prepare a session of this type in the background (script, agent, opening audio). */
   warm(type: SessionType, voiceId?: string): void;
@@ -154,14 +155,22 @@ function knownVoice(id?: string): string | undefined {
   return GUIDE_VOICES.find((v) => v.id === id)?.id;
 }
 
+/**
+ * ElevenLabs' v3-family models re-perform every line, and at lower stability two lines in one
+ * session can sound like different people. "Robust" (1) keeps one voice and one manner across
+ * the whole session; consistency matters more here than expressiveness. Pace comes from the
+ * agent's speed and the script's [slowly] direction.
+ */
+export const GUIDE_STABILITY = 1;
+
 function chooseOutput(voiceId?: string, agent?: AgentSettings): SpeechOutput {
   // ElevenLabs is the guide's only voice. If it can't be reached the session pauses; it never switches to the phone's voice.
   return new ElevenLabsSpeechOutput({
     apiUrl: config.apiUrl,
     headers: apiHeaders(),
-    // A voice chosen in Settings wins; otherwise the session type's agent decides.
+    // The voice picked for this session (its type's own, or the person's pick); the agent's only as a fallback.
     voiceId: voiceId ?? agent?.voiceId ?? config.voiceId,
-    settings: agent,
+    settings: { speed: agent?.speed, similarity: agent?.similarity, stability: GUIDE_STABILITY },
     direction: () => VOICE_DIRECTION,
   });
 }
@@ -222,7 +231,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       setStatus('preparing');
       // Usually already warmed from Home. If not, wait briefly, then start with what is known:
       // a slower network should cost a slightly less fresh script, not a silence.
-      const chosenVoice = knownVoice(voiceId) ?? knownVoice(prefs.voiceId);
+      const chosenVoice = knownVoice(voiceId) ?? voiceFor(type, prefs.voices);
       const agent = await Promise.race([
         warmSession(type, chosenVoice),
         new Promise<AgentSettings | undefined>((r) => setTimeout(() => r(lastAgent[type]), 1500)),
@@ -271,7 +280,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         programDay: opts.programDay,
         keepTranscript: __DEV__ && prefs.dev.keepTranscripts,
       });
-      const ambience = prefs.ambience === false ? undefined : new Ambience();
+      const ambience = prefs.ambience === false ? undefined : new Ambience(type);
       const r = new SessionRunner({
         engine,
         brain,
@@ -398,7 +407,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const warm = useCallback((type: SessionType, voiceId?: string) => {
-    void warmSession(type, knownVoice(voiceId) ?? knownVoice(dataRef.current.prefs.voiceId)).catch(() => {});
+    void warmSession(type, knownVoice(voiceId) ?? voiceFor(type, dataRef.current.prefs.voices)).catch(() => {});
   }, []);
 
   const value = useMemo<VoiceSessionValue>(

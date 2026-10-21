@@ -1,10 +1,13 @@
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import type { SessionType } from '../domain/types';
 import type { SessionStatus } from './VoiceSessionProvider';
 
 /**
- * A soft tone under the session: a low drone tuned to 432 Hz (assets/audio/tone-432.wav,
- * a seamless 30-second loop). It is atmosphere, nothing more — the app never calls it
- * healing or says it does anything for pain.
+ * A soft bed under the session, one per session type (assets/audio/ambience-<type>.wav,
+ * seamless 40-second loops made by tools/make-ambience.py, which says why they sound as they
+ * do). Notice: an open, slowly breathing chord. Flare: a slow tide. Sleep: darker and slower.
+ * Fear: a close, warm chord. It is atmosphere, nothing more: the app never calls it healing
+ * or says it does anything for pain.
  *
  * It sits well under the voice: quieter while the guide speaks and while listening,
  * and fuller in the silences. When the person actually speaks it dips a little more,
@@ -31,6 +34,14 @@ const RELEASE_MS = 1200;
 /** Ease in and out, so a fade has no audible corner at either end. */
 const ease = (t: number) => t * t * (3 - 2 * t);
 
+// Named one by one: Metro bundles only the files it can see required.
+const BEDS: Record<SessionType, number> = {
+  notice: require('../../assets/audio/ambience-notice.wav'),
+  flare: require('../../assets/audio/ambience-flare.wav'),
+  sleep: require('../../assets/audio/ambience-sleep.wav'),
+  fear: require('../../assets/audio/ambience-fear.wav'),
+};
+
 export class Ambience {
   private player?: AudioPlayer;
   private target = 0;
@@ -40,11 +51,13 @@ export class Ambience {
   private lastVoiceAt = 0;
   private release?: ReturnType<typeof setTimeout>;
 
+  constructor(private readonly type: SessionType = 'notice') {}
+
   start() {
     if (this.player) return;
     try {
       // Pausing must not switch the audio session off under the recogniser (see ElevenLabsSpeechOutput.play).
-      this.player = createAudioPlayer(require('../../assets/audio/tone-432.wav'), { keepAudioSessionActive: true });
+      this.player = createAudioPlayer(BEDS[this.type], { keepAudioSessionActive: true });
       this.player.loop = true;
       this.player.volume = 0;
       this.player.play();
