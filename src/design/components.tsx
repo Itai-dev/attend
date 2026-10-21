@@ -42,25 +42,14 @@ const TONES = {
   inverse: color.onAccent,
 };
 
-const SERIF_VARIANTS = new Set<TypeVariant>(['display', 'title', 'title2', 'headline']);
-
-/**
- * Type scaled with Dynamic Type (large titles capped so layouts hold). Serif variants are one
- * font file per weight, so a weight passed in style is dropped rather than faked as bold:
- * titles stay light.
- */
+/** Type scaled with Dynamic Type, large titles capped so layouts hold. */
 export function Txt({ variant = 'body', tone = 'primary', align, style, maxFontSizeMultiplier, ...rest }: TxtProps) {
   const cap = maxFontSizeMultiplier ?? (variant === 'display' || variant === 'title' ? 1.35 : 2);
-  let extra = style;
-  if (SERIF_VARIANTS.has(variant) && style) {
-    const { fontWeight: _drop, ...flat } = StyleSheet.flatten(style) ?? {};
-    extra = flat;
-  }
   return (
     <Text
       {...rest}
       maxFontSizeMultiplier={cap}
-      style={[type[variant], { color: TONES[tone], textAlign: align }, extra]}
+      style={[type[variant], { color: TONES[tone], textAlign: align }, style]}
     />
   );
 }

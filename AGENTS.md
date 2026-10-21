@@ -88,7 +88,7 @@ updating the privacy copy in Settings and the README first.
 **Design: a quiet Japanese clinic (21 Oct 2026).** Washi by day (warm paper, sumi ink)
 and Sumi at night (warm charcoal, rice-paper text), following the phone's appearance so a
 session opened at night never starts bright. Ma — room around everything, soft corners,
-soft shadows, few boxes. A light serif for titles (Newsreader), the system sans for the rest.
+soft shadows, few boxes. San Francisco throughout (21 Oct 2026: no serif); titles a little light.
 One leading colour, moss, for the one next step and practice done, chosen for calm (green,
 never red; see `design/theme.ts`). The ensō is the breathing form (`viz/Enso.tsx`). Under
 sessions, real nature recordings (`tools/make-ambience.py`). The experience stays Attend's

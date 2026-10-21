@@ -6,8 +6,7 @@ import { Appearance, DynamicColorIOS, Platform, useColorScheme, type ColorValue,
  * light and dark setting, so a session opened at night never starts with a bright screen.
  *
  * - Ma: room around everything, few boxes, soft corners and soft shadows instead of edges.
- * - Type: a light serif for what you read as a title (Newsreader), the system sans for the
- *   rest. Gentle, not bold.
+ * - Type: San Francisco throughout, titles a little light. Gentle, not bold.
  * - One leading colour, moss: green is the hue most linked with calm and restoration (lower
  *   heart rate in green surroundings, Frontiers in Psychology 2019; early trials of green
  *   light easing migraine and fibromyalgia pain, University of Arizona). Earthy and low in
@@ -107,18 +106,16 @@ export const radius = { xs: 6, s: 10, m: 16, l: 22, pill: 999 } as const;
 export const HIT = 44;
 
 const sans = Platform.select({ web: 'system-ui, -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif', default: undefined });
-/** Loaded in app/_layout.tsx before anything renders. */
-export const serif = { light: 'Newsreader_300Light', regular: 'Newsreader_400Regular', medium: 'Newsreader_500Medium' } as const;
-
 /**
- * Titles in a light serif with open tracking; everything read in passing in the system sans.
- * Hierarchy from size and leading, not weight: nothing on these screens raises its voice.
+ * San Francisco throughout (21 Oct 2026: the Newsreader serif is gone; "just the San Francisco
+ * font for now"). Hierarchy from size and leading, with titles a little lighter than the
+ * system's default, so nothing on these screens raises its voice.
  */
 export const type = {
-  display: { fontFamily: serif.light, fontSize: 36, lineHeight: 42, fontWeight: '400', letterSpacing: -0.4 },
-  title: { fontFamily: serif.regular, fontSize: 27, lineHeight: 33, fontWeight: '400', letterSpacing: -0.3 },
-  title2: { fontFamily: serif.regular, fontSize: 22, lineHeight: 28, fontWeight: '400', letterSpacing: -0.2 },
-  headline: { fontFamily: serif.regular, fontSize: 19, lineHeight: 24, fontWeight: '400', letterSpacing: -0.1 },
+  display: { fontFamily: sans, fontSize: 34, lineHeight: 41, fontWeight: '300', letterSpacing: -0.4 },
+  title: { fontFamily: sans, fontSize: 26, lineHeight: 32, fontWeight: '400', letterSpacing: -0.3 },
+  title2: { fontFamily: sans, fontSize: 21, lineHeight: 27, fontWeight: '400', letterSpacing: -0.2 },
+  headline: { fontFamily: sans, fontSize: 17, lineHeight: 22, fontWeight: '500', letterSpacing: -0.2 },
   body: { fontFamily: sans, fontSize: 16, lineHeight: 24, fontWeight: '400', letterSpacing: -0.1 },
   callout: { fontFamily: sans, fontSize: 14, lineHeight: 20, fontWeight: '400', letterSpacing: 0 },
   footnote: { fontFamily: sans, fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: 0 },
