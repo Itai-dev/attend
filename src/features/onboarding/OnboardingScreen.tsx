@@ -294,7 +294,7 @@ export function OnboardingScreen() {
                   One a day. Never a nudge about missed days.
                 </Txt>
               </View>
-              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: '#8C8C8C', false: color.surfacePressed }} thumbColor="#FFFFFF" accessibilityLabel="A gentle reminder" />
+              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" accessibilityLabel="A gentle reminder" />
             </View>
             <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
               Day 1 starts with a quick check-in, so in four weeks you can look back at where you began.

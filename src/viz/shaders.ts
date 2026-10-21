@@ -283,12 +283,12 @@ half4 main(float2 fragCoord) {
   float rim = exp(-abs(d) * 36.0);
   float halo = exp(-max(d, 0.0) * 6.5);
 
-  // Grey tones (21 Oct 2026): the breath is told by light and movement, not hue. The names
-  // stay so the mixing below reads as before.
-  float3 lilac = float3(0.74, 0.74, 0.76);
-  float3 apricot = float3(0.86, 0.86, 0.86);
-  float3 sea = float3(0.66, 0.66, 0.68);
-  float3 moon = float3(0.95, 0.95, 0.95);
+  // Grey with a breath of the app's sage (21 Oct 2026): told mostly by light and movement,
+  // barely by hue. The names stay so the mixing below reads as before.
+  float3 lilac = float3(0.70, 0.80, 0.76);
+  float3 apricot = float3(0.82, 0.88, 0.85);
+  float3 sea = float3(0.60, 0.74, 0.69);
+  float3 moon = float3(0.95, 0.96, 0.95);
   float3 tint = mix(lilac, apricot, uSpeak * 0.5);
   tint = mix(tint, sea, uListen * 0.6);
 

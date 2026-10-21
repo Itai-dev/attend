@@ -87,8 +87,9 @@ updating the privacy copy in Settings and the README first.
 
 **Design language, not another app's UX (21 Oct 2026).** The visual system takes its
 cues from Spotify's design approach — near-black base, opaque grey surfaces, bold tight
-type, white for the one next step — in grey tones (21 Oct 2026: hierarchy by lightness,
-weight and size, not hue; only the body map keeps colour) — on Apple foundations (system
+type, in grey tones with one soft sage for the one next step and practice done (21 Oct
+2026: chosen for calm — green and blue, never red; see `design/theme.ts`) — on Apple
+foundations (system
 type, SF Symbols, native tabs, springs without bounce). The experience stays Attend's own:
 a wellness program, guided practice, check-ins and progress. No album pages, track lists,
 shelves, "now playing" or play buttons: this is not a media app. The greys in

@@ -2,10 +2,10 @@ import { Platform, type TextStyle } from 'react-native';
 
 /**
  * Attend's visual language (21 Oct 2026): Spotify's design approach on Apple foundations,
- * in grey tones. A near-black base, opaque grey surfaces that step up in brightness to show
- * depth, bold system type with tight tracking, and white for the one thing to do next.
- * Hierarchy comes from lightness, weight and size, not hue: nothing competes with the
- * practice, and nothing on these screens can read as a verdict. The body map keeps its
+ * in grey tones with one soft leading colour. A near-black base, opaque grey surfaces that
+ * step up in brightness to show depth, bold system type with tight tracking, and sage for
+ * the one thing to do next. Hierarchy otherwise comes from lightness, weight and size:
+ * nothing competes with the practice, and nothing on these screens can read as a verdict. The body map keeps its
  * colours, because there colour names a kind of sensation.
  *
  * Dark only, by design. The product is used with the eyes closed, often at night; a bright
@@ -24,13 +24,20 @@ export const color = {
   text: '#FFFFFF',
   textSecondary: '#B3B3B3',
   textTertiary: '#7A7A7A',
-  /** The one thing to do next: white on the dark, the brightest thing on screen. Never decoration. */
-  accent: '#FFFFFF',
+  /**
+   * The one leading colour (21 Oct 2026): a soft sage, between green and blue. Green is the
+   * hue most linked with calm and restoration (lower heart rate in green surroundings,
+   * Frontiers in Psychology 2019; early trials of green light easing migraine and fibromyalgia
+   * pain, University of Arizona), blue with calm and trust; red, the colour of alarm, stays
+   * out. Desaturated so it soothes rather than signals. Used only for the one thing to do
+   * next and for practice done — never decoration, never anything about pain.
+   */
+  accent: '#8CCFB4',
   onAccent: '#0B0B0D',
-  focusRing: '#FFFFFF',
+  focusRing: '#8CCFB4',
   /** The program's marks: days done, the week strip, the path. Practice, never pain. */
-  practice: '#E4E4E4',
-  practiceSoft: 'rgba(255,255,255,0.12)',
+  practice: '#8CCFB4',
+  practiceSoft: 'rgba(140,207,180,0.14)',
   /** Milestones and the person's goal: a softer grey, and only ever about what they did. */
   milestone: '#C8C8C8',
   milestoneSoft: 'rgba(255,255,255,0.06)',
