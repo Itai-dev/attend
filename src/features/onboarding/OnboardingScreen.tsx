@@ -1,42 +1,19 @@
-import { router } from "expo-router";
-import { useState } from "react";
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Prefs } from "@/data/types";
-import { useData } from "@/data/store";
-import { WHERE_REGIONS } from "@/domain/checkin";
-import {
-  EMPTY_PROGRAM,
-  PROGRAM_DAYS,
-  PROGRAM_TITLE,
-  WEEKS,
-} from "@/domain/program";
-import { REGIONS } from "@/domain/regions";
-import type { BodyRegion } from "@/domain/types";
-import {
-  Chip,
-  haptic,
-  PrimaryButton,
-  QuietButton,
-  Txt,
-} from "@/design/components";
-import { CoverArt } from "@/design/media";
-import { color, HIT, radius, space } from "@/design/theme";
-import {
-  requestReminderPermission,
-  scheduleReminders,
-} from "@/voice/reminders";
-import { BreathingField } from "@/viz/BreathingField";
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { Prefs } from '@/data/types';
+import { useData } from '@/data/store';
+import { WHERE_REGIONS } from '@/domain/checkin';
+import { EMPTY_PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE, WEEKS } from '@/domain/program';
+import { REGIONS } from '@/domain/regions';
+import type { BodyRegion } from '@/domain/types';
+import { Chip, haptic, PrimaryButton, QuietButton, Txt } from '@/design/components';
+import { CoverArt } from '@/design/media';
+import { color, HIT, radius, space } from '@/design/theme';
+import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
+import { BreathingField } from '@/viz/BreathingField';
 
 /**
  * The welcome: four screens, about a minute and a half. A promise (pain can change), how it
@@ -48,27 +25,20 @@ import { BreathingField } from "@/viz/BreathingField";
  * practice back to (docs/RESEARCH.md §4).
  */
 
-const GOALS = [
-  "Long walks",
-  "Playing with my kids",
-  "Sleeping through",
-  "Working without breaks",
-  "Sport",
-  "Time with friends",
-];
+const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through', 'Working without breaks', 'Sport', 'Time with friends'];
 const DURATIONS: Array<{
-  value: NonNullable<Prefs["painFor"]>;
+  value: NonNullable<Prefs['painFor']>;
   label: string;
 }> = [
-  { value: "months", label: "Months" },
-  { value: "1-3y", label: "1–3 yrs" },
-  { value: "3-10y", label: "3–10 yrs" },
-  { value: "10y+", label: "10+ yrs" },
+  { value: 'months', label: 'Months' },
+  { value: '1-3y', label: '1–3 yrs' },
+  { value: '3-10y', label: '3–10 yrs' },
+  { value: '10y+', label: '10+ yrs' },
 ];
 const TIMES = [
-  { id: "morning", label: "Morning", hour: 8, minute: 0 },
-  { id: "midday", label: "Midday", hour: 13, minute: 0 },
-  { id: "evening", label: "Evening", hour: 20, minute: 30 },
+  { id: 'morning', label: 'Morning', hour: 8, minute: 0 },
+  { id: 'midday', label: 'Midday', hour: 13, minute: 0 },
+  { id: 'evening', label: 'Evening', hour: 20, minute: 30 },
 ] as const;
 
 function cap(s: string) {
@@ -76,7 +46,7 @@ function cap(s: string) {
 }
 
 function hhmm(h: number, m: number) {
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 export function OnboardingScreen() {
@@ -84,16 +54,12 @@ export function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const { prefs, sessions, setPrefs } = useData();
   const [step, setStep] = useState(0);
-  const [where, setWhere] = useState<BodyRegion | undefined>(
-    prefs.place?.region,
-  );
-  const [painFor, setPainFor] = useState<Prefs["painFor"]>(prefs.painFor);
+  const [where, setWhere] = useState<BodyRegion | undefined>(prefs.place?.region);
+  const [painFor, setPainFor] = useState<Prefs['painFor']>(prefs.painFor);
   const [goal, setGoal] = useState<string | undefined>(prefs.goal);
-  const [ownGoal, setOwnGoal] = useState(
-    prefs.goal && !GOALS.includes(prefs.goal) ? prefs.goal : "",
-  );
+  const [ownGoal, setOwnGoal] = useState(prefs.goal && !GOALS.includes(prefs.goal) ? prefs.goal : '');
   const [writing, setWriting] = useState(!!ownGoal);
-  const [time, setTime] = useState<(typeof TIMES)[number]["id"]>("evening");
+  const [time, setTime] = useState<(typeof TIMES)[number]['id']>('evening');
   const [remind, setRemind] = useState(prefs.reminder?.enabled ?? true);
 
   const finalGoal = writing ? ownGoal.trim() || undefined : goal;
@@ -101,25 +67,21 @@ export function OnboardingScreen() {
   const finish = async () => {
     const t = TIMES.find((x) => x.id === time)!;
     const reminder = { enabled: remind, hour: t.hour, minute: t.minute };
-    if (remind && !(await requestReminderPermission()))
-      reminder.enabled = false;
+    if (remind && !(await requestReminderPermission())) reminder.enabled = false;
     await setPrefs({
       onboarded: true,
       goal: finalGoal,
       painFor,
-      place: where && where !== "whole_body" ? { region: where } : undefined,
+      place: where && where !== 'whole_body' ? { region: where } : undefined,
       reminder,
       // Running the welcome again keeps the program where it was.
       program: prefs.program ?? EMPTY_PROGRAM,
     });
     const last = sessions.filter((s) => !s.isSample).map((s) => s.startedAt);
-    await scheduleReminders(
-      reminder,
-      last.length ? Math.max(...last) : undefined,
-    );
-    router.replace("/");
+    await scheduleReminders(reminder, last.length ? Math.max(...last) : undefined);
+    router.replace('/');
     // Day 1 begins with the baseline check-in, so in four weeks there is a start to look back to.
-    if (!prefs.program) setTimeout(() => router.push("/checkin"), 350);
+    if (!prefs.program) setTimeout(() => router.push('/checkin'), 350);
   };
 
   return (
@@ -135,13 +97,7 @@ export function OnboardingScreen() {
       {step > 0 ? (
         <View style={styles.bars} accessibilityLabel={`Step ${step + 1} of 4`}>
           {[0, 1, 2, 3].map((i) => (
-            <View
-              key={i}
-              style={[
-                styles.bar,
-                i <= step && { backgroundColor: color.accent },
-              ]}
-            />
+            <View key={i} style={[styles.bar, i <= step && { backgroundColor: color.accent }]} />
           ))}
         </View>
       ) : (
@@ -150,62 +106,37 @@ export function OnboardingScreen() {
           style={{
             letterSpacing: 3.2,
             paddingHorizontal: space.l,
-            fontWeight: "800",
+            fontWeight: '800',
           }}
         >
           ATTEND
         </Txt>
       )}
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {step === 0 ? (
-          <Animated.View
-            key="0"
-            entering={FadeIn.duration(700)}
-            style={{ flex: 1 }}
-          >
+          <Animated.View key="0" entering={FadeIn.duration(700)} style={{ flex: 1 }}>
             <View style={styles.orb}>
               <BreathingField width={240} height={240} mode="idle" dim={0.9} />
             </View>
-            <Txt variant="display">Pain is real.{"\n"}And it can change.</Txt>
+            <Txt variant="display">Pain is real.{'\n'}And it can change.</Txt>
             <Txt variant="body" tone="secondary" style={{ marginTop: space.l }}>
-              A few minutes a day of guided attention, eyes closed. A short
-              program that helps you meet pain with less alarm.
+              A few minutes a day of guided attention, eyes closed. A short program that helps you meet pain with less alarm.
             </Txt>
           </Animated.View>
         ) : null}
 
         {step === 1 ? (
-          <Animated.View
-            key="1"
-            entering={FadeIn.duration(600)}
-            style={{ gap: space.xl }}
-          >
+          <Animated.View key="1" entering={FadeIn.duration(600)} style={{ gap: space.xl }}>
             <Txt variant="display">How Attend works</Txt>
             {[
-              [
-                "Pain that lasts keeps the alarm on",
-                "Long-lasting pain often involves a nervous system that stays on alert, long after an injury.",
-              ],
-              [
-                "Attention without alarm is a skill",
-                "Somatic tracking: noticing a sensation with curiosity instead of fear. It can be practised.",
-              ],
-              [
-                "A little, often",
-                `A 2-minute lesson and a short practice a day, for ${PROGRAM_DAYS} days. You just listen.`,
-              ],
+              ['Pain that lasts keeps the alarm on', 'Long-lasting pain often involves a nervous system that stays on alert, long after an injury.'],
+              ['Attention without alarm is a skill', 'Somatic tracking: noticing a sensation with curiosity instead of fear. It can be practised.'],
+              ['A little, often', `A 2-minute lesson and a short practice a day, for ${PROGRAM_DAYS} days. You just listen.`],
             ].map(([title, body], i) => (
               <View key={title} style={styles.point}>
                 <View style={styles.num}>
-                  <Txt
-                    variant="callout"
-                    style={{ color: color.onAccent, fontWeight: "800" }}
-                  >
+                  <Txt variant="callout" style={{ color: color.onAccent, fontWeight: '800' }}>
                     {String(i + 1)}
                   </Txt>
                 </View>
@@ -219,8 +150,7 @@ export function OnboardingScreen() {
             ))}
             <View style={styles.note}>
               <Txt variant="footnote" tone="secondary">
-                Attend is for pain you already know well. Anything new, changing
-                or severe deserves a doctor’s look first.
+                Attend is for pain you already know well. Anything new, changing or severe deserves a doctor’s look first.
               </Txt>
             </View>
           </Animated.View>
@@ -231,12 +161,7 @@ export function OnboardingScreen() {
             <Txt variant="display">Where does it hurt most?</Txt>
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => (
-                <Chip
-                  key={r}
-                  label={cap(REGIONS[r].label)}
-                  selected={where === r}
-                  onPress={() => setWhere(where === r ? undefined : r)}
-                />
+                <Chip key={r} label={cap(REGIONS[r].label)} selected={where === r} onPress={() => setWhere(where === r ? undefined : r)} />
               ))}
             </View>
 
@@ -252,19 +177,12 @@ export function OnboardingScreen() {
                     accessibilityRole="radio"
                     accessibilityState={{ checked: on }}
                     onPress={() => {
-                      haptic("select");
+                      haptic('select');
                       setPainFor(d.value);
                     }}
-                    style={[
-                      styles.seg,
-                      on && { backgroundColor: color.accent },
-                    ]}
+                    style={[styles.seg, on && { backgroundColor: color.accent }]}
                   >
-                    <Txt
-                      variant="footnote"
-                      tone={on ? "inverse" : "secondary"}
-                      style={{ fontWeight: on ? "700" : "500" }}
-                    >
+                    <Txt variant="footnote" tone={on ? 'inverse' : 'secondary'} style={{ fontWeight: on ? '700' : '500' }}>
                       {d.label}
                     </Txt>
                   </Pressable>
@@ -275,11 +193,7 @@ export function OnboardingScreen() {
             <Txt variant="title2" style={{ marginTop: space.xxl }}>
               What do you want to get back to?
             </Txt>
-            <Txt
-              variant="footnote"
-              tone="tertiary"
-              style={{ marginTop: space.xs }}
-            >
+            <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.xs }}>
               This is what Attend works toward with you.
             </Txt>
             <View style={styles.chips}>
@@ -294,11 +208,7 @@ export function OnboardingScreen() {
                   }}
                 />
               ))}
-              <Chip
-                label="In my words…"
-                selected={writing}
-                onPress={() => setWriting(!writing)}
-              />
+              <Chip label="In my words…" selected={writing} onPress={() => setWriting(!writing)} />
             </View>
             {writing ? (
               <TextInput
@@ -318,19 +228,12 @@ export function OnboardingScreen() {
         {step === 3 ? (
           <Animated.View key="3" entering={FadeIn.duration(600)}>
             <Txt variant="display">Your plan</Txt>
-            <CoverArt
-              art="violet"
-              seed={7}
-              size={width - space.l * 2}
-              height={196}
-              rounded={radius.m}
-              style={{ marginTop: space.l }}
-            >
+            <CoverArt art="violet" seed={7} size={width - space.l * 2} height={196} rounded={radius.m} style={{ marginTop: space.l }}>
               <View style={styles.plan}>
                 <Txt
                   variant="caption"
                   style={{
-                    color: "rgba(255,255,255,0.85)",
+                    color: 'rgba(255,255,255,0.85)',
                     letterSpacing: 1.4,
                   }}
                 >
@@ -338,26 +241,17 @@ export function OnboardingScreen() {
                 </Txt>
                 <Txt variant="title">{PROGRAM_TITLE}</Txt>
                 {finalGoal ? (
-                  <Txt
-                    variant="footnote"
-                    style={{ color: "rgba(255,255,255,0.8)" }}
-                  >
-                    Toward:{" "}
-                    {finalGoal.charAt(0).toLowerCase() + finalGoal.slice(1)}
+                  <Txt variant="footnote" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    Toward: {finalGoal.charAt(0).toLowerCase() + finalGoal.slice(1)}
                   </Txt>
                 ) : null}
                 <View style={styles.weeks}>
                   {([1, 2, 3, 4] as const).map((w) => (
                     <View key={w} style={{ flex: 1, gap: space.xs }}>
-                      <View
-                        style={[styles.weekBar, w > 1 && { opacity: 0.35 }]}
-                      />
-                      <Txt
-                        variant="caption"
-                        style={{ color: "rgba(255,255,255,0.8)" }}
-                      >
+                      <View style={[styles.weekBar, w > 1 && { opacity: 0.35 }]} />
+                      <Txt variant="caption" style={{ color: 'rgba(255,255,255,0.8)' }}>
                         Wk {w}
-                        {"\n"}
+                        {'\n'}
                         {WEEKS[w].name}
                       </Txt>
                     </View>
@@ -378,19 +272,15 @@ export function OnboardingScreen() {
                     accessibilityRole="radio"
                     accessibilityState={{ checked: on }}
                     onPress={() => {
-                      haptic("select");
+                      haptic('select');
                       setTime(t.id);
                     }}
                     style={[styles.time, on && styles.timeOn]}
                   >
-                    <Txt
-                      variant="callout"
-                      tone={on ? "inverse" : "primary"}
-                      style={{ fontWeight: "600" }}
-                    >
+                    <Txt variant="callout" tone={on ? 'inverse' : 'primary'} style={{ fontWeight: '600' }}>
                       {t.label}
                     </Txt>
-                    <Txt variant="footnote" tone={on ? "inverse" : "tertiary"}>
+                    <Txt variant="footnote" tone={on ? 'inverse' : 'tertiary'}>
                       {hhmm(t.hour, t.minute)}
                     </Txt>
                   </Pressable>
@@ -404,42 +294,18 @@ export function OnboardingScreen() {
                   One a day. Never a nudge about missed days.
                 </Txt>
               </View>
-              <Switch
-                value={remind}
-                onValueChange={setRemind}
-                trackColor={{ true: color.accent, false: color.surfacePressed }}
-                thumbColor="#FFFFFF"
-                accessibilityLabel="A gentle reminder"
-              />
+              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" accessibilityLabel="A gentle reminder" />
             </View>
-            <Txt
-              variant="footnote"
-              tone="tertiary"
-              style={{ marginTop: space.l }}
-            >
-              Day 1 starts with a quick check-in, so in four weeks you can look
-              back at where you began.
+            <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
+              Day 1 starts with a quick check-in, so in four weeks you can look back at where you began.
             </Txt>
           </Animated.View>
         ) : null}
       </ScrollView>
 
       <View style={styles.footer}>
-        {step < 3 ? (
-          <PrimaryButton
-            label={step === 0 ? "Get started" : "Continue"}
-            onPress={() => setStep(step + 1)}
-          />
-        ) : (
-          <PrimaryButton label="Start Day 1" onPress={finish} />
-        )}
-        {step > 0 ? (
-          <QuietButton
-            label="Back"
-            style={{ alignSelf: "center" }}
-            onPress={() => setStep(step - 1)}
-          />
-        ) : null}
+        {step < 3 ? <PrimaryButton label={step === 0 ? 'Get started' : 'Continue'} onPress={() => setStep(step + 1)} /> : <PrimaryButton label="Start Day 1" onPress={finish} />}
+        {step > 0 ? <QuietButton label="Back" style={{ alignSelf: 'center' }} onPress={() => setStep(step - 1)} /> : null}
       </View>
     </View>
   );
@@ -447,7 +313,7 @@ export function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  bars: { flexDirection: "row", gap: 6, paddingHorizontal: space.l },
+  bars: { flexDirection: 'row', gap: 6, paddingHorizontal: space.l },
   bar: {
     flex: 1,
     height: 3,
@@ -456,19 +322,19 @@ const styles = StyleSheet.create({
   },
   content: { flexGrow: 1, padding: space.l, paddingTop: space.xxl },
   orb: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
     minHeight: 260,
   },
-  point: { flexDirection: "row", gap: space.l },
+  point: { flexDirection: 'row', gap: space.l },
   num: {
     width: 32,
     height: 32,
     borderRadius: 16,
     backgroundColor: color.accent,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   note: {
     padding: space.l,
@@ -476,13 +342,13 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
   },
   chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: space.s,
     marginTop: space.l,
   },
   segment: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: space.xs,
     padding: space.xs,
     marginTop: space.m,
@@ -492,8 +358,8 @@ const styles = StyleSheet.create({
   seg: {
     flex: 1,
     minHeight: HIT - 4,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radius.pill,
   },
   input: {
@@ -504,24 +370,24 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfaceStrong,
     color: color.text,
     fontSize: 17,
-    ...(Platform.OS === "web" ? { outlineStyle: "none" as never } : {}),
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}),
   },
-  plan: { flex: 1, padding: space.l, gap: space.s, justifyContent: "flex-end" },
-  weeks: { flexDirection: "row", gap: space.s, marginTop: space.s },
+  plan: { flex: 1, padding: space.l, gap: space.s, justifyContent: 'flex-end' },
+  weeks: { flexDirection: 'row', gap: space.s, marginTop: space.s },
   weekBar: { height: 4, borderRadius: 2, backgroundColor: color.text },
-  times: { flexDirection: "row", gap: space.s, marginTop: space.m },
+  times: { flexDirection: 'row', gap: space.s, marginTop: space.m },
   time: {
     flex: 1,
     minHeight: 64,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radius.m,
     backgroundColor: color.surface,
   },
   timeOn: { backgroundColor: color.accent },
   remind: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: space.m,
     marginTop: space.l,
     padding: space.l,

@@ -212,9 +212,8 @@ export function SessionScreen() {
           </View>
 
           <View style={styles.buttons}>
-            <View style={styles.side}>
-              <IconButton icon="xmark" label={confirmEnd ? 'Confirm end session' : 'End session'} onPress={end} tint={color.textSecondary} iconSize={20} />
-            </View>
+            {/* One way out, top-left like a player's dismiss; two end buttons made the row read as a choice. */}
+            <View style={styles.side} />
             <PlayButton
               size={68}
               playing={!paused}

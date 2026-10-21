@@ -1,27 +1,14 @@
-import { router } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useData } from "@/data/store";
-import {
-  currentTz,
-  PAIN_END_HIGH,
-  PAIN_END_LOW,
-  PAIN_MAX,
-  painLabel,
-  WHERE_REGIONS as WHERE,
-} from "@/domain/checkin";
-import { newId } from "@/domain/ids";
-import { REGIONS } from "@/domain/regions";
-import type { BodyRegion, Place } from "@/domain/types";
-import {
-  Chip,
-  haptic,
-  IconButton,
-  PrimaryButton,
-  Txt,
-} from "@/design/components";
-import { color, HIT, radius, space } from "@/design/theme";
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useData } from '@/data/store';
+import { currentTz, PAIN_END_HIGH, PAIN_END_LOW, PAIN_MAX, painLabel, WHERE_REGIONS as WHERE } from '@/domain/checkin';
+import { newId } from '@/domain/ids';
+import { REGIONS } from '@/domain/regions';
+import type { BodyRegion, Place } from '@/domain/types';
+import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
+import { color, HIT, radius, space } from '@/design/theme';
 
 /**
  * The check-in, from Pattern: how much it hurts right now, and where. Pain is the only
@@ -47,13 +34,7 @@ export function CheckinScreen() {
   const [saving, setSaving] = useState(false);
 
   const toggle = (r: BodyRegion) => {
-    setPlaces((p) =>
-      p.includes(r)
-        ? p.filter((x) => x !== r)
-        : r === "whole_body"
-          ? ["whole_body"]
-          : [...p.filter((x) => x !== "whole_body"), r],
-    );
+    setPlaces((p) => (p.includes(r) ? p.filter((x) => x !== r) : r === 'whole_body' ? ['whole_body'] : [...p.filter((x) => x !== 'whole_body'), r]));
   };
 
   const save = async () => {
@@ -61,14 +42,14 @@ export function CheckinScreen() {
     setSaving(true);
     const chosen: Place[] = places.map((region) => ({ region }));
     await saveCheckIn({
-      id: newId("c_"),
+      id: newId('c_'),
       at: Date.now(),
       tz: currentTz(),
       pain,
       // The question was on screen, so nothing chosen is an answer ([]), not "never asked".
       places: chosen,
     });
-    haptic("soft");
+    haptic('soft');
     router.back();
   };
 
@@ -82,12 +63,7 @@ export function CheckinScreen() {
         }}
       >
         <View style={styles.top}>
-          <IconButton
-            icon="xmark"
-            label="Close"
-            onPress={() => router.back()}
-            tint={color.text}
-          />
+          <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.text} />
         </View>
 
         <Txt variant="display" accessibilityRole="header">
@@ -96,18 +72,14 @@ export function CheckinScreen() {
 
         <View style={styles.readout} accessibilityLiveRegion="polite">
           <Txt variant="display" style={{ fontSize: 48, lineHeight: 54 }}>
-            {pain === null ? "–" : pain}
+            {pain === null ? '–' : pain}
           </Txt>
-          <Txt variant="title2" tone="secondary" style={{ fontWeight: "600" }}>
-            {pain === null ? "Choose a number" : painLabel(pain)}
+          <Txt variant="title2" tone="secondary" style={{ fontWeight: '600' }}>
+            {pain === null ? 'Choose a number' : painLabel(pain)}
           </Txt>
         </View>
 
-        <View
-          style={styles.scale}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Pain, from 0, no pain, to 10, most intense"
-        >
+        <View style={styles.scale} accessibilityRole="radiogroup" accessibilityLabel="Pain, from 0, no pain, to 10, most intense">
           {Array.from({ length: PAIN_MAX + 1 }, (_, n) => {
             const on = n === pain;
             return (
@@ -117,16 +89,12 @@ export function CheckinScreen() {
                 accessibilityState={{ checked: on }}
                 accessibilityLabel={`${n}, ${painLabel(n)}`}
                 onPress={() => {
-                  haptic("select");
+                  haptic('select');
                   setPain(n);
                 }}
-                style={({ pressed }) => [
-                  styles.step,
-                  pressed && !on && { backgroundColor: color.surfacePressed },
-                  on && styles.stepOn,
-                ]}
+                style={({ pressed }) => [styles.step, pressed && !on && { backgroundColor: color.surfacePressed }, on && styles.stepOn]}
               >
-                <Txt variant="headline" tone={on ? "inverse" : "primary"}>
+                <Txt variant="headline" tone={on ? 'inverse' : 'primary'}>
                   {n}
                 </Txt>
               </Pressable>
@@ -142,21 +110,12 @@ export function CheckinScreen() {
           </Txt>
         </View>
 
-        <Txt
-          variant="title2"
-          accessibilityRole="header"
-          style={{ marginTop: space.xxl, marginBottom: space.m }}
-        >
+        <Txt variant="title2" accessibilityRole="header" style={{ marginTop: space.xxl, marginBottom: space.m }}>
           Where, if you like
         </Txt>
         <View style={styles.where}>
           {WHERE.map((r) => (
-            <Chip
-              key={r}
-              label={cap(REGIONS[r].label)}
-              selected={places.includes(r)}
-              onPress={() => toggle(r)}
-            />
+            <Chip key={r} label={cap(REGIONS[r].label)} selected={places.includes(r)} onPress={() => toggle(r)} />
           ))}
         </View>
         <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
@@ -170,12 +129,7 @@ export function CheckinScreen() {
           accessibilityState={{ disabled: pain === null || saving }}
           onPress={save}
         />
-        <Txt
-          variant="footnote"
-          tone="tertiary"
-          align="center"
-          style={{ marginTop: space.l }}
-        >
+        <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>
           Stays on this iPhone. Only you see it.
         </Txt>
       </ScrollView>
@@ -186,19 +140,19 @@ export function CheckinScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     marginBottom: space.s,
   },
   readout: {
-    flexDirection: "row",
-    alignItems: "baseline",
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: space.m,
     marginTop: space.xl,
   },
   scale: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: space.s,
     marginTop: space.xl,
   },
@@ -206,15 +160,15 @@ const styles = StyleSheet.create({
     width: HIT + 4,
     height: HIT + 4,
     borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: color.surfaceStrong,
   },
   stepOn: { backgroundColor: color.accent },
   ends: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: space.m,
   },
-  where: { flexDirection: "row", flexWrap: "wrap", gap: space.s },
+  where: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s },
 });
