@@ -20,7 +20,9 @@ export function MomentScreen() {
 
   const save = async () => {
     if (!ready) return;
-    await setPrefs({ moments: [{ id: newId('mo_'), at: Date.now(), text: text.trim() }, ...(prefs.moments ?? [])].slice(0, 200) });
+    await setPrefs({
+      moments: [{ id: newId('mo_'), at: Date.now(), text: text.trim() }, ...(prefs.moments ?? [])].slice(0, 200),
+    });
     haptic('soft');
     router.back();
   };
@@ -30,8 +32,8 @@ export function MomentScreen() {
       <View style={styles.top}>
         <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
       </View>
-      <View style={{ paddingHorizontal: space.xl, flex: 1 }}>
-        <Txt variant="title" accessibilityRole="header">
+      <View style={{ paddingHorizontal: space.l, flex: 1 }}>
+        <Txt variant="display" accessibilityRole="header">
           Save a moment
         </Txt>
         <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
@@ -54,7 +56,7 @@ export function MomentScreen() {
           Stays on this iPhone.
         </Txt>
       </View>
-      <View style={{ paddingHorizontal: space.xl }}>
+      <View style={{ paddingHorizontal: space.l }}>
         <PrimaryButton label="Save" disabled={!ready} style={{ opacity: ready ? 1 : 0.4 }} onPress={save} />
       </View>
     </View>
@@ -69,9 +71,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
     padding: space.l,
     borderRadius: radius.m,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
+    backgroundColor: color.surfaceStrong,
     color: color.text,
     fontSize: 18,
     lineHeight: 25,

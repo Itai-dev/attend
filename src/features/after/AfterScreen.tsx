@@ -11,7 +11,7 @@ import type { Session, SessionFeeling } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
-import { BreathingField } from '@/viz/BreathingField';
+import { Enso } from '@/viz/Enso';
 
 /**
  * After a guided session: a soft completion moment. What was done (minutes, days this
@@ -46,7 +46,12 @@ export function AfterScreen({ session }: { session: Session }) {
   const stats = useMemo(() => practiceStats(sessions, now, tz), [sessions, now, tz]);
   const earned = useMemo(() => {
     const moments = prefs.moments?.length ?? 0;
-    const before = milestones({ sessions: sessions.filter((s) => s.id !== session.id), program: withoutDay(program, session.programDay), moments, tz });
+    const before = milestones({
+      sessions: sessions.filter((s) => s.id !== session.id),
+      program: withoutDay(program, session.programDay),
+      moments,
+      tz,
+    });
     const after = milestones({ sessions, program, moments, tz });
     return newlyEarned(before, after);
   }, [sessions, program, prefs.moments, session.id, session.programDay, tz]);
@@ -62,13 +67,26 @@ export function AfterScreen({ session }: { session: Session }) {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + space.xl, paddingBottom: space.xl, paddingHorizontal: space.xl }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingTop: insets.top + space.xl,
+          paddingBottom: space.xl,
+          paddingHorizontal: space.l,
+        }}
+      >
         <Animated.View entering={FadeIn.duration(1400)} style={{ alignItems: 'center' }}>
-          <BreathingField width={150} height={150} mode="idle" dim={0.95} />
-          <Txt variant="caption" style={{ color: color.practice, letterSpacing: 1.4, marginTop: space.xs }}>
+          <Enso width={150} height={150} mode="idle" dim={0.95} />
+          <Txt
+            variant="caption"
+            style={{
+              color: color.practice,
+              letterSpacing: 1.4,
+              marginTop: space.xs,
+            }}
+          >
             {dayDone ? `DAY ${session.programDay} COMPLETE` : 'PRACTICE COMPLETE'}
           </Txt>
-          <Txt variant="title" align="center" style={{ marginTop: space.s }}>
+          <Txt variant="display" align="center" style={{ marginTop: space.s }}>
             {early ? `You stopped after ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}. That still counts.` : `${WORDS[minutes] ?? minutes} quiet minutes, done.`}
           </Txt>
         </Animated.View>
@@ -100,13 +118,7 @@ export function AfterScreen({ session }: { session: Session }) {
           </Txt>
           <View style={styles.feelings}>
             {FEELINGS.map((f) => (
-              <Chip
-                key={f.value}
-                label={f.label}
-                selected={session.feeling === f.value}
-                style={{ flexGrow: 1 }}
-                onPress={() => setFeeling(session.id, session.feeling === f.value ? null : f.value)}
-              />
+              <Chip key={f.value} label={f.label} selected={session.feeling === f.value} style={{ flexGrow: 1 }} onPress={() => setFeeling(session.id, session.feeling === f.value ? null : f.value)} />
             ))}
           </View>
           <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s }}>
@@ -127,7 +139,13 @@ export function AfterScreen({ session }: { session: Session }) {
         </Animated.View>
       </ScrollView>
 
-      <View style={{ paddingHorizontal: space.xl, paddingBottom: insets.bottom + space.l, gap: space.m }}>
+      <View
+        style={{
+          paddingHorizontal: space.l,
+          paddingBottom: insets.bottom + space.l,
+          gap: space.m,
+        }}
+      >
         {next ? (
           <Txt variant="footnote" tone="tertiary" align="center">
             Tomorrow · Day {next.day} · {next.lesson.title}
@@ -142,8 +160,20 @@ export function AfterScreen({ session }: { session: Session }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   tiles: { flexDirection: 'row', gap: space.s, marginTop: space.xl },
-  tile: { flex: 1, alignItems: 'center', gap: 2, padding: space.m, borderRadius: radius.m, backgroundColor: color.surface },
-  feelings: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, marginTop: space.m },
+  tile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    padding: space.m,
+    borderRadius: radius.m,
+    backgroundColor: color.surface,
+  },
+  feelings: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.s,
+    marginTop: space.m,
+  },
   milestone: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -152,7 +182,5 @@ const styles = StyleSheet.create({
     padding: space.l,
     borderRadius: radius.m,
     backgroundColor: color.milestoneSoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(242,196,141,0.3)',
   },
 });

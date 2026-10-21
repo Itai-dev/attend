@@ -49,7 +49,14 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
   const guidedMap = useMemo<BodyMapState>(
     () => ({
       sensations: [
-        { id: 'place', region: session?.place?.region ?? 'whole_body', side: session?.place?.side, descriptors: [], userLanguage: [], primary: true },
+        {
+          id: 'place',
+          region: session?.place?.region ?? 'whole_body',
+          side: session?.place?.side,
+          descriptors: [],
+          userLanguage: [],
+          primary: true,
+        },
       ],
     }),
     [session?.place],
@@ -96,7 +103,10 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
         />
       ) : null}
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + (mode === 'detail' ? 52 : space.xl), paddingBottom: insets.bottom + space.xxxl }}
+        contentContainerStyle={{
+          paddingTop: insets.top + (mode === 'detail' ? 52 : space.xl),
+          paddingBottom: insets.bottom + space.xxxl,
+        }}
       >
         <View style={styles.pad}>
           {mode === 'reveal' ? (
@@ -117,13 +127,7 @@ function Recap({ id, mode }: { id: string; mode: 'reveal' | 'detail' }) {
 
         {!special ? (
           <View style={{ alignItems: 'center', marginTop: space.l }}>
-            <BodyField
-              map={guided ? guidedMap : showStart ? session.bodyMapStart : session.bodyMapEnd}
-              view={view}
-              width={mapW}
-              height={mapH}
-              reveal={reveal}
-            />
+            <BodyField map={guided ? guidedMap : showStart ? session.bodyMapStart : session.bodyMapEnd} view={view} width={mapW} height={mapH} reveal={reveal} />
             <View style={styles.mapControls}>
               <Segmented
                 options={[
@@ -232,18 +236,32 @@ function Changes({ session }: { session: Session }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  pad: { paddingHorizontal: space.xl },
+  pad: { paddingHorizontal: space.l },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  mapControls: { flexDirection: 'row', gap: space.s, marginTop: space.m, flexWrap: 'wrap', justifyContent: 'center' },
-  changeRow: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: 30 },
-  changeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: color.textTertiary },
+  mapControls: {
+    flexDirection: 'row',
+    gap: space.s,
+    marginTop: space.m,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  changeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.m,
+    minHeight: 30,
+  },
+  changeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: color.textTertiary,
+  },
   care: {
     marginTop: space.xl,
     padding: space.l,
     borderRadius: radius.m,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
   },
   close: { position: 'absolute', right: space.m },
 });

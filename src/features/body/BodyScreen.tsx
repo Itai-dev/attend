@@ -17,7 +17,14 @@ import { shortDate } from '../shared/format';
  * own words. No counts of pain, no heat-map of "worst areas".
  */
 
-type Place = { region: BodyRegion; side?: Side; sessions: number; words: string[]; lately?: string; lastAt: number };
+type Place = {
+  region: BodyRegion;
+  side?: Side;
+  sessions: number;
+  words: string[];
+  lately?: string;
+  lastAt: number;
+};
 
 function placesFrom(sessions: Session[]): Place[] {
   const by = new Map<string, Place>();
@@ -26,7 +33,13 @@ function placesFrom(sessions: Session[]): Place[] {
     const p = s.bodyMapEnd.sensations.find((x) => x.primary) ?? s.bodyMapEnd.sensations[0];
     if (!p || p.region === 'whole_body') continue;
     const key = `${p.region}|${p.side ?? ''}`;
-    const prev = by.get(key) ?? { region: p.region, side: p.side, sessions: 0, words: [], lastAt: 0 };
+    const prev = by.get(key) ?? {
+      region: p.region,
+      side: p.side,
+      sessions: 0,
+      words: [],
+      lastAt: 0,
+    };
     prev.sessions++;
     for (const w of [...p.descriptors].reverse()) if (!prev.words.includes(w)) prev.words.push(w);
     prev.lately = s.oneLiner;
@@ -43,7 +56,7 @@ export function BodyScreen() {
   const [view, setView] = useState<FigureView>(() => preferredView(composite.map));
   const places = useMemo(() => placesFrom(sessions), [sessions]);
   const recent = sessions.filter((s) => s.bodyMapEnd.sensations.length > 0).slice(0, 6);
-  const mapW = Math.min(width - space.xl * 2, 480);
+  const mapW = Math.min(width - space.l * 2, 480);
 
   return (
     <TitledScroll title="Body" onBack={() => router.back()}>
@@ -75,7 +88,12 @@ export function BodyScreen() {
                 </Txt>
                 <Txt variant="footnote" tone="tertiary" style={{ marginTop: 2 }}>
                   {p.sessions === 1 ? 'One session' : `${p.sessions} sessions`}
-                  {p.words.length ? ` · ${p.words.slice(0, 4).map((w) => descriptorInfo(w)?.word ?? w).join(', ')}` : ''}
+                  {p.words.length
+                    ? ` · ${p.words
+                        .slice(0, 4)
+                        .map((w) => descriptorInfo(w)?.word ?? w)
+                        .join(', ')}`
+                    : ''}
                 </Txt>
                 {p.lately ? (
                   <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
@@ -95,13 +113,18 @@ export function BodyScreen() {
       {recent.length > 0 ? (
         <>
           <SectionLabel style={{ marginTop: space.xxl }}>Recent sessions</SectionLabel>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.xl }} contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.m }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.l }} contentContainerStyle={{ paddingHorizontal: space.l, gap: space.m }}>
             {recent.map((s) => (
               <Pressable
                 key={s.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${shortDate(s.startedAt)}: ${s.oneLiner}`}
-                onPress={() => router.push({ pathname: '/journey/[id]', params: { id: s.id } })}
+                onPress={() =>
+                  router.push({
+                    pathname: '/journey/[id]',
+                    params: { id: s.id },
+                  })
+                }
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
                 <View style={styles.recentCard}>
@@ -130,11 +153,14 @@ function lowerFirst(s: string) {
 const styles = StyleSheet.create({
   mapCard: {
     alignSelf: 'center',
-    borderRadius: radius.l,
+    borderRadius: radius.m,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
+    backgroundColor: color.surface,
   },
   place: { paddingVertical: space.l },
-  recentCard: { borderRadius: radius.s, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
+  recentCard: {
+    borderRadius: radius.s,
+    overflow: 'hidden',
+    backgroundColor: color.surface,
+  },
 });

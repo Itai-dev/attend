@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Prefs } from '@/data/types';
@@ -10,9 +10,10 @@ import { EMPTY_PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE, WEEKS } from '@/domain/prog
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion } from '@/domain/types';
 import { Chip, haptic, PrimaryButton, QuietButton, Txt } from '@/design/components';
+import { CoverArt } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
 import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
-import { BreathingField } from '@/viz/BreathingField';
+import { Enso } from '@/viz/Enso';
 
 /**
  * The welcome: four screens, about a minute and a half. A promise (pain can change), how it
@@ -25,7 +26,10 @@ import { BreathingField } from '@/viz/BreathingField';
  */
 
 const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through', 'Working without breaks', 'Sport', 'Time with friends'];
-const DURATIONS: Array<{ value: NonNullable<Prefs['painFor']>; label: string }> = [
+const DURATIONS: Array<{
+  value: NonNullable<Prefs['painFor']>;
+  label: string;
+}> = [
   { value: 'months', label: 'Months' },
   { value: '1-3y', label: '1–3 yrs' },
   { value: '3-10y', label: '3–10 yrs' },
@@ -47,6 +51,7 @@ function hhmm(h: number, m: number) {
 
 export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { prefs, sessions, setPrefs } = useData();
   const [step, setStep] = useState(0);
   const [where, setWhere] = useState<BodyRegion | undefined>(prefs.place?.region);
@@ -80,15 +85,30 @@ export function OnboardingScreen() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + space.l, paddingBottom: insets.bottom + space.l }]}>
+    <View
+      style={[
+        styles.root,
+        {
+          paddingTop: insets.top + space.l,
+          paddingBottom: insets.bottom + space.l,
+        },
+      ]}
+    >
       {step > 0 ? (
         <View style={styles.bars} accessibilityLabel={`Step ${step + 1} of 4`}>
           {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={[styles.bar, i <= step && { backgroundColor: color.practice }]} />
+            <View key={i} style={[styles.bar, i <= step && { backgroundColor: color.accent }]} />
           ))}
         </View>
       ) : (
-        <Txt variant="caption" tone="tertiary" style={{ letterSpacing: 3.2, paddingHorizontal: space.xl }}>
+        <Txt
+          variant="headline"
+          style={{
+            letterSpacing: 3.2,
+            paddingHorizontal: space.l,
+            fontWeight: '800',
+          }}
+        >
           ATTEND
         </Txt>
       )}
@@ -97,7 +117,7 @@ export function OnboardingScreen() {
         {step === 0 ? (
           <Animated.View key="0" entering={FadeIn.duration(700)} style={{ flex: 1 }}>
             <View style={styles.orb}>
-              <BreathingField width={240} height={240} mode="idle" dim={0.9} />
+              <Enso width={240} height={240} mode="idle" dim={0.9} />
             </View>
             <Txt variant="display">Pain is real.{'\n'}And it can change.</Txt>
             <Txt variant="body" tone="secondary" style={{ marginTop: space.l }}>
@@ -108,7 +128,7 @@ export function OnboardingScreen() {
 
         {step === 1 ? (
           <Animated.View key="1" entering={FadeIn.duration(600)} style={{ gap: space.xl }}>
-            <Txt variant="title">How Attend works</Txt>
+            <Txt variant="display">How Attend works</Txt>
             {[
               ['Pain that lasts keeps the alarm on', 'Long-lasting pain often involves a nervous system that stays on alert, long after an injury.'],
               ['Attention without alarm is a skill', 'Somatic tracking: noticing a sensation with curiosity instead of fear. It can be practised.'],
@@ -116,7 +136,7 @@ export function OnboardingScreen() {
             ].map(([title, body], i) => (
               <View key={title} style={styles.point}>
                 <View style={styles.num}>
-                  <Txt variant="callout" style={{ color: color.practice, fontWeight: '600' }}>
+                  <Txt variant="callout" style={{ color: color.onAccent, fontWeight: '800' }}>
                     {String(i + 1)}
                   </Txt>
                 </View>
@@ -138,9 +158,7 @@ export function OnboardingScreen() {
 
         {step === 2 ? (
           <Animated.View key="2" entering={FadeIn.duration(600)}>
-            <Txt variant="title2" style={{ fontWeight: '300', fontSize: 26, lineHeight: 32 }}>
-              Where does it hurt most?
-            </Txt>
+            <Txt variant="display">Where does it hurt most?</Txt>
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => (
                 <Chip key={r} label={cap(REGIONS[r].label)} selected={where === r} onPress={() => setWhere(where === r ? undefined : r)} />
@@ -162,9 +180,9 @@ export function OnboardingScreen() {
                       haptic('select');
                       setPainFor(d.value);
                     }}
-                    style={[styles.seg, on && { backgroundColor: color.surfaceStrong }]}
+                    style={[styles.seg, on && { backgroundColor: color.accent }]}
                   >
-                    <Txt variant="footnote" tone={on ? 'primary' : 'secondary'} style={{ fontWeight: on ? '600' : '500' }}>
+                    <Txt variant="footnote" tone={on ? 'inverse' : 'secondary'} style={{ fontWeight: on ? '700' : '500' }}>
                       {d.label}
                     </Txt>
                   </Pressable>
@@ -209,30 +227,38 @@ export function OnboardingScreen() {
 
         {step === 3 ? (
           <Animated.View key="3" entering={FadeIn.duration(600)}>
-            <Txt variant="title">Your plan</Txt>
-            <View style={styles.plan}>
-              <Txt variant="caption" style={{ color: color.practice, letterSpacing: 1.4 }}>
-                {PROGRAM_DAYS} DAYS · A FEW MINUTES A DAY
-              </Txt>
-              <Txt variant="title2">{PROGRAM_TITLE}</Txt>
-              {finalGoal ? (
-                <Txt variant="footnote" tone="secondary">
-                  Toward: {finalGoal.charAt(0).toLowerCase() + finalGoal.slice(1)}
+            <Txt variant="display">Your plan</Txt>
+            <CoverArt art="violet" seed={7} size={width - space.l * 2} height={196} rounded={radius.m} style={{ marginTop: space.l }}>
+              <View style={styles.plan}>
+                <Txt
+                  variant="caption"
+                  style={{
+                    color: 'rgba(255,255,255,0.85)',
+                    letterSpacing: 1.4,
+                  }}
+                >
+                  {PROGRAM_DAYS} DAYS · A FEW MINUTES A DAY
                 </Txt>
-              ) : null}
-              <View style={styles.weeks}>
-                {([1, 2, 3, 4] as const).map((w) => (
-                  <View key={w} style={{ flex: 1, gap: space.xs }}>
-                    <View style={[styles.weekBar, w > 1 && { opacity: 0.35 }]} />
-                    <Txt variant="caption" tone="secondary">
-                      Wk {w}
-                      {'\n'}
-                      {WEEKS[w].name}
-                    </Txt>
-                  </View>
-                ))}
+                <Txt variant="title">{PROGRAM_TITLE}</Txt>
+                {finalGoal ? (
+                  <Txt variant="footnote" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    Toward: {finalGoal.charAt(0).toLowerCase() + finalGoal.slice(1)}
+                  </Txt>
+                ) : null}
+                <View style={styles.weeks}>
+                  {([1, 2, 3, 4] as const).map((w) => (
+                    <View key={w} style={{ flex: 1, gap: space.xs }}>
+                      <View style={[styles.weekBar, w > 1 && { opacity: 0.35 }]} />
+                      <Txt variant="caption" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                        Wk {w}
+                        {'\n'}
+                        {WEEKS[w].name}
+                      </Txt>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
+            </CoverArt>
 
             <Txt variant="title2" style={{ marginTop: space.xxl }}>
               When suits you best?
@@ -268,7 +294,7 @@ export function OnboardingScreen() {
                   One a day. Never a nudge about missed days.
                 </Txt>
               </View>
-              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.practice }} accessibilityLabel="A gentle reminder" />
+              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" accessibilityLabel="A gentle reminder" />
             </View>
             <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
               Day 1 starts with a quick check-in, so in four weeks you can look back at where you began.
@@ -278,11 +304,7 @@ export function OnboardingScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        {step < 3 ? (
-          <PrimaryButton label={step === 0 ? 'Get started' : 'Continue'} onPress={() => setStep(step + 1)} />
-        ) : (
-          <PrimaryButton label="Start Day 1" onPress={finish} />
-        )}
+        {step < 3 ? <PrimaryButton label={step === 0 ? 'Get started' : 'Continue'} onPress={() => setStep(step + 1)} /> : <PrimaryButton label="Start Day 1" onPress={finish} />}
         {step > 0 ? <QuietButton label="Back" style={{ alignSelf: 'center' }} onPress={() => setStep(step - 1)} /> : null}
       </View>
     </View>
@@ -291,14 +313,40 @@ export function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  bars: { flexDirection: 'row', gap: 6, paddingHorizontal: space.xl },
-  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: color.surfaceStrong },
-  content: { flexGrow: 1, padding: space.xl, paddingTop: space.xxl },
-  orb: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 260 },
+  bars: { flexDirection: 'row', gap: 6, paddingHorizontal: space.l },
+  bar: {
+    flex: 1,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: color.surfaceStrong,
+  },
+  content: { flexGrow: 1, padding: space.l, paddingTop: space.xxl },
+  orb: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    minHeight: 260,
+  },
   point: { flexDirection: 'row', gap: space.l },
-  num: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.practiceSoft, alignItems: 'center', justifyContent: 'center' },
-  note: { padding: space.l, borderRadius: radius.m, backgroundColor: color.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, marginTop: space.l },
+  num: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: color.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  note: {
+    padding: space.l,
+    borderRadius: radius.m,
+    backgroundColor: color.surface,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.s,
+    marginTop: space.l,
+  },
   segment: {
     flexDirection: 'row',
     gap: space.xs,
@@ -306,33 +354,27 @@ const styles = StyleSheet.create({
     marginTop: space.m,
     borderRadius: radius.pill,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
   },
-  seg: { flex: 1, minHeight: HIT - 4, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
+  seg: {
+    flex: 1,
+    minHeight: HIT - 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+  },
   input: {
     marginTop: space.m,
     minHeight: HIT + 8,
     paddingHorizontal: space.l,
     borderRadius: radius.m,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
+    backgroundColor: color.surfaceStrong,
     color: color.text,
     fontSize: 17,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}),
   },
-  plan: {
-    marginTop: space.l,
-    padding: space.xl,
-    gap: space.s,
-    borderRadius: radius.l,
-    backgroundColor: 'rgba(207,198,255,0.08)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(207,198,255,0.3)',
-  },
+  plan: { flex: 1, padding: space.l, gap: space.s, justifyContent: 'flex-end' },
   weeks: { flexDirection: 'row', gap: space.s, marginTop: space.s },
-  weekBar: { height: 4, borderRadius: 2, backgroundColor: color.practice },
+  weekBar: { height: 4, borderRadius: 2, backgroundColor: color.text },
   times: { flexDirection: 'row', gap: space.s, marginTop: space.m },
   time: {
     flex: 1,
@@ -341,10 +383,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.m,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
   },
-  timeOn: { backgroundColor: color.text, borderColor: color.text },
+  timeOn: { backgroundColor: color.accent },
   remind: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -353,8 +393,6 @@ const styles = StyleSheet.create({
     padding: space.l,
     borderRadius: radius.m,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
   },
-  footer: { paddingHorizontal: space.xl, gap: space.s },
+  footer: { paddingHorizontal: space.l, gap: space.s },
 });

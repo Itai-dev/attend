@@ -9,7 +9,8 @@ import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { voiceFor } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { speakPlace } from '@/domain/regions';
-import { Card, haptic, Icon, PrimaryButton, SectionLabel, Txt } from '@/design/components';
+import { Card, haptic, Icon, PrimaryButton, Txt } from '@/design/components';
+import { Pill } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
@@ -56,15 +57,13 @@ export function HomeScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }}
+      contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.l }}
     >
       <View style={styles.head}>
         <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
           {greeting()}
         </Txt>
-        <Txt variant="footnote" tone="tertiary">
-          {finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`}
-        </Txt>
+        <Pill label={finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`} />
       </View>
 
       <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xl }}>
@@ -99,9 +98,7 @@ export function HomeScreen() {
             {doneToday ? <Icon name="checkmark" size={13} tint={color.practice} weight="bold" /> : <Txt variant="footnote" style={{ fontWeight: '700' }}>2</Txt>}
           </View>
           <View style={{ flex: 1 }}>
-            <Txt variant="body" style={{ fontWeight: '600' }}>
-              {today.practice.title}
-            </Txt>
+            <Txt variant="headline">{today.practice.title}</Txt>
             <Txt variant="footnote" tone="secondary">
               Practice · {today.practice.minutes} min · rests on {restsOn}
             </Txt>
@@ -118,12 +115,26 @@ export function HomeScreen() {
 
       <View style={styles.quick}>
         <Card label="Flare. A 3-minute session for right now" onPress={() => router.push({ pathname: '/before', params: { preset: 'flare-3' } })} style={styles.quickCard}>
-          <SectionLabel style={{ marginBottom: space.xs }}>Flare?</SectionLabel>
-          <Txt variant="callout">A 3-minute session for right now</Txt>
+          <View style={[styles.quickIcon, { backgroundColor: color.practiceSoft }]}>
+            <Icon name="wind" size={18} tint={color.practice} />
+          </View>
+          <Txt variant="headline" style={{ marginTop: space.m }}>
+            Flare?
+          </Txt>
+          <Txt variant="footnote" tone="secondary" style={{ marginTop: 2 }}>
+            A 3-minute session for right now
+          </Txt>
         </Card>
         <Card label="Check in. How it is today, and where" onPress={() => router.push('/checkin')} style={styles.quickCard}>
-          <SectionLabel style={{ marginBottom: space.xs }}>Check in</SectionLabel>
-          <Txt variant="callout">How it is today, and where</Txt>
+          <View style={[styles.quickIcon, { backgroundColor: color.practiceSoft }]}>
+            <Icon name="square.and.pencil" size={17} tint={color.practice} />
+          </View>
+          <Txt variant="headline" style={{ marginTop: space.m }}>
+            Check in
+          </Txt>
+          <Txt variant="footnote" tone="secondary" style={{ marginTop: 2 }}>
+            How it is today, and where
+          </Txt>
         </Card>
       </View>
 
@@ -147,14 +158,15 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'baseline', gap: space.m },
-  today: { marginTop: space.xl, padding: space.l, gap: space.m, borderRadius: radius.l },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.m },
+  today: { marginTop: space.xl, padding: space.l + 4, gap: space.m, borderRadius: radius.l },
   kicker: { color: color.practice, letterSpacing: 1.4 },
   step: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: HIT },
   mark: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: color.text, alignItems: 'center', justifyContent: 'center' },
   markDone: { borderWidth: 0, backgroundColor: color.practiceSoft },
   quick: { flexDirection: 'row', gap: space.m, marginTop: space.m },
-  quickCard: { flex: 1, padding: space.l, minHeight: 96 },
-  goal: { marginTop: space.m, padding: space.l, backgroundColor: color.milestoneSoft, borderColor: 'rgba(242,196,141,0.24)' },
+  quickCard: { flex: 1, padding: space.l, minHeight: 112, borderRadius: radius.l },
+  quickIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  goal: { marginTop: space.m, padding: space.l, borderRadius: radius.l, backgroundColor: color.milestoneSoft },
   goalLink: { minHeight: 36, justifyContent: 'center', marginTop: space.xs, alignSelf: 'flex-start' },
 });

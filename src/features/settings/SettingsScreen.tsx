@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
-import { haptic, Hairline, QuietButton, SectionLabel, Segmented, Txt } from '@/design/components';
+import { haptic, Hairline, QuietButton, Segmented, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
 import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { speechModule } from '@/voice/speechModule';
@@ -24,6 +24,15 @@ function confirm(title: string, message: string, action: string, run: () => void
   ]);
 }
 
+/** Section titles are bold and full-size, as on Spotify's settings, not tiny caps. */
+function Section({ children, first }: { children: string; first?: boolean }) {
+  return (
+    <Txt variant="title2" accessibilityRole="header" style={{ marginTop: first ? 0 : space.xxl, marginBottom: space.m }}>
+      {children}
+    </Txt>
+  );
+}
+
 function Group({ children }: { children: ReactNode }) {
   return <View style={styles.group}>{children}</View>;
 }
@@ -38,7 +47,7 @@ function Choice({ label, detail, selected, disabled, onPress }: { label: string;
         haptic('select');
         onPress();
       }}
-      style={({ pressed }) => [styles.choice, { opacity: disabled ? 0.4 : pressed ? 0.6 : 1 }]}
+      style={({ pressed }) => [styles.choice, { opacity: disabled ? 0.4 : 1 }, pressed && { backgroundColor: color.surfaceStrong }]}
     >
       <View style={{ flex: 1 }}>
         <Txt variant="body">{label}</Txt>
@@ -59,13 +68,22 @@ export function SettingsScreen() {
   const realCount = sessions.filter((s) => !s.isSample).length;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: color.bg }} contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xxxl }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: color.bg }}
+      contentContainerStyle={{
+        padding: space.l,
+        paddingTop: space.xl,
+        paddingBottom: insets.bottom + space.xxxl,
+      }}
+    >
       <View style={styles.header}>
-        <Txt variant="title">Settings</Txt>
+        <Txt variant="display" accessibilityRole="header">
+          Settings
+        </Txt>
         <QuietButton label="Done" tone="primary" onPress={() => router.back()} />
       </View>
 
-      <SectionLabel>Daily reminder</SectionLabel>
+      <Section first>Daily reminder</Section>
       <Group>
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
@@ -77,11 +95,19 @@ export function SettingsScreen() {
           <Switch
             value={!!prefs.reminder?.enabled}
             disabled={!remindersAvailable()}
-            trackColor={{ true: color.practice }}
+            trackColor={{ true: color.accent, false: color.surfacePressed }}
+            thumbColor="#FFFFFF"
             accessibilityLabel="A gentle reminder"
             onValueChange={async (on) => {
-              const base = prefs.reminder ?? { enabled: false, hour: 20, minute: 30 };
-              const reminder = { ...base, enabled: on && (await requestReminderPermission()) };
+              const base = prefs.reminder ?? {
+                enabled: false,
+                hour: 20,
+                minute: 30,
+              };
+              const reminder = {
+                ...base,
+                enabled: on && (await requestReminderPermission()),
+              };
               await setPrefs({ reminder });
               await scheduleReminders(reminder, undefined);
             }}
@@ -110,23 +136,19 @@ export function SettingsScreen() {
         ) : null}
       </Group>
 
-      <SectionLabel style={styles.section}>Background</SectionLabel>
+      <Section>Background</Section>
       <Group>
-        <Choice
-          label="Soft background"
-          detail="A quiet bed under the voice, one for each kind of session"
-          selected={prefs.ambience !== false}
-          onPress={() => setPrefs({ ambience: true })}
-        />
+        <Choice label="Soft background" detail="Nature under the voice: a stream, waves, rain or wind" selected={prefs.ambience !== false} onPress={() => setPrefs({ ambience: true })} />
         <Hairline />
         <Choice label="Silence" detail="Only the guide’s voice" selected={prefs.ambience === false} onPress={() => setPrefs({ ambience: false })} />
       </Group>
 
-      <SectionLabel style={styles.section}>Privacy</SectionLabel>
+      <Section>Privacy</Section>
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
-            Your sessions and check-ins are stored only on this iPhone. There is no account. Sessions are guided: they never use the microphone, and nothing you say is heard. Where the guide rests your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
+            Your sessions and check-ins are stored only on this iPhone. There is no account. Sessions are guided: they never use the microphone, and nothing you say is heard. Where the guide rests
+            your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
             {hasRemote ? ' The guide’s lines are voiced through Attend’s voice service by ElevenLabs. Nothing about you is sent with them.' : ''}
           </Txt>
         </View>
@@ -138,9 +160,9 @@ export function SettingsScreen() {
               deleteAll();
             })
           }
-          style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
+          style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.surfaceStrong }]}
         >
-          <Txt variant="body" style={{ color: '#FFB4A8' }}>
+          <Txt variant="body" tone="secondary">
             Delete all sessions
           </Txt>
           <Txt variant="footnote" tone="tertiary">
@@ -149,19 +171,19 @@ export function SettingsScreen() {
         </Pressable>
       </Group>
 
-      <SectionLabel style={styles.section}>Sample sessions</SectionLabel>
+      <Section>Sample sessions</Section>
       <Group>
-        <Pressable accessibilityRole="button" onPress={() => (hasSamples ? deleteSamples() : addSamples())} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
+        <Pressable accessibilityRole="button" onPress={() => (hasSamples ? deleteSamples() : addSamples())} style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.surfaceStrong }]}>
           <Txt variant="body">{hasSamples ? 'Remove sample sessions' : 'Show sample sessions'}</Txt>
         </Pressable>
       </Group>
 
-      <SectionLabel style={styles.section}>About</SectionLabel>
+      <Section>About</Section>
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="callout" tone="secondary">
-            Attend is a practice for familiar, long-standing sensations, built around somatic tracking. It isn’t a diagnostic tool and doesn’t replace medical care. If a symptom is new,
-            changing quickly or severe, contact a medical professional.
+            Attend is a practice for familiar, long-standing sensations, built around somatic tracking. It isn’t a diagnostic tool and doesn’t replace medical care. If a symptom is new, changing
+            quickly or severe, contact a medical professional.
           </Txt>
           <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
             Version {Constants.expoConfig?.version ?? '0.1.0'}
@@ -181,7 +203,7 @@ function DeveloperSettings() {
   const set = (patch: Partial<typeof dev>) => setPrefs({ dev: { ...dev, ...patch } });
   return (
     <>
-      <SectionLabel style={styles.section}>Developer</SectionLabel>
+      <Section>Developer</Section>
       <Group>
         <View style={styles.textBlock}>
           <Txt variant="footnote" tone="secondary" style={{ marginBottom: space.s }}>
@@ -215,17 +237,17 @@ function DeveloperSettings() {
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Conversational sessions</Txt>
-          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Debug panel in sessions</Txt>
-          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Keep transcripts</Txt>
-          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: '#8D99FF' }} />
+          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" />
         </View>
         <Hairline />
         <View style={styles.textBlock}>
@@ -241,19 +263,40 @@ function DeveloperSettings() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xl },
-  section: { marginTop: space.xxl },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: space.xl,
+  },
   group: {
     borderRadius: radius.m,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
     overflow: 'hidden',
   },
-  choice: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, paddingHorizontal: space.l, paddingVertical: space.s, gap: space.m },
-  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.4, borderColor: color.textTertiary },
-  radioOn: { borderWidth: 5.5, borderColor: color.text },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: HIT + 8, paddingHorizontal: space.l },
+  choice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: HIT + 12,
+    paddingHorizontal: space.l,
+    paddingVertical: space.s,
+    gap: space.m,
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.4,
+    borderColor: color.textTertiary,
+  },
+  radioOn: { borderWidth: 6, borderColor: color.accent },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: HIT + 8,
+    paddingHorizontal: space.l,
+  },
   textBlock: { padding: space.l },
   note: { marginTop: space.s, paddingHorizontal: space.xs },
 });

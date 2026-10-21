@@ -24,7 +24,7 @@ export function JourneyScreen() {
   const withMaps = sessions.filter((s) => s.bodyMapEnd.sensations.length > 0);
   const earliest = withMaps[withMaps.length - 1];
   const latest = withMaps[0];
-  const pairW = (Math.min(width, 520) - space.xl * 2 - space.m) / 2;
+  const pairW = (Math.min(width, 520) - space.l * 2 - space.m) / 2;
 
   return (
     <TitledScroll title="Journey" onBack={() => router.back()}>
@@ -39,11 +39,7 @@ export function JourneyScreen() {
 
       <SectionLabel>{analysis.spanLabel}</SectionLabel>
       {earliest && latest && earliest.id !== latest.id ? (
-        <View
-          style={styles.pair}
-          accessible
-          accessibilityLabel={`Your earliest map, from ${shortDate(earliest.startedAt)}, beside your latest, from ${shortDate(latest.startedAt)}.`}
-        >
+        <View style={styles.pair} accessible accessibilityLabel={`Your earliest map, from ${shortDate(earliest.startedAt)}, beside your latest, from ${shortDate(latest.startedAt)}.`}>
           <ThenNow session={earliest} label="Earlier" width={pairW} />
           <ThenNow session={latest} label="Lately" width={pairW} />
         </View>
@@ -62,7 +58,7 @@ export function JourneyScreen() {
           </View>
         ))
       ) : (
-        <Txt variant="title2" tone="secondary" style={{ fontWeight: '300', marginTop: space.l }}>
+        <Txt variant="title2" tone="secondary" style={{ fontWeight: '600', marginTop: space.l }}>
           {analysis.placeholder}
         </Txt>
       )}
@@ -108,14 +104,7 @@ function SessionRow({ session, first, last }: { session: Session; first: boolean
       <View style={styles.rail}>
         <View style={[styles.railLine, first && { top: 46 }, last && { bottom: '50%' }]} />
         <View style={styles.thumb}>
-          <BodyField
-            map={session.bodyMapEnd}
-            view={p ? preferredView(session.bodyMapEnd) : 'front'}
-            width={58}
-            height={96}
-            animated={false}
-            accessibilityLabel=""
-          />
+          <BodyField map={session.bodyMapEnd} view={p ? preferredView(session.bodyMapEnd) : 'front'} width={58} height={96} animated={false} accessibilityLabel="" />
         </View>
       </View>
       <View style={{ flex: 1, paddingVertical: space.m }}>
@@ -148,10 +137,29 @@ const styles = StyleSheet.create({
   lead: { marginTop: space.xl, marginBottom: space.xl },
   insight: { marginBottom: space.l },
   pair: { flexDirection: 'row', gap: space.m, marginTop: space.xs },
-  pairCard: { borderRadius: radius.m, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
+  pairCard: {
+    borderRadius: radius.m,
+    overflow: 'hidden',
+    backgroundColor: color.surface,
+  },
   row: { flexDirection: 'row', gap: space.l, alignItems: 'center' },
-  rail: { width: 58, alignItems: 'center', alignSelf: 'stretch', justifyContent: 'center' },
-  railLine: { position: 'absolute', top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: color.hairline },
-  thumb: { borderRadius: radius.s, overflow: 'hidden', marginVertical: space.s },
+  rail: {
+    width: 58,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  railLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: color.hairline,
+  },
+  thumb: {
+    borderRadius: radius.s,
+    overflow: 'hidden',
+    marginVertical: space.s,
+  },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },
 });

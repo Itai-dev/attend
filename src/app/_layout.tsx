@@ -1,27 +1,35 @@
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { Newsreader_300Light, Newsreader_400Regular, Newsreader_500Medium, useFonts } from '@expo-google-fonts/newsreader';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DataProvider, useData } from '@/data/store';
-import { color } from '@/design/theme';
+import { color, useColors, useScheme } from '@/design/theme';
 import { VoiceSessionProvider } from '@/voice/VoiceSessionProvider';
 import { SkiaGate } from '@/viz/SkiaGate';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const navTheme = {
-  ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: color.bg, card: color.bg, text: color.text, border: color.hairline, primary: color.text },
-};
+/** Navigation's own colours (headers, cards behind transitions) follow Washi by day and Sumi at night. */
+function useNavTheme() {
+  const scheme = useScheme();
+  const c = useColors();
+  const base = scheme === 'light' ? DefaultTheme : DarkTheme;
+  return { ...base, colors: { ...base.colors, background: c.bg, card: c.bg, text: c.text, border: c.hairline, primary: c.text } };
+}
 
 function RootStack() {
   const { ready } = useData();
+  // The serif is part of the design, not decoration: the splash stays until it has loaded,
+  // so titles never flash in a fallback face.
+  const [fontsLoaded, fontError] = useFonts({ Newsreader_300Light, Newsreader_400Regular, Newsreader_500Medium });
+  const fonts = fontsLoaded || !!fontError;
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
-  if (!ready) return <View style={{ flex: 1, backgroundColor: color.bg }} />;
+    if (ready && fonts) SplashScreen.hideAsync().catch(() => {});
+  }, [ready, fonts]);
+  if (!ready || !fonts) return <View style={{ flex: 1, backgroundColor: color.bg }} />;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
       <Stack.Screen name="(tabs)" />
@@ -41,10 +49,11 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  const navTheme = useNavTheme();
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: color.bg }}>
       <ThemeProvider value={navTheme}>
-        <StatusBar style="light" />
+        <StatusBar style="auto" />
         <SkiaGate>
           <DataProvider>
             <VoiceSessionProvider>

@@ -14,6 +14,7 @@ import {
   type TextProps,
   type TextStyle,
   type ViewStyle,
+  type ColorValue,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,14 +42,25 @@ const TONES = {
   inverse: color.onAccent,
 };
 
-/** System type, scaled with Dynamic Type (large titles capped so layouts hold). */
+const SERIF_VARIANTS = new Set<TypeVariant>(['display', 'title', 'title2', 'headline']);
+
+/**
+ * Type scaled with Dynamic Type (large titles capped so layouts hold). Serif variants are one
+ * font file per weight, so a weight passed in style is dropped rather than faked as bold:
+ * titles stay light.
+ */
 export function Txt({ variant = 'body', tone = 'primary', align, style, maxFontSizeMultiplier, ...rest }: TxtProps) {
   const cap = maxFontSizeMultiplier ?? (variant === 'display' || variant === 'title' ? 1.35 : 2);
+  let extra = style;
+  if (SERIF_VARIANTS.has(variant) && style) {
+    const { fontWeight: _drop, ...flat } = StyleSheet.flatten(style) ?? {};
+    extra = flat;
+  }
   return (
     <Text
       {...rest}
       maxFontSizeMultiplier={cap}
-      style={[type[variant], { color: TONES[tone], textAlign: align }, style]}
+      style={[type[variant], { color: TONES[tone], textAlign: align }, extra]}
     />
   );
 }
@@ -75,7 +87,7 @@ type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   style?: StyleProp<ViewStyle>;
 };
 
-/** The one big, light button. There is usually only one per screen. */
+/** The one accent pill: begin, continue, done. There is usually only one per screen. */
 export function PrimaryButton({ label, detail, style, onPress, ...rest }: ButtonProps) {
   const p = usePressScale();
   return (
@@ -91,7 +103,7 @@ export function PrimaryButton({ label, detail, style, onPress, ...rest }: Button
       }}
       style={[styles.primary, p.style, style]}
     >
-      <Txt variant="headline" tone="inverse" style={{ fontSize: 18 }}>
+      <Txt variant="body" tone="inverse" style={{ fontSize: 17, fontWeight: '600' }}>
         {label}
       </Txt>
       {detail ? (
@@ -141,9 +153,21 @@ const GLYPHS: Record<string, string> = {
   checkmark: '✓',
   'lock.fill': '⌂',
   'star.fill': '✦',
+  'chevron.down': '⌄',
+  'checkmark.circle.fill': '✓',
+  'person.fill': '●',
+  'book.fill': '❐',
+  'moon.fill': '☾',
+  'flame.fill': '◆',
+  'heart.text.square.fill': '♡',
+  'bell.fill': '◔',
+  'speaker.wave.2.fill': '♪',
+  'plus': '+',
+  'square.and.pencil': '✎',
+  wind: '≋',
 };
 
-export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: string; weight?: SymbolViewProps['weight'] }) {
+export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: ColorValue; weight?: SymbolViewProps['weight'] }) {
   if (Platform.OS === 'ios') {
     return (
       <SymbolView
@@ -173,7 +197,7 @@ export function IconButton({
   onPress: () => void;
   size?: number;
   iconSize?: number;
-  tint?: string;
+  tint?: ColorValue;
   variant?: 'plain' | 'filled';
   style?: StyleProp<ViewStyle>;
 }) {
@@ -224,7 +248,7 @@ export function TitledScroll({
       {...rest}
       style={{ flex: 1, backgroundColor: color.bg }}
       contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={[{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.xl }, contentStyle]}
+      contentContainerStyle={[{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.l }, contentStyle]}
     >
       {onBack ? <IconButton icon="chevron.left" label="Back" onPress={onBack} tint={color.textSecondary} style={{ marginLeft: -space.m }} /> : null}
       <View style={styles.titleRow}>
@@ -317,7 +341,7 @@ export function Chip({
       }}
       style={[styles.chip, selected && styles.chipOn, p.style, style]}
     >
-      <Txt variant="headline" tone={selected ? 'inverse' : 'primary'} style={{ fontWeight: '500' }}>
+      <Txt variant="body" tone={selected ? 'inverse' : 'primary'} style={{ fontWeight: '500' }}>
         {label}
       </Txt>
       <View style={[styles.chipDot, selected && styles.chipDotOn]} />
@@ -358,7 +382,7 @@ export function SampleBadge() {
 
 const styles = StyleSheet.create({
   primary: {
-    minHeight: 64,
+    minHeight: 54,
     borderRadius: radius.pill,
     backgroundColor: color.accent,
     alignItems: 'center',
@@ -374,7 +398,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: space.xl,
+    marginBottom: space.l,
     gap: space.m,
   },
   segmented: {
@@ -397,32 +421,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-end',
     gap: space.m,
-    minHeight: 52,
+    minHeight: 48,
     paddingLeft: space.xl,
     paddingRight: space.l,
     borderRadius: radius.pill,
     backgroundColor: color.surfaceStrong,
   },
   chipOn: {
-    backgroundColor: color.text,
+    backgroundColor: color.accent,
   },
   chipDot: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: color.surfacePressed,
   },
   chipDotOn: {
     backgroundColor: color.onAccent,
     borderWidth: 5,
-    borderColor: color.text,
+    borderColor: color.accent,
   },
+  // Paper on paper: a soft shadow by day (transparent at night), never a drawn border.
   card: {
     borderRadius: radius.l,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
-    overflow: 'hidden',
+    shadowColor: color.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    shadowOpacity: 1,
   },
   badge: {
     borderWidth: StyleSheet.hairlineWidth,

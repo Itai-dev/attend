@@ -7,7 +7,7 @@ import { useData } from '@/data/store';
 import { EMPTY_PROGRAM, markRead, programDay, WEEKS } from '@/domain/program';
 import { haptic, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
-import { BreathingField } from '@/viz/BreathingField';
+import { Enso } from '@/viz/Enso';
 
 /**
  * A lesson: a few short cards, one idea each, then straight into the day's practice.
@@ -46,7 +46,7 @@ export function LessonScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         {i === 0 ? (
           <View style={{ alignItems: 'center', marginBottom: space.l }}>
-            <BreathingField width={160} height={160} mode="idle" dim={0.8} />
+            <Enso width={160} height={160} mode="idle" dim={0.8} />
           </View>
         ) : null}
         {i === 0 ? (
@@ -56,7 +56,7 @@ export function LessonScreen() {
         ) : null}
         <Animated.View key={i} entering={FadeIn.duration(500)} style={{ gap: space.l, marginTop: space.l }}>
           {card.text.map((p) => (
-            <Txt key={p} variant="body" style={{ fontSize: 19, lineHeight: 28 }}>
+            <Txt key={p} variant="body" style={{ fontSize: 20, lineHeight: 29, fontWeight: '500', letterSpacing: -0.3 }}>
               {p}
             </Txt>
           ))}
@@ -92,9 +92,9 @@ export function LessonScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0D0C14' },
+  root: { flex: 1, backgroundColor: color.bg },
   bars: { flexDirection: 'row', gap: 4, paddingHorizontal: space.xl },
-  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(242,240,235,0.2)' },
+  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: color.surfacePressed },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: space.xl, paddingRight: space.s },
   body: { flexGrow: 1, paddingHorizontal: space.xl, paddingTop: space.l, paddingBottom: space.xxl },
   notice: { padding: space.l, borderRadius: radius.m, backgroundColor: color.practiceSoft },

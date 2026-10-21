@@ -7,7 +7,7 @@ import { currentTz, PAIN_END_HIGH, PAIN_END_LOW, PAIN_MAX, painLabel, WHERE_REGI
 import { newId } from '@/domain/ids';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion, Place } from '@/domain/types';
-import { Chip, haptic, IconButton, PrimaryButton, SectionLabel, Txt } from '@/design/components';
+import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
 
 /**
@@ -21,7 +21,6 @@ import { color, HIT, radius, space } from '@/design/theme';
  * The places are Attend's own regions, so the place a check-in names is the place a guided
  * session rests on, in the same words.
  */
-
 
 function cap(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -56,9 +55,15 @@ export function CheckinScreen() {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + space.xxxl, paddingHorizontal: space.xl }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingTop: insets.top + space.l,
+          paddingBottom: insets.bottom + space.xxxl,
+          paddingHorizontal: space.l,
+        }}
+      >
         <View style={styles.top}>
-          <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
+          <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.text} />
         </View>
 
         <Txt variant="display" accessibilityRole="header">
@@ -66,10 +71,10 @@ export function CheckinScreen() {
         </Txt>
 
         <View style={styles.readout} accessibilityLiveRegion="polite">
-          <Txt variant="title" style={{ fontSize: 44, lineHeight: 52 }}>
+          <Txt variant="display" style={{ fontSize: 48, lineHeight: 54 }}>
             {pain === null ? '–' : pain}
           </Txt>
-          <Txt variant="title2" tone="secondary">
+          <Txt variant="title2" tone="secondary" style={{ fontWeight: '600' }}>
             {pain === null ? 'Choose a number' : painLabel(pain)}
           </Txt>
         </View>
@@ -87,7 +92,7 @@ export function CheckinScreen() {
                   haptic('select');
                   setPain(n);
                 }}
-                style={({ pressed }) => [styles.step, on && styles.stepOn, { opacity: pressed ? 0.6 : 1 }]}
+                style={({ pressed }) => [styles.step, pressed && !on && { backgroundColor: color.surfacePressed }, on && styles.stepOn]}
               >
                 <Txt variant="headline" tone={on ? 'inverse' : 'primary'}>
                   {n}
@@ -105,7 +110,9 @@ export function CheckinScreen() {
           </Txt>
         </View>
 
-        <SectionLabel style={{ marginTop: space.xxl }}>Where, if you like</SectionLabel>
+        <Txt variant="title2" accessibilityRole="header" style={{ marginTop: space.xxl, marginBottom: space.m }}>
+          Where, if you like
+        </Txt>
         <View style={styles.where}>
           {WHERE.map((r) => (
             <Chip key={r} label={cap(REGIONS[r].label)} selected={places.includes(r)} onPress={() => toggle(r)} />
@@ -132,20 +139,36 @@ export function CheckinScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  top: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: space.s },
-  readout: { flexDirection: 'row', alignItems: 'baseline', gap: space.m, marginTop: space.xl },
-  scale: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s, marginTop: space.xl },
+  top: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: space.s,
+  },
+  readout: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: space.m,
+    marginTop: space.xl,
+  },
+  scale: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.s,
+    marginTop: space.xl,
+  },
   step: {
     width: HIT + 4,
     height: HIT + 4,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
+    backgroundColor: color.surfaceStrong,
   },
-  stepOn: { backgroundColor: color.text, borderColor: color.text },
-  ends: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.m },
+  stepOn: { backgroundColor: color.accent },
+  ends: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: space.m,
+  },
   where: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s },
 });

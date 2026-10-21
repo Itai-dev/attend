@@ -7,8 +7,8 @@ import { milestones, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM } from '@/domain/program';
 import { buildProgress, PROGRESS_MEANING, type ProgressDay } from '@/domain/progress';
 import { REGIONS } from '@/domain/regions';
-import { Card, Hairline, Icon, PrimaryButton, SectionLabel, TitledScroll, Txt } from '@/design/components';
-import { color, HIT, space } from '@/design/theme';
+import { Card, Hairline, Icon, PrimaryButton, TitledScroll, Txt } from '@/design/components';
+import { color, HIT, radius, space } from '@/design/theme';
 import { sessionDate } from '../shared/format';
 
 /**
@@ -20,6 +20,15 @@ import { sessionDate } from '../shared/format';
  */
 
 const CHART_H = 140;
+
+/** A bold section title, as on a Spotify shelf. */
+function Section({ children, first }: { children: string; first?: boolean }) {
+  return (
+    <Txt variant="title2" accessibilityRole="header" style={{ marginTop: first ? space.s : space.xxl, marginBottom: space.m }}>
+      {children}
+    </Txt>
+  );
+}
 
 function Chart({ days }: { days: ProgressDay[] }) {
   const [w, setW] = useState(0);
@@ -91,7 +100,7 @@ export function ProgressScreen() {
 
   return (
     <TitledScroll title="Progress">
-      <SectionLabel>Your practice</SectionLabel>
+      <Section first>Your practice</Section>
       <View style={styles.tiles}>
         {[
           [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
@@ -99,8 +108,8 @@ export function ProgressScreen() {
           [program.read.length, program.read.length === 1 ? 'lesson' : 'lessons'],
         ].map(([n, label]) => (
           <View key={String(label)} style={styles.tile}>
-            <Txt variant="title">{String(n)}</Txt>
-            <Txt variant="caption" tone="tertiary">
+            <Txt variant="display">{String(n)}</Txt>
+            <Txt variant="footnote" tone="secondary">
               {String(label)}
             </Txt>
           </View>
@@ -112,7 +121,7 @@ export function ProgressScreen() {
             <View style={[styles.badge, m.earned ? styles.badgeOn : styles.badgeOff]}>
               <Icon name="star.fill" size={16} tint={m.earned ? color.milestone : color.textTertiary} />
             </View>
-            <Txt variant="caption" tone={m.earned ? 'secondary' : 'tertiary'} align="center" style={{ fontSize: 10, lineHeight: 12 }}>
+            <Txt variant="caption" tone={m.earned ? 'secondary' : 'tertiary'} align="center" style={{ fontSize: 10, lineHeight: 12, fontWeight: '500', letterSpacing: 0 }}>
               {m.label}
             </Txt>
           </View>
@@ -121,7 +130,7 @@ export function ProgressScreen() {
 
       {prefs.goal || moments.length ? (
         <>
-          <SectionLabel style={{ marginTop: space.xxl }}>{prefs.goal ? `Toward ${prefs.goal.toLowerCase()}` : 'Moments'}</SectionLabel>
+          <Section>{prefs.goal ? `Toward ${prefs.goal.toLowerCase()}` : 'Moments'}</Section>
           <Card style={{ padding: space.l, gap: space.m }}>
             {moments.length ? (
               moments.map((m) => (
@@ -138,7 +147,7 @@ export function ProgressScreen() {
               </Txt>
             )}
             <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={{ minHeight: 36, justifyContent: 'center' }}>
-              <Txt variant="callout" style={{ color: color.milestone }}>
+              <Txt variant="callout" style={{ color: color.milestone, fontWeight: '700' }}>
                 Save a moment
               </Txt>
             </Pressable>
@@ -146,11 +155,13 @@ export function ProgressScreen() {
         </>
       ) : null}
 
-      <SectionLabel style={{ marginTop: space.xxl }}>Your pain record</SectionLabel>
+      <Section>Your pain record</Section>
       <PrimaryButton label="Check in" detail="How much it hurts right now" onPress={() => router.push('/checkin')} />
 
       <Card style={styles.card}>
-        <SectionLabel>Last 8 weeks</SectionLabel>
+        <Txt variant="headline" style={{ marginBottom: space.l }}>
+          Last 8 weeks
+        </Txt>
         {progress.enough ? (
           <Chart days={progress.days} />
         ) : (
@@ -169,11 +180,11 @@ export function ProgressScreen() {
 
       {recent.length ? (
         <>
-          <SectionLabel style={{ marginTop: space.xxl }}>Check-ins</SectionLabel>
-          <View>
+          <Section>Check-ins</Section>
+          <View style={styles.list}>
             {recent.map((c, i) => (
               <View key={c.id}>
-                {i > 0 ? <Hairline /> : null}
+                {i > 0 ? <Hairline style={{ marginLeft: space.l }} /> : null}
                 <Pressable
                   accessibilityRole="button"
                   accessibilityHint="Asks before deleting"
@@ -181,9 +192,11 @@ export function ProgressScreen() {
                   style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
                 >
                   <View style={{ flex: 1 }}>
-                    <Txt variant="body">{formatPain(c.pain)}</Txt>
+                    <Txt variant="body" style={{ fontWeight: '500' }}>
+                      {formatPain(c.pain)}
+                    </Txt>
                     {placesText(c) ? (
-                      <Txt variant="footnote" tone="tertiary">
+                      <Txt variant="footnote" tone="secondary">
                         {placesText(c)}
                       </Txt>
                     ) : null}
@@ -205,7 +218,7 @@ export function ProgressScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: space.xl, padding: space.xl },
+  card: { marginTop: space.m, padding: space.l },
   grid: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: color.hairline },
   gridLabel: { position: 'absolute', right: 0, top: -16, fontSize: 10 },
   dot: { position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: color.text },
@@ -213,12 +226,13 @@ const styles = StyleSheet.create({
   tick: { position: 'absolute', width: 3, height: 12, borderRadius: 2, backgroundColor: color.textTertiary },
   legend: { flexDirection: 'row', gap: space.xl, marginTop: space.m, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, gap: space.m, paddingVertical: space.s },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: HIT + 12, gap: space.m, paddingVertical: space.s, paddingHorizontal: space.l },
+  list: { borderRadius: radius.m, backgroundColor: color.surface, overflow: 'hidden' },
   tiles: { flexDirection: 'row', gap: space.s },
-  tile: { flex: 1, padding: space.m, gap: 2, borderRadius: 16, backgroundColor: color.surface },
-  marks: { flexDirection: 'row', gap: space.xs, marginTop: space.l },
+  tile: { flex: 1, padding: space.m, paddingTop: space.l, gap: 2, borderRadius: radius.m, backgroundColor: color.surface },
+  marks: { flexDirection: 'row', gap: space.xs, marginTop: space.l, padding: space.m, borderRadius: radius.m, backgroundColor: color.surface },
   mark: { flex: 1, alignItems: 'center', gap: space.xs },
   badge: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  badgeOn: { backgroundColor: 'rgba(242,196,141,0.16)' },
+  badgeOn: { backgroundColor: color.milestoneSoft },
   badgeOff: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.hairline },
 });

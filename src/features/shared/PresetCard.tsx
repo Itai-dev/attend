@@ -2,14 +2,14 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import type { Preset, PresetCategory } from '@/domain/presets';
 import { Card, Icon, Txt } from '@/design/components';
-import { color, fieldColor, radius, space } from '@/design/theme';
+import { color, radius, space } from '@/design/theme';
 
-/** Each category's colour: from the field palette, soft and cool-to-warm, never red. */
+/** Each category's grey: told apart by lightness, never by hue. */
 export const CATEGORY_COLOR: Record<PresetCategory, string> = {
-  familiar: fieldColor.lilac,
-  flare: fieldColor.apricot,
-  sleep: fieldColor.dusk,
-  worry: fieldColor.seaglass,
+  familiar: '#D6D6D6',
+  flare: '#E8E8E8',
+  sleep: '#A8A8A8',
+  worry: '#C2C2C2',
 };
 
 /** Any-time sessions go through Before too, so where attention rests is chosen with the eyes open. */
@@ -28,12 +28,12 @@ export function PresetArt({ category, size }: { category: PresetCategory; size: 
   );
 }
 
-/** One ready-made session: art, title, length and voice, and a play button. One tap begins it. */
+/** One ready-made session: its colour, title, length and voice. One tap opens it on Before. */
 export function PresetCard({ preset, featured }: { preset: Preset; featured?: boolean }) {
   const art = featured ? 92 : 76;
   return (
     <Card
-      label={`${preset.title}. ${preset.minutes} minutes, ${preset.voiceName}'s voice. Begins a session.`}
+      label={`${preset.title}. ${preset.minutes} minutes, ${preset.voiceName}'s voice.`}
       onPress={() => startPreset(preset)}
       style={styles.card}
     >
@@ -51,9 +51,7 @@ export function PresetCard({ preset, featured }: { preset: Preset; featured?: bo
           {preset.minutes} min · {preset.voiceName}
         </Txt>
       </View>
-      <View style={styles.play}>
-        <Icon name="play.fill" size={14} tint={color.onAccent} />
-      </View>
+      <Icon name="chevron.right" size={14} tint={color.textTertiary} />
     </Card>
   );
 }
@@ -62,5 +60,4 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: space.l, padding: space.m, paddingRight: space.l },
   art: { borderRadius: radius.m, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   text: { flex: 1 },
-  play: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.text, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
 });

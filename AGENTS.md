@@ -85,7 +85,16 @@ sessions use no microphone. Speech, where it is used (the welcome), is recognise
 device and audio is never stored. No analytics. Changing what leaves the phone means
 updating the privacy copy in Settings and the README first.
 
-**Colour is never a verdict.** Dark, calm, no red in the body visualisation. The body map
+**Design: a quiet Japanese clinic (21 Oct 2026).** Washi by day (warm paper, sumi ink)
+and Sumi at night (warm charcoal, rice-paper text), following the phone's appearance so a
+session opened at night never starts bright. Ma — room around everything, soft corners,
+soft shadows, few boxes. A light serif for titles (Newsreader), the system sans for the rest.
+One leading colour, moss, for the one next step and practice done, chosen for calm (green,
+never red; see `design/theme.ts`). The ensō is the breathing form (`viz/Enso.tsx`). Under
+sessions, real nature recordings (`tools/make-ambience.py`). The experience stays Attend's
+own — no album pages, shelves, "now playing" or play buttons; this is not a media app.
+
+**Colour is never a verdict.** Calm, no red anywhere, including the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.
 
 ## Structure rules

@@ -4,7 +4,7 @@ import { useData } from '@/data/store';
 import { currentTz, dayKey } from '@/domain/checkin';
 import { PRESETS } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE, programDay, WEEKS } from '@/domain/program';
-import { Card, Icon, SectionLabel, TitledScroll, Txt } from '@/design/components';
+import { Card, Icon, TitledScroll, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
 import { PresetCard } from '../shared/PresetCard';
 
@@ -91,7 +91,12 @@ export function ProgramScreen() {
         })}
       </View>
 
-      <SectionLabel style={{ marginTop: space.xxl }}>Any time</SectionLabel>
+      <Txt variant="title2" accessibilityRole="header" style={{ marginTop: space.xxl, marginBottom: space.xs }}>
+        Any time
+      </Txt>
+      <Txt variant="footnote" tone="secondary" style={{ marginBottom: space.m }}>
+        For a flare, for sleep, for a worried moment
+      </Txt>
       <View style={{ gap: space.m }}>
         {anytime.map((p) => (
           <PresetCard key={p.id} preset={p} />
@@ -103,7 +108,7 @@ export function ProgramScreen() {
 
 const styles = StyleSheet.create({
   week: { padding: space.l, gap: space.m, borderRadius: radius.l },
-  weekNow: { backgroundColor: 'rgba(207,198,255,0.07)', borderColor: 'rgba(207,198,255,0.3)' },
+  weekNow: { backgroundColor: color.surfaceStrong, borderColor: color.hairline },
   weekHead: { flexDirection: 'row', alignItems: 'center', gap: space.m },
   days: { flexDirection: 'row', gap: space.s },
   day: { flex: 1, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

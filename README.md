@@ -98,7 +98,8 @@ server/lib/agents.ts        The ElevenLabs agents (one per session type). Edit p
                             first message in the ElevenLabs dashboard; read via GET /agent. The voice
                             itself is one per session type, in code (SESSION_VOICES, domain/presets.ts),
                             spoken at "Robust" stability with a fixed seed so a session keeps one voice.
-tools/make-ambience.py      The soft bed under each session type (assets/audio/ambience-*.wav).
+tools/make-ambience.py      Nature under each session type: public-domain field recordings cut into
+                            seamless loops (assets/audio/ambience-*.wav, credited in CREDITS.md).
 server/lib/guideScript.ts   Everything the guide says. Edit and commit: the next session on every
                             phone uses it, no rebuild. Safety lines stay fixed in the app.
 tests/                      node:test, run through tsx.
