@@ -1,8 +1,7 @@
 /**
- * Cover art palettes. Every practice gets generated cover art, the way every album and
- * podcast on Spotify has one: it makes a list scannable at a glance and gives each kind of
- * practice a face. Colour says which week or kind of session it is, never anything about
- * pain, and there is no red.
+ * Colour palettes for the program's weeks and kinds of session: the wash behind Today's
+ * header, the plan in onboarding. Colour says which week or kind of session it is, never
+ * anything about pain, and there is no red.
  *
  * Kept free of React Native so it can be checked in Node.
  */

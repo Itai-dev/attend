@@ -1,79 +1,48 @@
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ArtKey } from '@/design/art';
+import { StyleSheet, View } from 'react-native';
 import { useData } from '@/data/store';
-import { Icon, Txt } from '@/design/components';
-import { CoverArt, ListRow, RowIcon } from '@/design/media';
+import { Card, Icon, TitledScroll, Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
 
 /**
- * You: a library of what is yours. The body map and journey (from conversational sessions),
- * the welcome again (to change the place, goal or practice time), and settings.
+ * You: the body map and journey (from conversational sessions), the welcome again (to change
+ * the place, goal or practice time), and settings.
  */
 
-function Art({ art, icon, seed }: { art: ArtKey; icon: string; seed: number }) {
+function Place({ title, detail, icon, onPress }: { title: string; detail: string; icon: string; onPress: () => void }) {
   return (
-    <CoverArt art={art} size={56} seed={seed} rounded={4}>
-      <View style={styles.artIcon}>
-        <Icon name={icon} size={22} tint={color.text} />
+    <Card label={`${title}. ${detail}`} onPress={onPress} style={styles.place}>
+      <View style={styles.icon}>
+        <Icon name={icon} size={18} tint={color.textSecondary} />
       </View>
-    </CoverArt>
+      <View style={{ flex: 1 }}>
+        <Txt variant="headline">{title}</Txt>
+        <Txt variant="footnote" tone="tertiary">
+          {detail}
+        </Txt>
+      </View>
+      <Icon name="chevron.right" size={14} tint={color.textTertiary} />
+    </Card>
   );
 }
 
 export function YouScreen() {
-  const { prefs, setPrefs } = useData();
-  const insets = useSafeAreaInsets();
+  const { setPrefs } = useData();
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: color.bg }} contentContainerStyle={{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120 }}>
-      <View style={styles.head}>
-        <View style={styles.avatar}>
-          <Icon name="person.fill" size={16} tint={color.onAccent} />
-        </View>
-        <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
-          You
-        </Txt>
+    <TitledScroll title="You">
+      <View style={{ gap: space.m }}>
+        <Place title="Body" detail="A map of what you’ve described" icon="figure.stand" onPress={() => router.push('/body')} />
+        <Place title="Journey" detail="How it has moved and changed, in your words" icon="point.topleft.down.curvedto.point.bottomright.up" onPress={() => router.push('/journey')} />
       </View>
-      {prefs.goal ? (
-        <Txt variant="footnote" tone="secondary" style={styles.goal}>
-          Practising toward {prefs.goal.toLowerCase()}
-        </Txt>
-      ) : null}
-
-      <View style={{ marginTop: space.l }}>
-        <ListRow
-          leading={<Art art="teal" icon="figure.stand" seed={3} />}
-          title="Body"
-          subtitle="A map of what you’ve described"
-          onPress={() => router.push('/body')}
-        />
-        <ListRow
-          leading={<Art art="violet" icon="point.topleft.down.curvedto.point.bottomright.up" seed={5} />}
-          title="Journey"
-          subtitle="How it has moved and changed, in your words"
-          onPress={() => router.push('/journey')}
-        />
-        <ListRow
-          leading={<Art art="amber" icon="waveform" seed={9} />}
-          title="Your plan"
-          subtitle="Where it hurts, your goal, your practice time"
-          onPress={() => setPrefs({ onboarded: false })}
-        />
-        <ListRow
-          leading={<RowIcon name="gearshape" size={56} tint={color.textSecondary} />}
-          title="Settings"
-          subtitle="Reminder, background sound, privacy"
-          onPress={() => router.push('/settings')}
-        />
+      <View style={{ gap: space.m, marginTop: space.xxl }}>
+        <Place title="Your plan" detail="Where it hurts, your goal, your practice time" icon="waveform" onPress={() => setPrefs({ onboarded: false })} />
+        <Place title="Settings" detail="Reminder, background sound, privacy" icon="gearshape" onPress={() => router.push('/settings')} />
       </View>
-    </ScrollView>
+    </TitledScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingHorizontal: space.l },
-  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
-  goal: { paddingHorizontal: space.l, marginTop: space.s },
-  artIcon: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  place: { flexDirection: 'row', alignItems: 'center', gap: space.l, padding: space.l, minHeight: 72 },
+  icon: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.surfaceStrong, alignItems: 'center', justifyContent: 'center' },
 });

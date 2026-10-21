@@ -152,6 +152,7 @@ const GLYPHS: Record<string, string> = {
   'speaker.wave.2.fill': '♪',
   'plus': '+',
   'square.and.pencil': '✎',
+  wind: '≋',
 };
 
 export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: string; weight?: SymbolViewProps['weight'] }) {
