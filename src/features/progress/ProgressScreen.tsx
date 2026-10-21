@@ -233,6 +233,6 @@ const styles = StyleSheet.create({
   marks: { flexDirection: 'row', gap: space.xs, marginTop: space.l, padding: space.m, borderRadius: radius.m, backgroundColor: color.surface },
   mark: { flex: 1, alignItems: 'center', gap: space.xs },
   badge: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  badgeOn: { backgroundColor: 'rgba(242,196,141,0.16)' },
+  badgeOn: { backgroundColor: color.milestoneSoft },
   badgeOff: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.hairline },
 });

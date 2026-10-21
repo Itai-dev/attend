@@ -95,7 +95,7 @@ export function SettingsScreen() {
           <Switch
             value={!!prefs.reminder?.enabled}
             disabled={!remindersAvailable()}
-            trackColor={{ true: color.accent, false: color.surfacePressed }}
+            trackColor={{ true: '#8C8C8C', false: color.surfacePressed }}
             thumbColor="#FFFFFF"
             accessibilityLabel="A gentle reminder"
             onValueChange={async (on) => {
@@ -162,7 +162,7 @@ export function SettingsScreen() {
           }
           style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.surfaceStrong }]}
         >
-          <Txt variant="body" style={{ color: '#FFB4A8' }}>
+          <Txt variant="body" tone="secondary">
             Delete all sessions
           </Txt>
           <Txt variant="footnote" tone="tertiary">
@@ -237,17 +237,17 @@ function DeveloperSettings() {
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Conversational sessions</Txt>
-          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" />
+          <Switch value={!!dev.conversation} onValueChange={(v) => set({ conversation: v })} trackColor={{ true: '#8C8C8C', false: color.surfacePressed }} thumbColor="#FFFFFF" />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Debug panel in sessions</Txt>
-          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" />
+          <Switch value={dev.panel} onValueChange={(v) => set({ panel: v })} trackColor={{ true: '#8C8C8C', false: color.surfacePressed }} thumbColor="#FFFFFF" />
         </View>
         <Hairline />
         <View style={styles.row}>
           <Txt variant="body">Keep transcripts</Txt>
-          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" />
+          <Switch value={dev.keepTranscripts} onValueChange={(v) => set({ keepTranscripts: v })} trackColor={{ true: '#8C8C8C', false: color.surfacePressed }} thumbColor="#FFFFFF" />
         </View>
         <Hairline />
         <View style={styles.textBlock}>

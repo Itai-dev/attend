@@ -122,8 +122,8 @@ export function HomeScreen() {
 
       <View style={styles.quick}>
         <Card label="Flare. A 3-minute session for right now" onPress={() => router.push({ pathname: '/before', params: { preset: 'flare-3' } })} style={styles.quickCard}>
-          <View style={[styles.quickIcon, { backgroundColor: 'rgba(255,195,154,0.16)' }]}>
-            <Icon name="wind" size={18} tint="#FFC39A" />
+          <View style={[styles.quickIcon, { backgroundColor: color.practiceSoft }]}>
+            <Icon name="wind" size={18} tint={color.practice} />
           </View>
           <Txt variant="headline" style={{ marginTop: space.m }}>
             Flare?

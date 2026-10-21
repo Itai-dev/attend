@@ -18,13 +18,14 @@ export type ArtPalette = {
   header: string;
 };
 
+// Grey tones (21 Oct 2026): the weeks and kinds of session differ in lightness, not hue.
 export const ART: Record<ArtKey, ArtPalette> = {
-  violet: { from: '#5A49C2', to: '#1E1648', glow: '#C9BCFF', header: '#3B2F86' },
-  teal: { from: '#1F8576', to: '#0B302B', glow: '#A6EBDB', header: '#175E54' },
-  amber: { from: '#C47A36', to: '#3D1E0C', glow: '#FFD2A8', header: '#80502A' },
-  moss: { from: '#4F8240', to: '#162B12', glow: '#CDEBA6', header: '#355A2B' },
-  night: { from: '#2C3680', to: '#090B22', glow: '#9FA9FF', header: '#222A63' },
-  slate: { from: '#4A4F5E', to: '#16171C', glow: '#D6DAE6', header: '#33363F' },
+  violet: { from: '#5A5A5A', to: '#1C1C1C', glow: '#D6D6D6', header: '#3A3A3A' },
+  teal: { from: '#525252', to: '#191919', glow: '#CCCCCC', header: '#353535' },
+  amber: { from: '#626262', to: '#1F1F1F', glow: '#DEDEDE', header: '#3E3E3E' },
+  moss: { from: '#4C4C4C', to: '#171717', glow: '#C4C4C4', header: '#323232' },
+  night: { from: '#3A3A3A', to: '#0F0F0F', glow: '#ADADAD', header: '#262626' },
+  slate: { from: '#4A4A4A', to: '#161616', glow: '#D0D0D0', header: '#333333' },
 };
 
 /** The program's weeks: Understand, Notice, Soften, Live. */

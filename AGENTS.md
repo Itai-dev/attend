@@ -87,11 +87,12 @@ updating the privacy copy in Settings and the README first.
 
 **Design language, not another app's UX (21 Oct 2026).** The visual system takes its
 cues from Spotify's design approach — near-black base, opaque grey surfaces, bold tight
-type, confident colour, one accent for the one next step — on Apple foundations (system
+type, white for the one next step — in grey tones (21 Oct 2026: hierarchy by lightness,
+weight and size, not hue; only the body map keeps colour) — on Apple foundations (system
 type, SF Symbols, native tabs, springs without bounce). The experience stays Attend's own:
 a wellness program, guided practice, check-ins and progress. No album pages, track lists,
-shelves, "now playing" or play buttons: this is not a media app. Colour (`design/art.ts`)
-names a week or a kind of session, never anything about pain.
+shelves, "now playing" or play buttons: this is not a media app. The greys in
+`design/art.ts` tell weeks and kinds of session apart, never anything about pain.
 
 **Colour is never a verdict.** Dark, calm, no red in the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.

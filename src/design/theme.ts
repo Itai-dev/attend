@@ -1,13 +1,12 @@
 import { Platform, type TextStyle } from 'react-native';
 
 /**
- * Attend's visual language (21 Oct 2026): a listening app, so it borrows the grammar of the
- * best one, Spotify, on Apple foundations. A near-black base, opaque grey surfaces that step
- * up in brightness to show depth, bold system type with tight tracking, generated cover art
- * for every practice, and one bright accent reserved for play.
- *
- * Colour lives in the cover art and the accent. No red anywhere: red would read as "bad",
- * and nothing on these screens is a verdict.
+ * Attend's visual language (21 Oct 2026): Spotify's design approach on Apple foundations,
+ * in grey tones. A near-black base, opaque grey surfaces that step up in brightness to show
+ * depth, bold system type with tight tracking, and white for the one thing to do next.
+ * Hierarchy comes from lightness, weight and size, not hue: nothing competes with the
+ * practice, and nothing on these screens can read as a verdict. The body map keeps its
+ * colours, because there colour names a kind of sensation.
  *
  * Dark only, by design. The product is used with the eyes closed, often at night; a bright
  * screen is the wrong first thing to see on opening them.
@@ -25,16 +24,16 @@ export const color = {
   text: '#FFFFFF',
   textSecondary: '#B3B3B3',
   textTertiary: '#7A7A7A',
-  /** Play, begin, the one thing to do next. Never used for decoration. */
-  accent: '#B9A8FF',
+  /** The one thing to do next: white on the dark, the brightest thing on screen. Never decoration. */
+  accent: '#FFFFFF',
   onAccent: '#0B0B0D',
-  focusRing: '#B9A8FF',
-  /** The program's colour: days done, the week strip, the path. Practice, never pain. */
-  practice: '#B9A8FF',
-  practiceSoft: 'rgba(185,168,255,0.16)',
-  /** Milestones and the person's goal: warm, and only ever about what they did. */
-  milestone: '#F2C48D',
-  milestoneSoft: 'rgba(242,196,141,0.12)',
+  focusRing: '#FFFFFF',
+  /** The program's marks: days done, the week strip, the path. Practice, never pain. */
+  practice: '#E4E4E4',
+  practiceSoft: 'rgba(255,255,255,0.12)',
+  /** Milestones and the person's goal: a softer grey, and only ever about what they did. */
+  milestone: '#C8C8C8',
+  milestoneSoft: 'rgba(255,255,255,0.06)',
 } as const;
 
 export { fieldColor, familyColor } from './palette';

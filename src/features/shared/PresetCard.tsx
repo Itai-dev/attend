@@ -2,14 +2,14 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import type { Preset, PresetCategory } from '@/domain/presets';
 import { Card, Icon, Txt } from '@/design/components';
-import { color, fieldColor, radius, space } from '@/design/theme';
+import { color, radius, space } from '@/design/theme';
 
-/** Each category's colour: from the field palette, soft and cool-to-warm, never red. */
+/** Each category's grey: told apart by lightness, never by hue. */
 export const CATEGORY_COLOR: Record<PresetCategory, string> = {
-  familiar: fieldColor.lilac,
-  flare: fieldColor.apricot,
-  sleep: fieldColor.dusk,
-  worry: fieldColor.seaglass,
+  familiar: '#D6D6D6',
+  flare: '#E8E8E8',
+  sleep: '#A8A8A8',
+  worry: '#C2C2C2',
 };
 
 /** Any-time sessions go through Before too, so where attention rests is chosen with the eyes open. */
