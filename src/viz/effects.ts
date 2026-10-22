@@ -1,26 +1,20 @@
 import { Skia, type SkRuntimeEffect } from '@shopify/react-native-skia';
-import { BODY_SKSL, BREATH_SKSL } from './shaders';
+import { BREATH_SKSL } from './shaders';
 
 /**
- * Effects are compiled lazily, on first use, not at import time: on web,
- * CanvasKit is only loaded once SkiaGate has finished, and compiling earlier
- * would throw.
+ * The breathing orb's shader, compiled lazily on first use, not at import time: on web,
+ * CanvasKit is only loaded once SkiaGate has finished, and compiling earlier would throw.
  */
-const cache: Partial<Record<'body' | 'breath', SkRuntimeEffect | null>> = {};
+let cache: SkRuntimeEffect | null | undefined;
 
-export function effect(name: 'body' | 'breath'): SkRuntimeEffect | null {
-  if (cache[name]) return cache[name]!;
+export function effect(_name: 'breath'): SkRuntimeEffect | null {
+  if (cache !== undefined) return cache;
   try {
-    const e = Skia.RuntimeEffect.Make(name === 'body' ? BODY_SKSL : BREATH_SKSL);
-    if (!e && __DEV__) console.warn(`[attend] ${name} shader failed to compile`);
-    cache[name] = e;
+    cache = Skia.RuntimeEffect.Make(BREATH_SKSL);
+    if (!cache && __DEV__) console.warn('[attend] breath shader failed to compile');
   } catch (err) {
-    if (__DEV__) console.warn(`[attend] ${name} shader error`, err);
-    cache[name] = null;
+    if (__DEV__) console.warn('[attend] breath shader error', err);
+    cache = null;
   }
-  return cache[name]!;
+  return cache;
 }
-
-// The body map is drawn as a dark picture in both appearances: Sumi's charcoal, so at night it
-// fades into the screen with no visible edge, and by day it reads as an inset image on the paper.
-export const BG_RGB: [number, number, number] = [28 / 255, 26 / 255, 23 / 255];

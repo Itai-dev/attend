@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { type ReactNode } from 'react';
 import {
@@ -231,6 +232,11 @@ export function IconButton({
       <Icon name={icon} size={iconSize} tint={tint} />
     </AnimatedPressable>
   );
+}
+
+/** Settings sit behind a gear at the top right of every tab, not in a tab of their own (22 Oct 2026). */
+export function SettingsButton() {
+  return <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={color.textSecondary} iconSize={20} style={{ marginRight: -space.s }} />;
 }
 
 /** A screen with a large title that scrolls with its content, iOS-style. */

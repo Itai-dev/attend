@@ -54,6 +54,7 @@ export function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const { prefs, sessions, setPrefs } = useData();
   const [step, setStep] = useState(0);
+  const [name, setName] = useState(prefs.name ?? '');
   const [where, setWhere] = useState<BodyRegion | undefined>(prefs.place?.region);
   const [painFor, setPainFor] = useState<Prefs['painFor']>(prefs.painFor);
   const [goal, setGoal] = useState<string | undefined>(prefs.goal);
@@ -70,6 +71,7 @@ export function OnboardingScreen() {
     if (remind && !(await requestReminderPermission())) reminder.enabled = false;
     await setPrefs({
       onboarded: true,
+      name: name.trim() || undefined,
       goal: finalGoal,
       painFor,
       place: where && where !== 'whole_body' ? { region: where } : undefined,
@@ -158,7 +160,22 @@ export function OnboardingScreen() {
 
         {step === 2 ? (
           <Animated.View key="2" entering={FadeIn.duration(600)}>
-            <Txt variant="display">Where does it hurt most?</Txt>
+            <Txt variant="display">What should we call you?</Txt>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Your first name"
+              placeholderTextColor={color.textTertiary}
+              accessibilityLabel="Your name"
+              autoCapitalize="words"
+              returnKeyType="done"
+              maxLength={30}
+              style={styles.input}
+            />
+
+            <Txt variant="title2" style={{ marginTop: space.xxl }}>
+              Where does it hurt most?
+            </Txt>
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => (
                 <Chip key={r} label={cap(REGIONS[r].label)} selected={where === r} onPress={() => setWhere(where === r ? undefined : r)} />

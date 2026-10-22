@@ -1,12 +1,12 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { type ReactNode } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import type { BrainPref, InputModePref } from '@/data/types';
-import { haptic, Hairline, QuietButton, Segmented, Txt } from '@/design/components';
+import { haptic, Hairline, Icon, QuietButton, Segmented, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
 import { remindersAvailable, requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { speechModule } from '@/voice/speechModule';
@@ -64,7 +64,11 @@ function Choice({ label, detail, selected, disabled, onPress }: { label: string;
 
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { prefs, setPrefs, deleteAll, deleteSamples, addSamples, hasSamples, sessions } = useData();
+  const { prefs, setPrefs, deleteAll, sessions } = useData();
+  const [name, setName] = useState(prefs.name ?? '');
+  const saveName = () => {
+    if (name.trim() !== (prefs.name ?? '')) void setPrefs({ name: name.trim() || undefined });
+  };
   const realCount = sessions.filter((s) => !s.isSample).length;
 
   return (
@@ -83,7 +87,44 @@ export function SettingsScreen() {
         <QuietButton label="Done" tone="primary" onPress={() => router.back()} />
       </View>
 
-      <Section first>Daily reminder</Section>
+      <Section first>You</Section>
+      <Group>
+        <View style={styles.row}>
+          <Txt variant="body">Name</Txt>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            onBlur={saveName}
+            onSubmitEditing={saveName}
+            placeholder="Add your name"
+            placeholderTextColor={color.textTertiary}
+            accessibilityLabel="Your name"
+            autoCapitalize="words"
+            returnKeyType="done"
+            maxLength={30}
+            style={styles.nameInput}
+          />
+        </View>
+        <Hairline />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            router.back();
+            void setPrefs({ onboarded: false });
+          }}
+          style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.surfaceStrong }]}
+        >
+          <View style={{ flex: 1 }}>
+            <Txt variant="body">Your plan</Txt>
+            <Txt variant="footnote" tone="tertiary">
+              Where it hurts, your goal, your practice time
+            </Txt>
+          </View>
+          <Icon name="chevron.right" size={14} tint={color.textTertiary} />
+        </Pressable>
+      </Group>
+
+      <Section>Daily reminder</Section>
       <Group>
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
@@ -168,13 +209,6 @@ export function SettingsScreen() {
           <Txt variant="footnote" tone="tertiary">
             {realCount === 1 ? '1 session' : `${realCount} sessions`}
           </Txt>
-        </Pressable>
-      </Group>
-
-      <Section>Sample sessions</Section>
-      <Group>
-        <Pressable accessibilityRole="button" onPress={() => (hasSamples ? deleteSamples() : addSamples())} style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.surfaceStrong }]}>
-          <Txt variant="body">{hasSamples ? 'Remove sample sessions' : 'Show sample sessions'}</Txt>
         </Pressable>
       </Group>
 
@@ -298,5 +332,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.l,
   },
   textBlock: { padding: space.l },
+  nameInput: { flex: 1, textAlign: 'right', color: color.text, fontSize: 16, minHeight: HIT, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}) },
   note: { marginTop: space.s, paddingHorizontal: space.xs },
 });

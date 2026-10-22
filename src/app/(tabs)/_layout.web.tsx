@@ -19,9 +19,8 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Today' }} />
-      <Tabs.Screen name="program" options={{ title: 'Program' }} />
-      <Tabs.Screen name="progress" options={{ title: 'Progress' }} />
-      <Tabs.Screen name="you" options={{ title: 'You' }} />
+      <Tabs.Screen name="explore" options={{ title: 'Explore' }} />
+      <Tabs.Screen name="you" options={{ title: prefs.name?.trim() || 'You' }} />
     </Tabs>
   );
 }

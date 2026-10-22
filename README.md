@@ -49,28 +49,25 @@ on-device voice and the local adaptive guide — fully offline.
 ## The loop
 
 ```
-Welcome (a short chat) ──▶ Today / Explore ──tap──▶ Session (eyes closed, voice only) ──▶ Recap ──▶ Journey
+Welcome ──▶ Today / Explore ──▶ Before ──▶ Session (eyes closed, gong to gong) ──▶ Practice complete ──▶ A quote ──▶ Done
 ```
 
-Three tabs: **Today** (the session set up in the welcome, its length, a few others),
-**Explore** (every ready-made session, by what it's for) and **You** (Body, Journey, the
-welcome again, Settings). Each ready-made session (`src/domain/presets.ts`) carries its own
-type, length and voice, so one tap begins it. The welcome (`src/domain/welcome.ts`) asks what
-brings the person here, how much time they have and which voice feels right — never how bad
-anything is — and ends on the safety note. It is spoken (`engine/WelcomeRunner.ts`): the same
-screen and loop as a session, answers understood on the device, voices auditioned by ear. A
-tap-through version is the fallback when listening isn't available or the person prefers it.
+> **22 Oct 2026:** simplified to three tabs. The body map screen, Journey, the session list,
+> sample sessions, and the separate Program and Progress tabs are gone.
 
-1. **Session** — the guide speaks, holds silence, listens, adapts. No tapping, no transcript.
-   Pause / end are there for the eyes-open moments; "pause", "continue", "stop" and "sorry?"
-   also work by voice.
-2. **Recap** — the body map fades in as the eyes open. A short qualitative reflection built
-   only from what was said. "At first / By the end" shows the change on the figure.
-3. **Journey** — earliest map beside the latest, then evidence-backed statements
-   ("Fixed in 4 of your first 4 sessions. Moving or changing in 3 of your last 3."), then
-   every session on a timeline.
-4. **Body** — everything attended to, recent places brighter, and the places returned to in
-   your own words.
+Three tabs: **Today** (the program day's lesson and practice, this week's practice dots, check
+in), **Explore** (after Headspace: ready-made sessions as colour-tile shelves by what they're
+for, and **Sounds**, the four nature recordings on their own, `src/domain/sounds.ts`) and the
+person's own tab, **named for them** (practice stats, milestones, moments toward the goal, the
+pain record). Settings are a gear at the top right of every tab. Each ready-made session
+(`src/domain/presets.ts`) carries its own type, length and voice.
+
+1. **Session** — a gong, then the guide speaks and holds silence. No tapping, no transcript.
+   Pause / end are there for the eyes-open moments. A second gong when it closes.
+2. **Practice complete** — minutes, days this week, the program; one optional tap about how
+   the practice felt; then a closing screen with one quote (`src/domain/quotes.ts`).
+3. **Sounds** — the gong, a nature recording for 10, 20, 30 minutes or until stopped, the
+   gong again. Not counted as practice.
 
 ---
 

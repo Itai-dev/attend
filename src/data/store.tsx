@@ -3,7 +3,6 @@ import { SessionEngine } from '../engine/SessionEngine';
 import type { CheckIn } from '../domain/checkin';
 import type { Session, SessionFeeling, SessionMoment } from '../domain/types';
 import { repository } from './repository';
-import { buildSampleSessions } from './seed';
 import { DEFAULT_PREFS, type Prefs } from './types';
 
 /**
@@ -18,14 +17,11 @@ type DataStore = {
   /** The pain record, newest first. */
   checkIns: CheckIn[];
   prefs: Prefs;
-  hasSamples: boolean;
   refresh(): Promise<void>;
   setPrefs(patch: Partial<Prefs>): Promise<void>;
   saveSession(session: Session, moments: SessionMoment[]): Promise<void>;
   deleteSession(id: string): Promise<void>;
   deleteAll(): Promise<void>;
-  deleteSamples(): Promise<void>;
-  addSamples(): Promise<void>;
   saveCheckIn(c: CheckIn): Promise<void>;
   setFeeling(sessionId: string, feeling: SessionFeeling | null): Promise<void>;
   deleteCheckIn(id: string): Promise<void>;
@@ -72,9 +68,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // catch below left the defaults (onboarded: false) in place and the welcome ran on
       // every launch.
       if (!cancelled) setPrefsState(p);
-      if (!p.samplesSeeded) {
-        for (const s of buildSampleSessions()) await repository.saveSession(s, []);
-        p = await repository.setPrefs({ samplesSeeded: true });
+      // Sample sessions only filled the Journey and Body screens, which are gone (22 Oct 2026):
+      // clear any an older build seeded, once.
+      if (p.samplesSeeded) {
+        await repository.deleteSamples().catch(() => {});
+        p = await repository.setPrefs({ samplesSeeded: false });
       }
       await recoverDraft();
       const list = await repository.listSessions();
@@ -97,7 +95,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       sessions,
       checkIns,
       prefs,
-      hasSamples: sessions.some((s) => s.isSample),
       refresh,
       async setPrefs(patch) {
         setPrefsState(await repository.setPrefs(patch));
@@ -113,14 +110,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       async deleteAll() {
         await repository.deleteAll();
-        await refresh();
-      },
-      async deleteSamples() {
-        await repository.deleteSamples();
-        await refresh();
-      },
-      async addSamples() {
-        for (const s of buildSampleSessions()) await repository.saveSession(s, []);
         await refresh();
       },
       async saveCheckIn(c) {

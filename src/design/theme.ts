@@ -97,7 +97,6 @@ export function useScheme(): 'light' | 'dark' {
   return Platform.OS === 'ios' ? (live === 'light' ? 'light' : 'dark') : atLaunch;
 }
 
-export { fieldColor, familyColor } from './palette';
 
 export const space = { xxs: 2, xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32, xxxl: 48, huge: 72 } as const;
 /** Soft corners: cards like smoothed paper, buttons and chips fully round. */

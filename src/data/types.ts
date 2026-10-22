@@ -43,6 +43,8 @@ export type BrainPref = 'auto' | 'local' | 'claude';
 
 export type Prefs = {
   onboarded: boolean;
+  /** What the person likes to be called: the third tab carries it. Asked in the welcome; optional. */
+  name?: string;
   samplesSeeded: boolean;
   voiceOutput: VoiceOutputPref;
   /**
