@@ -13,7 +13,7 @@ import { Appearance, DynamicColorIOS, Platform, useColorScheme, type ColorValue,
  *   light easing migraine and fibromyalgia pain, University of Arizona). Earthy and low in
  *   saturation, so it soothes rather than signals. Used only for the one thing to do next and
  *   for practice done. Never decoration, never anything about pain, and never red.
- * - The ensō, the brush circle, is the breathing form (design/Enso.tsx).
+ * - The ensō, the brush circle, marks the app's screens (viz/Enso.tsx); sessions show the moving orb (viz/BreathingField.tsx).
  *
  * Colours are dynamic on iOS (DynamicColorIOS), so StyleSheets stay static and still follow
  * the appearance. Where a plain string is needed (Skia, string maths), use `useColors()`.

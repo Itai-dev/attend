@@ -13,4 +13,4 @@ loops from these sources.
 | `ambience-sleep.wav` | Rain through the night, Serrinha do Alambari, Brazil | [aporee_54335_62155](https://archive.org/details/aporee_54335_62155) |
 | `ambience-fear.wav` | Wind in a pine forest, Miren, Slovenia | [aporee_51715_59066](https://archive.org/details/aporee_51715_59066) |
 
-`turn-cue.wav` is the app's own.
+`turn-cue.wav` and `gong.wav` (synthesised by `tools/make-gong.py`) are the app's own.

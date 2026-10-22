@@ -41,6 +41,8 @@ const PREFETCH = 3;
 const CACHE_VERSION = 2;
 const FETCH_TIMEOUT_MS = 10_000;
 const ATTEMPTS = 3;
+/** Under the voice, never over it: the guide plays at full volume. */
+const GONG_VOLUME = 0.55;
 
 function unavailable(message: string): VoiceError {
   return { code: 'network', message };
@@ -63,6 +65,8 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
   private dir: Directory | null = null;
   private inflight = new Map<string, Promise<string | null>>();
   private current?: AudioPlayer;
+  /** Gongs still ringing: they outlive the call that struck them, so the guide can begin over the tail. */
+  private ringing = new Set<AudioPlayer>();
   failures = 0;
 
   constructor(private readonly cfg: ElevenLabsConfig) {}
@@ -189,6 +193,62 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     await this.play(require('../../../assets/audio/turn-cue.wav'), signal, 0.5).catch(() => {});
   }
 
+  /**
+   * The gong that opens and closes a session (assets/audio/gong.wav, made by tools/make-gong.py).
+   * Bundled, so it never waits on the network. Resolves after `ringMs` while the tail keeps
+   * sounding, or once it has rung out; never rejects — a session without a gong still runs.
+   */
+  gong(signal: AbortSignal, ringMs?: number): Promise<void> {
+    if (signal.aborted) return Promise.resolve();
+    let player: AudioPlayer;
+    try {
+      player = createAudioPlayer(require('../../../assets/audio/gong.wav'), { updateInterval: 250, keepAudioSessionActive: true });
+      player.volume = GONG_VOLUME;
+    } catch {
+      return Promise.resolve();
+    }
+    this.ringing.add(player);
+    return new Promise<void>((resolve) => {
+      let resolved = false;
+      const done = () => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(early);
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      };
+      const release = () => {
+        clearTimeout(watchdog);
+        sub.remove();
+        if (!this.ringing.delete(player)) return;
+        try {
+          player.remove();
+        } catch {}
+      };
+      const sub = player.addListener('playbackStatusUpdate', (st: AudioStatus) => {
+        if (st.didJustFinish || st.error) {
+          release();
+          done();
+        }
+      });
+      // A gong that never reports finishing is still let go of.
+      const watchdog = setTimeout(() => {
+        release();
+        done();
+      }, 15_000);
+      const early = ringMs !== undefined ? setTimeout(done, ringMs) : undefined;
+      const onAbort = () => {
+        try {
+          player.pause();
+        } catch {}
+        release();
+        done();
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+      player.play();
+    });
+  }
+
   private play(source: AudioSource, signal: AbortSignal, volume?: number): Promise<void> {
     let player: AudioPlayer;
     try {
@@ -240,6 +300,13 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     try {
       this.current?.pause();
     } catch {}
+    for (const p of this.ringing) {
+      try {
+        p.pause();
+        p.remove();
+      } catch {}
+    }
+    this.ringing.clear();
   }
 
   dispose() {

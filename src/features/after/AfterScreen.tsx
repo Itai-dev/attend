@@ -1,22 +1,24 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
 import { currentTz } from '@/domain/checkin';
 import { milestones, newlyEarned, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM, PROGRAM_DAYS, programDay, type ProgramState } from '@/domain/program';
+import { quoteFor } from '@/domain/quotes';
 import type { Session, SessionFeeling } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, Txt } from '@/design/components';
-import { color, radius, space } from '@/design/theme';
+import { color, radius, serif, space } from '@/design/theme';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { Enso } from '@/viz/Enso';
 
 /**
  * After a guided session: a soft completion moment. What was done (minutes, days this
  * week, the program), how it felt (one optional tap, about the practice, never the pain),
- * any milestone this session earned, and tomorrow. Then Done, and the app is left.
+ * any milestone this session earned, and tomorrow. Then a closing screen (22 Oct 2026): the
+ * practice marked complete and one line to leave on (domain/quotes.ts), and the app is left.
  */
 
 const FEELINGS: Array<{ value: SessionFeeling; label: string }> = [
@@ -58,12 +60,15 @@ export function AfterScreen({ session }: { session: Session }) {
   const dayDone = session.programDay && program.done[session.programDay];
   const next = session.programDay && session.programDay < PROGRAM_DAYS ? programDay(session.programDay + 1) : undefined;
   const early = session.outcome === 'ended_early';
+  const [closing, setClosing] = useState(false);
 
   const done = () => {
     vs.reset();
     if (router.canDismiss()) router.dismissAll();
     router.navigate('/');
   };
+
+  if (closing) return <Closing session={session} dayDone={!!dayDone} onDone={done} />;
 
   return (
     <View style={styles.root}>
@@ -151,14 +156,54 @@ export function AfterScreen({ session }: { session: Session }) {
             Tomorrow · Day {next.day} · {next.lesson.title}
           </Txt>
         ) : null}
-        <PrimaryButton label="Done" onPress={done} />
+        <PrimaryButton label="Continue" onPress={() => setClosing(true)} />
       </View>
+    </View>
+  );
+}
+
+/** The last screen of a session: done, one quiet line, and back to the day. */
+function Closing({ session, dayDone, onDone }: { session: Session; dayDone: boolean; onDone: () => void }) {
+  const insets = useSafeAreaInsets();
+  const quote = useMemo(() => quoteFor(session.id), [session.id]);
+  return (
+    <View style={[styles.root, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.l, paddingHorizontal: space.l }]}>
+      <View style={styles.closing}>
+        <Animated.View entering={ZoomIn.duration(900).easing(Easing.out(Easing.cubic))} style={styles.seal} accessible accessibilityLabel={dayDone ? `Day ${session.programDay} complete` : 'Practice complete'}>
+          <Icon name="checkmark" size={30} tint={color.practice} weight="medium" />
+        </Animated.View>
+        <Animated.View entering={FadeIn.delay(300).duration(1200)}>
+          <Txt variant="caption" align="center" style={{ color: color.practice, letterSpacing: 1.4, marginTop: space.l }}>
+            {dayDone ? `DAY ${session.programDay} COMPLETE` : 'PRACTICE COMPLETE'}
+          </Txt>
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(900).duration(1400)} style={{ marginTop: space.xxxl }}>
+          <Txt variant="title" align="center" style={{ fontFamily: serif.light }}>
+            {quote.text}
+          </Txt>
+          <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>
+            {quote.by}
+          </Txt>
+        </Animated.View>
+      </View>
+      <Animated.View entering={FadeIn.delay(1800).duration(900)}>
+        <PrimaryButton label="Done" onPress={onDone} />
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
+  closing: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.s },
+  seal: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.practiceSoft,
+  },
   tiles: { flexDirection: 'row', gap: space.s, marginTop: space.xl },
   tile: {
     flex: 1,

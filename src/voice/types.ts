@@ -57,6 +57,11 @@ export interface SpeechOutput {
   speak(text: string, signal: AbortSignal): Promise<void>;
   /** A short sound that says "your turn", played after a question and before listening. Never rejects. */
   cue?(signal: AbortSignal): Promise<void>;
+  /**
+   * The gong that opens and closes a session. Resolves after `ringMs` (the tail keeps sounding)
+   * or once it has rung out, and immediately when aborted. Never rejects.
+   */
+  gong?(signal: AbortSignal, ringMs?: number): Promise<void>;
   stop(): void;
   begin?(): Promise<void>;
   end?(): Promise<void>;

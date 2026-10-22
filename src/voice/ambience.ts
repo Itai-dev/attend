@@ -15,13 +15,14 @@ import type { SessionStatus } from './VoiceSessionProvider';
  * the loudest thing an eyes-closed person hears. Paused or ended, it fades away.
  */
 
-// The recordings are levelled to -24 dBFS RMS, quieter than the old synthesised beds, so these
-// sit a little higher; still well under the voice.
+// Quiet by default (22 Oct 2026): at 0.17 under the voice the founder heard the water and wind
+// as noise over the guide. Now about 9 dB lower while the guide speaks, so the voice is always
+// clearly in front, and only a little fuller in the silences — a place, not a soundtrack.
 const LEVEL: Partial<Record<SessionStatus, number>> = {
-  preparing: 0.24,
-  speaking: 0.17,
-  holding: 0.3,
-  listening: 0.15,
+  preparing: 0.09,
+  speaking: 0.06,
+  holding: 0.12,
+  listening: 0.06,
 };
 const FADE_MS = 1200;
 const STEP_MS = 60;
