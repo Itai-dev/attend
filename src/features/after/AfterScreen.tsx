@@ -10,7 +10,7 @@ import { EMPTY_PROGRAM, PROGRAM_DAYS, programDay, type ProgramState } from '@/do
 import { quoteFor } from '@/domain/quotes';
 import type { Session, SessionFeeling } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, QuietButton, Txt } from '@/design/components';
-import { color, radius, serif, space } from '@/design/theme';
+import { color, radius, space } from '@/design/theme';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { Enso } from '@/viz/Enso';
 
@@ -192,7 +192,7 @@ function Closing({ session, dayDone, onDone }: { session: Session; dayDone: bool
           </Txt>
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(900).duration(1400)} style={{ marginTop: space.xxxl }}>
-          <Txt variant="title" align="center" style={{ fontFamily: serif.light }}>
+          <Txt variant="title" align="center" style={{ fontWeight: '500' }}>
             {quote.text}
           </Txt>
           <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>

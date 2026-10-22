@@ -1,4 +1,3 @@
-import { Newsreader_300Light, Newsreader_400Regular, Newsreader_500Medium, useFonts } from '@expo-google-fonts/newsreader';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -22,14 +21,11 @@ function useNavTheme() {
 
 function RootStack() {
   const { ready } = useData();
-  // The serif is part of the design, not decoration: the splash stays until it has loaded,
-  // so titles never flash in a fallback face.
-  const [fontsLoaded, fontError] = useFonts({ Newsreader_300Light, Newsreader_400Regular, Newsreader_500Medium });
-  const fonts = fontsLoaded || !!fontError;
+  // The fonts are the system's own (SF and SF Pro Rounded): nothing to load before the splash goes.
   useEffect(() => {
-    if (ready && fonts) SplashScreen.hideAsync().catch(() => {});
-  }, [ready, fonts]);
-  if (!ready || !fonts) return <View style={{ flex: 1, backgroundColor: color.bg }} />;
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+  if (!ready) return <View style={{ flex: 1, backgroundColor: color.bg }} />;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
       <Stack.Screen name="(tabs)" />

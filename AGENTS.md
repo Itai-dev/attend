@@ -88,7 +88,7 @@ updating the privacy copy in Settings and the README first.
 **Design: a quiet Japanese clinic (21 Oct 2026).** Washi by day (warm paper, sumi ink)
 and Sumi at night (warm charcoal, rice-paper text), following the phone's appearance so a
 session opened at night never starts bright. Ma — room around everything, soft corners,
-soft shadows, few boxes. A light serif for titles (Newsreader), the system sans for the rest.
+soft shadows, few boxes. San Francisco only (22 Oct 2026): SF Pro Rounded for titles, regular SF for the rest; no serif.
 One leading colour, moss, for the one next step and practice done, chosen for calm (green,
 never red; see `design/theme.ts`). The ensō (`viz/Enso.tsx`) marks the app's other screens;
 the session itself shows the moving orb (`viz/BreathingField.tsx`, 22 Oct 2026: the still ensō
