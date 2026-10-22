@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
@@ -9,8 +9,8 @@ import { milestones, newlyEarned, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM, PROGRAM_DAYS, programDay, type ProgramState } from '@/domain/program';
 import { quoteFor } from '@/domain/quotes';
 import type { Session, SessionFeeling } from '@/domain/types';
-import { Chip, Icon, PrimaryButton, Txt } from '@/design/components';
-import { color, radius, serif, space } from '@/design/theme';
+import { Chip, Icon, PrimaryButton, QuietButton, Txt } from '@/design/components';
+import { color, radius, space } from '@/design/theme';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { Enso } from '@/viz/Enso';
 
@@ -35,6 +35,20 @@ function withoutDay(p: ProgramState, day?: number): ProgramState {
   const done = { ...p.done };
   delete done[day];
   return { ...p, done };
+}
+
+/** Straight after a session. Every session ends here now: no recap map, no journey (22 Oct 2026). */
+export function RecapRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { sessions } = useData();
+  const session = sessions.find((s) => s.id === id);
+  if (session) return <AfterScreen session={session} />;
+  return (
+    <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
+      <Txt tone="secondary">This session is no longer here.</Txt>
+      <QuietButton label="Back" onPress={() => router.navigate('/')} />
+    </View>
+  );
 }
 
 export function AfterScreen({ session }: { session: Session }) {
@@ -178,7 +192,7 @@ function Closing({ session, dayDone, onDone }: { session: Session; dayDone: bool
           </Txt>
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(900).duration(1400)} style={{ marginTop: space.xxxl }}>
-          <Txt variant="title" align="center" style={{ fontFamily: serif.light }}>
+          <Txt variant="title" align="center" style={{ fontWeight: '500' }}>
             {quote.text}
           </Txt>
           <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>

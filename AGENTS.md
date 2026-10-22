@@ -88,7 +88,7 @@ updating the privacy copy in Settings and the README first.
 **Design: a quiet Japanese clinic (21 Oct 2026).** Washi by day (warm paper, sumi ink)
 and Sumi at night (warm charcoal, rice-paper text), following the phone's appearance so a
 session opened at night never starts bright. Ma — room around everything, soft corners,
-soft shadows, few boxes. A light serif for titles (Newsreader), the system sans for the rest.
+soft shadows, few boxes. San Francisco only (22 Oct 2026): SF Pro Rounded for titles, regular SF for the rest; no serif.
 One leading colour, moss, for the one next step and practice done, chosen for calm (green,
 never red; see `design/theme.ts`). The ensō (`viz/Enso.tsx`) marks the app's other screens;
 the session itself shows the moving orb (`viz/BreathingField.tsx`, 22 Oct 2026: the still ensō
@@ -96,8 +96,15 @@ read as static mid-practice), light on charcoal at night and an ink wash on pape
 opens and closes every session (`tools/make-gong.py`); under it, real nature recordings kept
 quiet, well under the voice (`tools/make-ambience.py`, `voice/ambience.ts`). After the
 completion moment, a closing screen with one quote (`domain/quotes.ts`): about practice and
-attention, never pain or healing. The experience stays Attend's
-own — no album pages, shelves, "now playing" or play buttons; this is not a media app.
+attention, never pain or healing.
+
+**Three tabs, kept simple (22 Oct 2026).** Today (the day's lesson and practice, the week's
+dots, check in), Explore (after Headspace: sessions as colour-tile shelves by what they're for,
+and the four nature sounds on their own, `domain/sounds.ts`), and the person's own tab, named
+for them (practice, milestones, the pain record). Settings are the gear at the top right of
+each tab. Removed on purpose: the body map screen, Journey, the list of past sessions, sample
+sessions, separate Program and Progress tabs. Don't bring them back as "normal" features.
+Explore's tiles use muted Japanese dye colours (`design/art.ts`); still no red.
 
 **Colour is never a verdict.** Calm, no red anywhere, including the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.

@@ -1,14 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { extract } from '../src/domain/extract';
-import { analyzeJourney } from '../src/domain/journey';
 import { buildRecap } from '../src/domain/recap';
 import { speakPlace, labelPlace } from '../src/domain/regions';
 import { screen, violatesGuideLanguage } from '../src/domain/safety';
 import { EMPTY_SIGNALS } from '../src/domain/types';
-import { buildSampleSessions } from '../src/data/seed';
 import * as L from '../src/engine/guide/lines';
-import { compositeMap, fieldsFor, MAX_FIELDS, xFor } from '../src/viz/bodyUniforms';
 
 test('extract: place, side and word from a natural sentence', () => {
   const o = extract('My neck feels really tight on the left side.');
@@ -110,35 +107,4 @@ test('recap: a safety pause never describes or reinterprets the sensation', () =
   const r = buildRecap({ sessionType: 'notice', outcome: 'safety_pause', bodyMapStart: { sensations: [] }, bodyMapEnd: { sensations: [] }, changes: [], signals: EMPTY_SIGNALS });
   assert.match(r.summary, /doctor|medical/);
   assert.doesNotMatch(r.summary, /safe\b|harmless|nothing to worry/);
-});
-
-test('journey: the sample story produces evidence-backed insights, and none from too little', () => {
-  const samples = buildSampleSessions(Date.UTC(2026, 9, 3));
-  const a = analyzeJourney(samples, Date.UTC(2026, 9, 3));
-  const ids = a.insights.map((i) => i.id);
-  assert.ok(ids.includes('variability'), ids.join());
-  assert.ok(ids.includes('acceptance'), ids.join());
-  for (const i of a.insights) assert.match(i.evidence, /\d/);
-  const few = analyzeJourney(samples.slice(0, 2));
-  assert.equal(few.insights.length, 0);
-  assert.ok(few.placeholder);
-});
-
-test('journey: no score is ever produced', () => {
-  const a = analyzeJourney(buildSampleSessions());
-  for (const i of a.insights) assert.doesNotMatch(i.text, /%|score|\/10|out of/);
-});
-
-test('body map: front and back mirror the sides', () => {
-  assert.ok(xFor('shoulder', 'left', 'front')[0] > 0);
-  assert.ok(xFor('shoulder', 'left', 'back')[0] < 0);
-  assert.equal(xFor('shoulder', 'bilateral', 'front').length, 2);
-  assert.deepEqual(xFor('neck', undefined, 'back'), [0]);
-});
-
-test('body map: never more fields than the shader holds', () => {
-  const comp = compositeMap(buildSampleSessions());
-  const sensations = Array.from({ length: 9 }, (_, i) => ({ id: String(i), region: 'knee' as const, side: 'bilateral' as const, descriptors: [], userLanguage: [] }));
-  assert.ok(fieldsFor({ sensations }, 'front').length <= MAX_FIELDS);
-  assert.ok(comp.map.sensations.length <= MAX_FIELDS);
 });

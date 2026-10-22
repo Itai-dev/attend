@@ -38,7 +38,7 @@ const RELEASE_MS = 1200;
 const ease = (t: number) => t * t * (3 - 2 * t);
 
 // Named one by one: Metro bundles only the files it can see required.
-const BEDS: Record<SessionType, number> = {
+export const BEDS: Record<SessionType, number> = {
   notice: require('../../assets/audio/ambience-notice.wav'),
   flare: require('../../assets/audio/ambience-flare.wav'),
   sleep: require('../../assets/audio/ambience-sleep.wav'),

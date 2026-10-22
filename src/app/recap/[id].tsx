@@ -1,1 +1,1 @@
-export { RecapRoute as default } from '@/features/recap/RecapScreen';
+export { RecapRoute as default } from '@/features/after/AfterScreen';

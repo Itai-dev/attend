@@ -6,8 +6,7 @@ import { Appearance, DynamicColorIOS, Platform, useColorScheme, type ColorValue,
  * light and dark setting, so a session opened at night never starts with a bright screen.
  *
  * - Ma: room around everything, few boxes, soft corners and soft shadows instead of edges.
- * - Type: a light serif for what you read as a title (Newsreader), the system sans for the
- *   rest. Gentle, not bold.
+ * - Type: San Francisco — SF Pro Rounded for titles, regular SF for the rest. Gentle, not bold.
  * - One leading colour, moss: green is the hue most linked with calm and restoration (lower
  *   heart rate in green surroundings, Frontiers in Psychology 2019; early trials of green
  *   light easing migraine and fibromyalgia pain, University of Arizona). Earthy and low in
@@ -97,7 +96,6 @@ export function useScheme(): 'light' | 'dark' {
   return Platform.OS === 'ios' ? (live === 'light' ? 'light' : 'dark') : atLaunch;
 }
 
-export { fieldColor, familyColor } from './palette';
 
 export const space = { xxs: 2, xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32, xxxl: 48, huge: 72 } as const;
 /** Soft corners: cards like smoothed paper, buttons and chips fully round. */
@@ -107,22 +105,26 @@ export const radius = { xs: 6, s: 10, m: 16, l: 22, pill: 999 } as const;
 export const HIT = 44;
 
 const sans = Platform.select({ web: 'system-ui, -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif', default: undefined });
-/** Loaded in app/_layout.tsx before anything renders. */
-export const serif = { light: 'Newsreader_300Light', regular: 'Newsreader_400Regular', medium: 'Newsreader_500Medium' } as const;
+/**
+ * SF Pro Rounded, the system font's rounded design: iOS gives it to React Native as
+ * 'ui-rounded', with every weight, so nothing is bundled or loaded. Android falls back to Roboto.
+ */
+export const rounded = Platform.select({ ios: 'ui-rounded', web: 'ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif', default: undefined });
 
 /**
- * Titles in a light serif with open tracking; everything read in passing in the system sans.
- * Hierarchy from size and leading, not weight: nothing on these screens raises its voice.
+ * San Francisco throughout (22 Oct 2026, replacing the Newsreader serif): titles in SF Pro
+ * Rounded — soft, friendly, calm — and everything read in passing in regular SF. Hierarchy from
+ * size and a medium-to-semibold weight; nothing on these screens is heavy or shouts.
  */
 export const type = {
-  display: { fontFamily: serif.light, fontSize: 36, lineHeight: 42, fontWeight: '400', letterSpacing: -0.4 },
-  title: { fontFamily: serif.regular, fontSize: 27, lineHeight: 33, fontWeight: '400', letterSpacing: -0.3 },
-  title2: { fontFamily: serif.regular, fontSize: 22, lineHeight: 28, fontWeight: '400', letterSpacing: -0.2 },
-  headline: { fontFamily: serif.regular, fontSize: 19, lineHeight: 24, fontWeight: '400', letterSpacing: -0.1 },
-  body: { fontFamily: sans, fontSize: 16, lineHeight: 24, fontWeight: '400', letterSpacing: -0.1 },
-  callout: { fontFamily: sans, fontSize: 14, lineHeight: 20, fontWeight: '400', letterSpacing: 0 },
+  display: { fontFamily: rounded, fontSize: 34, lineHeight: 41, fontWeight: '600', letterSpacing: 0.2 },
+  title: { fontFamily: rounded, fontSize: 26, lineHeight: 32, fontWeight: '600', letterSpacing: 0.2 },
+  title2: { fontFamily: rounded, fontSize: 21, lineHeight: 26, fontWeight: '600', letterSpacing: 0.2 },
+  headline: { fontFamily: rounded, fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: 0 },
+  body: { fontFamily: sans, fontSize: 16, lineHeight: 24, fontWeight: '400', letterSpacing: -0.2 },
+  callout: { fontFamily: sans, fontSize: 14, lineHeight: 20, fontWeight: '400', letterSpacing: -0.1 },
   footnote: { fontFamily: sans, fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: 0 },
-  caption: { fontFamily: sans, fontSize: 11, lineHeight: 14, fontWeight: '600', letterSpacing: 1.2 },
+  caption: { fontFamily: rounded, fontSize: 11, lineHeight: 14, fontWeight: '700', letterSpacing: 1.2 },
 } satisfies Record<string, TextStyle>;
 
 export type TypeVariant = keyof typeof type;

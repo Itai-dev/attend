@@ -9,7 +9,7 @@ import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { voiceFor } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
 import { speakPlace } from '@/domain/regions';
-import { Card, haptic, Icon, PrimaryButton, Txt } from '@/design/components';
+import { Card, haptic, Icon, PrimaryButton, SettingsButton, Txt } from '@/design/components';
 import { Pill } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
 import { scheduleReminders } from '@/voice/reminders';
@@ -18,9 +18,9 @@ import { greeting } from '../shared/format';
 import { WeekStrip } from '../shared/WeekStrip';
 
 /**
- * Today: one next step. The day's lesson and practice, this week's practice days, a way in
- * for a flare, a check-in, and the person's goal. The pain record isn't here — Today is
- * about doing, Progress is for looking back (docs/RESEARCH.md §5).
+ * Today: one next step. The day's lesson and practice, this week's practice days, and a
+ * quiet way to check in. Kept this simple on purpose (22 Oct 2026): other sessions live in
+ * Explore, the record and milestones on the person's own tab, settings behind the gear.
  */
 
 export function HomeScreen() {
@@ -36,7 +36,6 @@ export function HomeScreen() {
   const stats = useMemo(() => practiceStats(sessions, now, tz), [sessions, now, tz]);
   const place = latestPlace(checkIns) ?? prefs.place;
   const restsOn = today.practice.theme === 'open' || !place ? 'the body as a whole' : speakPlace(place.region, place.side);
-  const lastMoment = prefs.moments?.[0];
 
   // Keep the reminder in step with the latest practice: daily while practising, weekly after
   // four quiet days (voice/reminders.ts). Rescheduling is idempotent.
@@ -61,8 +60,11 @@ export function HomeScreen() {
     >
       <View style={styles.head}>
         <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
-          {greeting()}
+          {prefs.name?.trim() ? `${greeting().replace(/\.$/, '')},\n${prefs.name.trim()}.` : greeting()}
         </Txt>
+        <SettingsButton />
+      </View>
+      <View style={{ flexDirection: 'row', marginTop: space.m }}>
         <Pill label={finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`} />
       </View>
 
@@ -113,60 +115,29 @@ export function HomeScreen() {
         )}
       </Card>
 
-      <View style={styles.quick}>
-        <Card label="Flare. A 3-minute session for right now" onPress={() => router.push({ pathname: '/before', params: { preset: 'flare-3' } })} style={styles.quickCard}>
-          <View style={[styles.quickIcon, { backgroundColor: color.practiceSoft }]}>
-            <Icon name="wind" size={18} tint={color.practice} />
-          </View>
-          <Txt variant="headline" style={{ marginTop: space.m }}>
-            Flare?
-          </Txt>
-          <Txt variant="footnote" tone="secondary" style={{ marginTop: 2 }}>
-            A 3-minute session for right now
-          </Txt>
-        </Card>
-        <Card label="Check in. How it is today, and where" onPress={() => router.push('/checkin')} style={styles.quickCard}>
-          <View style={[styles.quickIcon, { backgroundColor: color.practiceSoft }]}>
-            <Icon name="square.and.pencil" size={17} tint={color.practice} />
-          </View>
-          <Txt variant="headline" style={{ marginTop: space.m }}>
-            Check in
-          </Txt>
-          <Txt variant="footnote" tone="secondary" style={{ marginTop: 2 }}>
+      <Card label="Check in. How it is today, and where" onPress={() => router.push('/checkin')} style={styles.checkin}>
+        <View style={[styles.quickIcon, { backgroundColor: color.practiceSoft }]}>
+          <Icon name="square.and.pencil" size={17} tint={color.practice} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Txt variant="headline">Check in</Txt>
+          <Txt variant="footnote" tone="secondary">
             How it is today, and where
           </Txt>
-        </Card>
-      </View>
-
-      {prefs.goal ? (
-        <Card style={styles.goal}>
-          <Txt variant="caption" style={{ color: color.milestone, letterSpacing: 1.2 }}>
-            TOWARD · {prefs.goal.toUpperCase()}
-          </Txt>
-          <Txt variant="callout" style={{ marginTop: space.xs }}>
-            {lastMoment ? `Last moment you saved: “${lastMoment.text}”` : 'Did something toward it today, however small? Save it as a moment.'}
-          </Txt>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={styles.goalLink} hitSlop={8}>
-            <Txt variant="callout" style={{ color: color.milestone }}>
-              Save a moment
-            </Txt>
-          </Pressable>
-        </Card>
-      ) : null}
+        </View>
+        <Icon name="chevron.right" size={14} tint={color.textTertiary} />
+      </Card>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: space.m },
+  head: { flexDirection: 'row', alignItems: 'flex-start', gap: space.m },
   today: { marginTop: space.xl, padding: space.l + 4, gap: space.m, borderRadius: radius.l },
   kicker: { color: color.practice, letterSpacing: 1.4 },
   step: { flexDirection: 'row', alignItems: 'center', gap: space.m, minHeight: HIT },
   mark: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: color.text, alignItems: 'center', justifyContent: 'center' },
   markDone: { borderWidth: 0, backgroundColor: color.practiceSoft },
-  quick: { flexDirection: 'row', gap: space.m, marginTop: space.m },
-  quickCard: { flex: 1, padding: space.l, minHeight: 112, borderRadius: radius.l },
+  checkin: { flexDirection: 'row', alignItems: 'center', gap: space.l, marginTop: space.m, padding: space.l, borderRadius: radius.l },
   quickIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  goal: { marginTop: space.m, padding: space.l, borderRadius: radius.l, backgroundColor: color.milestoneSoft },
-  goalLink: { minHeight: 36, justifyContent: 'center', marginTop: space.xs, alignSelf: 'flex-start' },
 });

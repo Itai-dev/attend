@@ -3,7 +3,11 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useData } from '@/data/store';
 import { color } from '@/design/theme';
 
-/** Four places: Today (the day's lesson and practice), Program (the 28 days and any-time sessions), Progress (practice and the pain record), You. */
+/**
+ * Three places (22 Oct 2026, simpler, after Headspace): Today (the day's lesson and practice),
+ * Explore (sessions and nature sounds), and the person's own tab, named for them. Settings
+ * are the gear at the top right of each.
+ */
 export default function TabsLayout() {
   const { prefs } = useData();
   if (!prefs.onboarded) return <Redirect href="/onboarding" />;
@@ -11,19 +15,15 @@ export default function TabsLayout() {
     <NativeTabs tintColor={color.text} iconColor={{ default: color.textTertiary, selected: color.text }} labelStyle={{ color: color.textTertiary }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'circle.circle', selected: 'circle.circle.fill' }} md="radio_button_checked" />
+        <NativeTabs.Trigger.Icon sf={{ default: 'sun.horizon', selected: 'sun.horizon.fill' }} md="wb_twilight" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="program">
-        <NativeTabs.Trigger.Label>Program</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'point.topleft.down.to.point.bottomright.curvepath', selected: 'point.topleft.down.to.point.bottomright.curvepath.fill' }} md="route" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="progress">
-        <NativeTabs.Trigger.Label>Progress</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} md="bar_chart" />
+      <NativeTabs.Trigger name="explore">
+        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }} md="grid_view" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="you">
-        <NativeTabs.Trigger.Label>You</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} md="person" />
+        <NativeTabs.Trigger.Label>{prefs.name?.trim() || 'You'}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} md="account_circle" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

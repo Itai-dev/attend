@@ -18,21 +18,26 @@ export type ArtPalette = {
   header: string;
 };
 
-// Grey tones (21 Oct 2026): the weeks and kinds of session differ in lightness, not hue.
+// Colour returns for Explore (22 Oct 2026, after Headspace's tiles): muted Japanese dyes, so the
+// shelves are told apart at a glance and still feel calm. Indigo, moss, ochre, wisteria, night,
+// river blue. Earthy and low in saturation; no red, and no colour ever says anything about pain.
 export const ART: Record<ArtKey, ArtPalette> = {
-  violet: { from: '#5A5A5A', to: '#1C1C1C', glow: '#D6D6D6', header: '#3A3A3A' },
-  teal: { from: '#525252', to: '#191919', glow: '#CCCCCC', header: '#353535' },
-  amber: { from: '#626262', to: '#1F1F1F', glow: '#DEDEDE', header: '#3E3E3E' },
-  moss: { from: '#4C4C4C', to: '#171717', glow: '#C4C4C4', header: '#323232' },
-  night: { from: '#3A3A3A', to: '#0F0F0F', glow: '#ADADAD', header: '#262626' },
-  slate: { from: '#4A4A4A', to: '#161616', glow: '#D0D0D0', header: '#333333' },
+  violet: { from: '#8C7BA8', to: '#4A3F63', glow: '#E4DAF2', header: '#5E5278' },
+  teal: { from: '#5E8E92', to: '#2B4A50', glow: '#D2ECEC', header: '#3C6066' },
+  amber: { from: '#C49A5C', to: '#7A5A2E', glow: '#F6E2BE', header: '#8E6C3C' },
+  moss: { from: '#7F9A68', to: '#3E5233', glow: '#E0ECCF', header: '#556B46' },
+  night: { from: '#4A5878', to: '#1D2438', glow: '#C9D3EC', header: '#2E3850' },
+  slate: { from: '#6F8BA6', to: '#33475E', glow: '#D8E6F2', header: '#46607A' },
 };
 
 /** The program's weeks: Understand, Notice, Soften, Live. */
 export const WEEK_ART: Record<1 | 2 | 3 | 4, ArtKey> = { 1: 'violet', 2: 'teal', 3: 'amber', 4: 'moss' };
 
 /** Any-time sessions, by what they're for. */
-export const CATEGORY_ART = { familiar: 'violet', flare: 'amber', sleep: 'night', worry: 'teal' } as const satisfies Record<string, ArtKey>;
+export const CATEGORY_ART = { familiar: 'moss', flare: 'amber', sleep: 'night', worry: 'violet' } as const satisfies Record<string, ArtKey>;
+
+/** The nature sounds in Explore: stream, waves, rain, wind. */
+export const SOUND_ART = { notice: 'teal', flare: 'slate', sleep: 'night', fear: 'moss' } as const satisfies Record<string, ArtKey>;
 
 /** Where the two glows sit, varied by a seed so two covers of one colour still differ. */
 export function glowSpots(seed: number): Array<{ x: number; y: number; r: number; a: number }> {
