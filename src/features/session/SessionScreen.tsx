@@ -11,8 +11,7 @@ import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components
 import { color, space } from '@/design/theme';
 import { SESSION_LENGTHS } from '@/engine/phases';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
-import type { BreathMode } from '@/viz/BreathingField';
-import { Enso } from '@/viz/Enso';
+import { BreathingField, type BreathMode } from '@/viz/BreathingField';
 import { clock } from '../shared/format';
 import { DevPanel } from './DevPanel';
 
@@ -105,7 +104,8 @@ export function SessionScreen() {
     <View style={styles.root}>
       <StatusBar hidden />
       {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
-      <Enso width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
+      {/* The moving orb, not the ensō (22 Oct 2026): a still line read as static during a session. */}
+      <BreathingField width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
         <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="none">
@@ -207,8 +207,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
   status: { letterSpacing: 2, textTransform: 'uppercase', fontSize: 11 },
-  // Below the ensō, never across it.
-  hint: { position: 'absolute', left: space.xl, right: space.xl, top: '71%', gap: 2 },
+  // Below the orb, never across it.
+  hint: { position: 'absolute', left: space.xl, right: space.xl, top: '66%', gap: 2 },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
   buttons: { flexDirection: 'row', gap: space.xxl },
   confirm: { marginBottom: space.m },

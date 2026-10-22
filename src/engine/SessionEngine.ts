@@ -165,6 +165,11 @@ export class SessionEngine {
     return this._phase === 'DONE';
   }
 
+  /** Ended by its own closing (completed, or "stop" said and closed gently), not by a safety pause. */
+  get closedCalmly(): boolean {
+    return this.outcome === 'completed' || this.outcome === 'ended_early';
+  }
+
   get elapsedMs(): number {
     return this.now() - this.startedAt;
   }
@@ -370,6 +375,8 @@ export class SessionEngine {
 
   /** Paused mid-turn: the next turn starts with "Let's continue." and asks again. */
   markInterrupted(): void {
+    // Paused before the guide had said anything (during the opening gong): there is nothing to continue.
+    if (this.history.length === 0) return;
     this.resumed = true;
     // If the guide's question was cut off or never answered, it is asked again.
     const last = this.history[this.history.length - 1];

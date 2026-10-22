@@ -241,6 +241,8 @@ uniform float uListen;
 uniform float uLevel;
 uniform float uDim;
 uniform float3 uBg;
+uniform float3 uInk;
+uniform float uPaper;
 
 float hash(float2 p) {
   return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
@@ -303,7 +305,12 @@ half4 main(float2 fragCoord) {
 
   col = float3(1.0) - exp(-col * 1.35);
   float grain = (hash(fragCoord + fract(t * 0.37)) - 0.5) * 0.014;
-  col = uBg + col * (1.0 - uBg) + grain;
+  // Sumi (night): light on charcoal, as it always was. Washi (day): the same form as a soft
+  // ink wash on the paper, so a daytime session is not a dark rectangle on a light app.
+  float3 onDark = uBg + col * (1.0 - uBg);
+  float wash = clamp(dot(col, float3(0.3333)) * 0.9, 0.0, 1.0);
+  float3 onPaper = mix(uBg, uInk, wash);
+  col = mix(onDark, onPaper, uPaper) + grain;
   return half4(col, 1.0);
 }
 `;

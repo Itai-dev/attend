@@ -40,6 +40,11 @@ export type RunnerDeps = {
 };
 
 const END_OF_UTTERANCE_MS = 1700;
+/**
+ * The opening gong rings for this long before the guide's first word; its tail fades under the
+ * voice. The closing gong is let ring out in full: it is the last thing heard before the eyes open.
+ */
+export const OPENING_GONG_MS = 4000;
 
 function withTimeout<T>(p: Promise<T> | undefined, ms: number): Promise<T | undefined> {
   if (!p) return Promise.resolve(undefined);
@@ -93,6 +98,8 @@ export class SessionRunner {
     }
 
     try {
+      // A gong opens the practice (22 Oct 2026): a clear start the person hears with eyes closed.
+      await this.gong(OPENING_GONG_MS);
       while (!engine.done && !this.hardStop) {
         await this.waitWhilePaused();
         if (this.hardStop) break;
@@ -143,6 +150,9 @@ export class SessionRunner {
         this.d.onDraft?.(engine.toDraft());
         if (outcome.command === 'pause') await this.voicePause();
       }
+      // And one closes it, once the closing lines have been said. Not after End (the person has
+      // already opened their eyes and tapped) and not after a safety pause, which ends on care, not ceremony.
+      if (engine.done && !this.hardStop && engine.closedCalmly) await this.gong();
     } finally {
       this.unsubLevel?.();
       this.d.voice.output.stop();
@@ -218,6 +228,17 @@ export class SessionRunner {
         await sleep(line.pauseAfterMs, signal);
       }
     }
+  }
+
+  private async gong(ringMs?: number) {
+    const out = this.d.voice.output;
+    if (!out.gong || this.hardStop) return;
+    await this.waitWhilePaused();
+    if (this.hardStop) return;
+    const step = (this.step = new AbortController());
+    this.set('holding');
+    this.debug('system', 'gong');
+    await out.gong(step.signal, ringMs);
   }
 
   /** A step was aborted by pause or end. Pauses resume with "Let's continue." */
