@@ -25,7 +25,7 @@ export type ElevenLabsConfig = {
   apiUrl: string;
   headers?: Record<string, string>;
   voiceId: string;
-  /** ElevenLabs v4 delivery tags spoken before every line, e.g. "[softly] [slowly]". From the guide script. */
+  /** Delivery tags sent before every line, from the guide script. Empty by default: tags made the voice whisper mid-line. */
   direction?: () => string;
   /** Voice settings from the session type's ElevenLabs agent. Part of the cache key, so a change re-records. */
   settings?: { speed?: number; stability?: number; similarity?: number };

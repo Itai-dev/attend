@@ -330,6 +330,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: HIT + 8,
     paddingHorizontal: space.l,
+    // A row with a second line (the reminder, "Your plan") outgrows minHeight; without this
+    // its title sat flush against the top of the card.
+    paddingVertical: space.m,
+    gap: space.m,
   },
   textBlock: { padding: space.l },
   nameInput: { flex: 1, textAlign: 'right', color: color.text, fontSize: 16, minHeight: HIT, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}) },
