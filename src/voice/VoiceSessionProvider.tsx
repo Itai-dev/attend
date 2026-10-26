@@ -159,7 +159,7 @@ function knownVoice(id?: string): string | undefined {
  * ElevenLabs' v3-family models re-perform every line, and at lower stability two lines in one
  * session can sound like different people. "Robust" (1) keeps one voice and one manner across
  * the whole session; consistency matters more here than expressiveness. Pace comes from the
- * agent's speed and the script's [slowly] direction.
+ * agent's speed alone: delivery tags made the voice whisper and creak (see guideScript.ts).
  */
 export const GUIDE_STABILITY = 1;
 

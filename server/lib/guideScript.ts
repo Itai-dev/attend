@@ -27,9 +27,11 @@
  *   - Safety and crisis lines are deliberately not here: they stay fixed in the
  *     app and can't be changed remotely.
  *
- * voice.direction is read by ElevenLabs v4 before every line — delivery tags
- * like [softly] [slowly] [whispers] [long pause]. Changing it re-records every
- * line on next use.
+ * voice.direction is sent to ElevenLabs before every line — delivery tags like
+ * [softly] or [slowly]. Keep it empty (26 Oct 2026): with "[softly] [slowly]" the
+ * voice slid into a whisper and a low creak partway through lines, so words seemed
+ * to cut out and list words ("tingling", "buzzing") came out in a different voice.
+ * Pace comes from the agent's speed instead. Changing it re-records every line.
  */
 
 export type Line = [text: string, pauseMs: number];
@@ -108,7 +110,7 @@ export type GuideScript = {
 };
 
 export const GUIDE_SCRIPT: GuideScript = {
-  voice: { direction: '[softly] [slowly]' },
+  voice: { direction: '' },
 
   ARRIVE: {
     notice: [
