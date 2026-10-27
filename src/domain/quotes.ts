@@ -8,6 +8,8 @@
  * small thing manufactured. tests/quotes.test.ts guards the wording.
  */
 
+import { isHe } from '../i18n';
+
 export type Quote = { text: string; by: string };
 
 export const QUOTES: Quote[] = [
@@ -22,9 +24,33 @@ export const QUOTES: Quote[] = [
   { text: 'Little by little, one travels far.', by: 'Spanish proverb' },
 ];
 
+/**
+ * Hebrew (27 Oct 2026): the same quotes, in the same order (a session shows the same quote in
+ * either language), rendered for the ear rather than word for word. Rilke wrote to one young
+ * poet; here he speaks in the plural, so the line never picks a gender for the reader. The
+ * snail keeps its singular: Issa is talking to the snail.
+ */
+const HE_QUOTES: Quote[] = [
+  { text: 'יושבים בשקט, לא עושים דבר,\nהאביב בא, והעשב צומח מעצמו.', by: 'זנרין קושו' },
+  { text: 'חילזון קטן,\nטפס על הר פוג׳י,\nאבל לאט, לאט.', by: 'קובאיאשי איסה' },
+  { text: 'בריכה עתיקה –\nצפרדע קופצת,\nקול מים.', by: 'מאצואו באשו' },
+  { text: 'בתודעת המתחיל יש אפשרויות רבות, בתודעת המומחה – מעטות.', by: 'שונריו סוזוקי' },
+  { text: 'תשומת לב היא הצורה הנדירה והטהורה ביותר של נדיבות.', by: 'סימון וייל' },
+  { text: 'תשומת לב היא ראשיתה של מסירות.', by: 'מרי אוליבר' },
+  { text: 'היו סבלניים כלפי כל מה שעוד לא נפתר בלבכם, ונסו לאהוב את השאלות עצמן.', by: 'ריינר מריה רילקה' },
+  { text: 'מסע של אלף מילין מתחיל בצעד אחד.', by: 'לאו דזה' },
+  { text: 'לאט לאט, מגיעים רחוק.', by: 'פתגם ספרדי' },
+];
+
+/** The quotes in the app's language. English returns QUOTES itself. */
+export function quotes(): Quote[] {
+  return isHe() ? HE_QUOTES : QUOTES;
+}
+
 /** The same session always shows the same quote; consecutive sessions usually differ. */
 export function quoteFor(sessionId: string): Quote {
   let h = 0;
   for (let i = 0; i < sessionId.length; i++) h = (Math.imul(h, 31) + sessionId.charCodeAt(i)) >>> 0;
-  return QUOTES[h % QUOTES.length]!;
+  const list = quotes();
+  return list[h % list.length]!;
 }
