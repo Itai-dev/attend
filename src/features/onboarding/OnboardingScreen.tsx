@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Prefs } from '@/data/types';
 import { useData } from '@/data/store';
 import { WHERE_REGIONS } from '@/domain/checkin';
-import { EMPTY_PROGRAM, PROGRAM_DAYS, PROGRAM_TITLE, WEEKS } from '@/domain/program';
+import { EMPTY_PROGRAM, PROGRAM_DAYS, programTitle, WEEKS } from '@/domain/program';
 import { REGIONS } from '@/domain/regions';
 import type { BodyRegion } from '@/domain/types';
 import { Chip, haptic, PrimaryButton, QuietButton, Txt } from '@/design/components';
@@ -256,7 +256,7 @@ export function OnboardingScreen() {
                 >
                   {PROGRAM_DAYS} DAYS · A FEW MINUTES A DAY
                 </Txt>
-                <Txt variant="title">{PROGRAM_TITLE}</Txt>
+                <Txt variant="title">{programTitle()}</Txt>
                 {finalGoal ? (
                   <Txt variant="footnote" style={{ color: 'rgba(255,255,255,0.8)' }}>
                     Toward: {finalGoal.charAt(0).toLowerCase() + finalGoal.slice(1)}
