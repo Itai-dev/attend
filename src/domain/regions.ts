@@ -211,8 +211,8 @@ export const HE_REGIONS: Record<BodyRegion, HeRegion> = {
 };
 
 function heSide(r: HeRegion, side: 'left' | 'right'): string {
-  const word = side === 'left' ? 'שמאל' : 'ימין';
-  return r.f ? `${word}ית` : `${word}י`;
+  if (side === 'left') return r.f ? 'שמאלית' : 'שמאלי';
+  return r.f ? 'ימנית' : 'ימני';
 }
 
 /** The place in Hebrew, definite, as the guide says it: "הכתף השמאלית", "הצד הימני של הצוואר". */
