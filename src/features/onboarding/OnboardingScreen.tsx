@@ -7,11 +7,12 @@ import type { Prefs } from '@/data/types';
 import { useData } from '@/data/store';
 import { WHERE_REGIONS } from '@/domain/checkin';
 import { EMPTY_PROGRAM, PROGRAM_DAYS, programTitle, WEEKS } from '@/domain/program';
-import { REGIONS } from '@/domain/regions';
+import { regionName } from '@/domain/regions';
 import type { BodyRegion } from '@/domain/types';
 import { Chip, haptic, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { CoverArt } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
+import { tr } from '@/i18n';
 import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { Enso } from '@/viz/Enso';
 
@@ -25,24 +26,41 @@ import { Enso } from '@/viz/Enso';
  * practice back to (docs/RESEARCH.md §4).
  */
 
-const GOALS = ['Long walks', 'Playing with my kids', 'Sleeping through', 'Working without breaks', 'Sport', 'Time with friends'];
-const DURATIONS: Array<{
-  value: NonNullable<Prefs['painFor']>;
-  label: string;
-}> = [
-  { value: 'months', label: 'Months' },
-  { value: '1-3y', label: '1–3 yrs' },
-  { value: '3-10y', label: '3–10 yrs' },
-  { value: '10y+', label: '10+ yrs' },
-];
+// The goal is stored as the words shown, so each language keeps its own list, index for index:
+// a goal picked in one language is still the same chip in the other.
+const GOALS_EN = ['Long walks', 'Playing with my kids', 'Sleeping through', 'Working without breaks', 'Sport', 'Time with friends'];
+const GOALS_HE = ['הליכות ארוכות', 'משחק עם הילדים', 'לילה שלם של שינה', 'יום עבודה מלא', 'ספורט', 'זמן עם חברים'];
+
+function goals() {
+  return tr(GOALS_EN, GOALS_HE);
+}
+
+/** A stored goal from the chips, in the app's language: the chip at the same place in the other list. */
+function localGoal(g: string | undefined) {
+  if (!g) return g;
+  const i = Math.max(GOALS_EN.indexOf(g), GOALS_HE.indexOf(g));
+  return i >= 0 ? goals()[i] : g;
+}
+
+function durations(): Array<{ value: NonNullable<Prefs['painFor']>; label: string }> {
+  return [
+    { value: 'months', label: tr('Months', 'חודשים') },
+    { value: '1-3y', label: tr('1–3 yrs', '1–3 שנים') },
+    { value: '3-10y', label: tr('3–10 yrs', '3–10 שנים') },
+    { value: '10y+', label: tr('10+ yrs', 'מעל 10') },
+  ];
+}
+
 const TIMES = [
-  { id: 'morning', label: 'Morning', hour: 8, minute: 0 },
-  { id: 'midday', label: 'Midday', hour: 13, minute: 0 },
-  { id: 'evening', label: 'Evening', hour: 20, minute: 30 },
+  { id: 'morning', hour: 8, minute: 0 },
+  { id: 'midday', hour: 13, minute: 0 },
+  { id: 'evening', hour: 20, minute: 30 },
 ] as const;
 
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+function timeLabel(id: (typeof TIMES)[number]['id']) {
+  if (id === 'morning') return tr('Morning', 'בוקר');
+  if (id === 'midday') return tr('Midday', 'צהריים');
+  return tr('Evening', 'ערב');
 }
 
 function hhmm(h: number, m: number) {
@@ -57,8 +75,9 @@ export function OnboardingScreen() {
   const [name, setName] = useState(prefs.name ?? '');
   const [where, setWhere] = useState<BodyRegion | undefined>(prefs.place?.region);
   const [painFor, setPainFor] = useState<Prefs['painFor']>(prefs.painFor);
-  const [goal, setGoal] = useState<string | undefined>(prefs.goal);
-  const [ownGoal, setOwnGoal] = useState(prefs.goal && !GOALS.includes(prefs.goal) ? prefs.goal : '');
+  const GOALS = goals();
+  const [goal, setGoal] = useState<string | undefined>(localGoal(prefs.goal));
+  const [ownGoal, setOwnGoal] = useState(prefs.goal && !GOALS.includes(localGoal(prefs.goal)!) ? prefs.goal : '');
   const [writing, setWriting] = useState(!!ownGoal);
   const [time, setTime] = useState<(typeof TIMES)[number]['id']>('evening');
   const [remind, setRemind] = useState(prefs.reminder?.enabled ?? true);
@@ -97,7 +116,7 @@ export function OnboardingScreen() {
       ]}
     >
       {step > 0 ? (
-        <View style={styles.bars} accessibilityLabel={`Step ${step + 1} of 4`}>
+        <View style={styles.bars} accessibilityLabel={tr(`Step ${step + 1} of 4`, `שלב ${step + 1} מתוך 4`)}>
           {[0, 1, 2, 3].map((i) => (
             <View key={i} style={[styles.bar, i <= step && { backgroundColor: color.accent }]} />
           ))}
@@ -111,7 +130,8 @@ export function OnboardingScreen() {
             fontWeight: '800',
           }}
         >
-          ATTEND
+          {/* Txt drops the tracking in Hebrew; the brand stays Latin, written plainly. */}
+          {tr('ATTEND', 'Attend')}
         </Txt>
       )}
 
@@ -121,21 +141,31 @@ export function OnboardingScreen() {
             <View style={styles.orb}>
               <Enso width={240} height={240} mode="idle" dim={0.9} />
             </View>
-            <Txt variant="display">Pain is real.{'\n'}And it can change.</Txt>
+            <Txt variant="display">{tr('Pain is real.\nAnd it can change.', 'הכאב אמיתי.\nוהוא יכול להשתנות.')}</Txt>
             <Txt variant="body" tone="secondary" style={{ marginTop: space.l }}>
-              A few minutes a day of guided attention, eyes closed. A short program that helps you meet pain with less alarm.
+              {tr(
+                'A few minutes a day of guided attention, eyes closed. A short program that helps you meet pain with less alarm.',
+                'כמה דקות ביום של תשומת לב מונחית, בעיניים עצומות. תוכנית קצרה שעוזרת לפגוש את הכאב בפחות בהלה.',
+              )}
             </Txt>
           </Animated.View>
         ) : null}
 
         {step === 1 ? (
           <Animated.View key="1" entering={FadeIn.duration(600)} style={{ gap: space.xl }}>
-            <Txt variant="display">How Attend works</Txt>
-            {[
-              ['Pain that lasts keeps the alarm on', 'Long-lasting pain often involves a nervous system that stays on alert, long after an injury.'],
-              ['Attention without alarm is a skill', 'Somatic tracking: noticing a sensation with curiosity instead of fear. It can be practised.'],
-              ['A little, often', `A 2-minute lesson and a short practice a day, for ${PROGRAM_DAYS} days. You just listen.`],
-            ].map(([title, body], i) => (
+            <Txt variant="display">{tr('How Attend works', 'איך Attend עובד')}</Txt>
+            {tr(
+              [
+                ['Pain that lasts keeps the alarm on', 'Long-lasting pain often involves a nervous system that stays on alert, long after an injury.'],
+                ['Attention without alarm is a skill', 'Somatic tracking: noticing a sensation with curiosity instead of fear. It can be practised.'],
+                ['A little, often', `A 2-minute lesson and a short practice a day, for ${PROGRAM_DAYS} days. You just listen.`],
+              ],
+              [
+                ['כאב ממושך משאיר את האזעקה דולקת', 'בכאב שנמשך זמן רב, מערכת העצבים נשארת לא פעם בכוננות, הרבה אחרי הפציעה.'],
+                ['תשומת לב בלי בהלה היא מיומנות', 'מעקב סומטי: לשים לב לתחושה בסקרנות במקום בפחד. את זה אפשר לתרגל.'],
+                ['קצת, בכל יום', `שיעור של 2 דקות ותרגול קצר בכל יום, במשך ${PROGRAM_DAYS} יום. רק להקשיב.`],
+              ],
+            ).map(([title, body], i) => (
               <View key={title} style={styles.point}>
                 <View style={styles.num}>
                   <Txt variant="callout" style={{ color: color.onAccent, fontWeight: '800' }}>
@@ -152,7 +182,10 @@ export function OnboardingScreen() {
             ))}
             <View style={styles.note}>
               <Txt variant="footnote" tone="secondary">
-                Attend is for pain you already know well. Anything new, changing or severe deserves a doctor’s look first.
+                {tr(
+                  'Attend is for pain you already know well. Anything new, changing or severe deserves a doctor’s look first.',
+                  'Attend נועד לכאב שכבר מוכר לכם היטב. כל דבר חדש, משתנה או חמור כדאי שרופא יבדוק קודם.',
+                )}
               </Txt>
             </View>
           </Animated.View>
@@ -160,13 +193,13 @@ export function OnboardingScreen() {
 
         {step === 2 ? (
           <Animated.View key="2" entering={FadeIn.duration(600)}>
-            <Txt variant="display">What should we call you?</Txt>
+            <Txt variant="display">{tr('What should we call you?', 'איך לקרוא לכם?')}</Txt>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Your first name"
+              placeholder={tr('Your first name', 'שם פרטי')}
               placeholderTextColor={color.textTertiary}
-              accessibilityLabel="Your name"
+              accessibilityLabel={tr('Your name', 'שם')}
               autoCapitalize="words"
               returnKeyType="done"
               maxLength={30}
@@ -174,19 +207,19 @@ export function OnboardingScreen() {
             />
 
             <Txt variant="title2" style={{ marginTop: space.xxl }}>
-              Where does it hurt most?
+              {tr('Where does it hurt most?', 'איפה הכי כואב?')}
             </Txt>
             <View style={styles.chips}>
               {WHERE_REGIONS.map((r) => (
-                <Chip key={r} label={cap(REGIONS[r].label)} selected={where === r} onPress={() => setWhere(where === r ? undefined : r)} />
+                <Chip key={r} label={regionName(r)} selected={where === r} onPress={() => setWhere(where === r ? undefined : r)} />
               ))}
             </View>
 
             <Txt variant="title2" style={{ marginTop: space.xxl }}>
-              For how long?
+              {tr('For how long?', 'כמה זמן זה נמשך?')}
             </Txt>
             <View style={styles.segment} accessibilityRole="radiogroup">
-              {DURATIONS.map((d) => {
+              {durations().map((d) => {
                 const on = painFor === d.value;
                 return (
                   <Pressable
@@ -208,10 +241,10 @@ export function OnboardingScreen() {
             </View>
 
             <Txt variant="title2" style={{ marginTop: space.xxl }}>
-              What do you want to get back to?
+              {tr('What do you want to get back to?', 'מה תרצו לעשות שוב?')}
             </Txt>
             <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.xs }}>
-              This is what Attend works toward with you.
+              {tr('This is what Attend works toward with you.', 'לשם נתקדם יחד.')}
             </Txt>
             <View style={styles.chips}>
               {GOALS.map((g) => (
@@ -225,15 +258,15 @@ export function OnboardingScreen() {
                   }}
                 />
               ))}
-              <Chip label="In my words…" selected={writing} onPress={() => setWriting(!writing)} />
+              <Chip label={tr('In my words…', 'במילים שלי…')} selected={writing} onPress={() => setWriting(!writing)} />
             </View>
             {writing ? (
               <TextInput
                 value={ownGoal}
                 onChangeText={setOwnGoal}
-                placeholder="Gardening on Saturdays"
+                placeholder={tr('Gardening on Saturdays', 'גינון בשבתות')}
                 placeholderTextColor={color.textTertiary}
-                accessibilityLabel="What you want to get back to"
+                accessibilityLabel={tr('What you want to get back to', 'מה תרצו לעשות שוב')}
                 maxLength={60}
                 autoFocus
                 style={styles.input}
@@ -244,7 +277,7 @@ export function OnboardingScreen() {
 
         {step === 3 ? (
           <Animated.View key="3" entering={FadeIn.duration(600)}>
-            <Txt variant="display">Your plan</Txt>
+            <Txt variant="display">{tr('Your plan', 'התוכנית שלכם')}</Txt>
             <CoverArt art="violet" seed={7} size={width - space.l * 2} height={196} rounded={radius.m} style={{ marginTop: space.l }}>
               <View style={styles.plan}>
                 <Txt
@@ -254,12 +287,12 @@ export function OnboardingScreen() {
                     letterSpacing: 1.4,
                   }}
                 >
-                  {PROGRAM_DAYS} DAYS · A FEW MINUTES A DAY
+                  {tr(`${PROGRAM_DAYS} DAYS · A FEW MINUTES A DAY`, `${PROGRAM_DAYS} יום · כמה דקות ביום`)}
                 </Txt>
                 <Txt variant="title">{programTitle()}</Txt>
                 {finalGoal ? (
                   <Txt variant="footnote" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                    Toward: {finalGoal.charAt(0).toLowerCase() + finalGoal.slice(1)}
+                    {tr(`Toward: ${finalGoal.charAt(0).toLowerCase() + finalGoal.slice(1)}`, `המטרה: ${finalGoal}`)}
                   </Txt>
                 ) : null}
                 <View style={styles.weeks}>
@@ -267,7 +300,7 @@ export function OnboardingScreen() {
                     <View key={w} style={{ flex: 1, gap: space.xs }}>
                       <View style={[styles.weekBar, w > 1 && { opacity: 0.35 }]} />
                       <Txt variant="caption" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                        Wk {w}
+                        {tr(`Wk ${w}`, `שבוע ${w}`)}
                         {'\n'}
                         {WEEKS[w].name}
                       </Txt>
@@ -278,7 +311,7 @@ export function OnboardingScreen() {
             </CoverArt>
 
             <Txt variant="title2" style={{ marginTop: space.xxl }}>
-              When suits you best?
+              {tr('When suits you best?', 'מתי הכי נוח לכם?')}
             </Txt>
             <View style={styles.times}>
               {TIMES.map((t) => {
@@ -295,7 +328,7 @@ export function OnboardingScreen() {
                     style={[styles.time, on && styles.timeOn]}
                   >
                     <Txt variant="callout" tone={on ? 'inverse' : 'primary'} style={{ fontWeight: '600' }}>
-                      {t.label}
+                      {timeLabel(t.id)}
                     </Txt>
                     <Txt variant="footnote" tone={on ? 'inverse' : 'tertiary'}>
                       {hhmm(t.hour, t.minute)}
@@ -306,23 +339,26 @@ export function OnboardingScreen() {
             </View>
             <View style={styles.remind}>
               <View style={{ flex: 1 }}>
-                <Txt variant="body">A gentle reminder</Txt>
+                <Txt variant="body">{tr('A gentle reminder', 'תזכורת עדינה')}</Txt>
                 <Txt variant="footnote" tone="tertiary">
-                  One a day. Never a nudge about missed days.
+                  {tr('One a day. Never a nudge about missed days.', 'אחת ביום. בלי הערות על ימים שפוספסו.')}
                 </Txt>
               </View>
-              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" accessibilityLabel="A gentle reminder" />
+              <Switch value={remind} onValueChange={setRemind} trackColor={{ true: color.accent, false: color.surfacePressed }} thumbColor="#FFFFFF" accessibilityLabel={tr('A gentle reminder', 'תזכורת עדינה')} />
             </View>
             <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.l }}>
-              Day 1 starts with a quick check-in, so in four weeks you can look back at where you began.
+              {tr(
+                'Day 1 starts with a quick check-in, so in four weeks you can look back at where you began.',
+                'יום 1 מתחיל בצ׳ק־אין קצר, כדי שבעוד ארבעה שבועות תוכלו לראות מאיפה התחלתם.',
+              )}
             </Txt>
           </Animated.View>
         ) : null}
       </ScrollView>
 
       <View style={styles.footer}>
-        {step < 3 ? <PrimaryButton label={step === 0 ? 'Get started' : 'Continue'} onPress={() => setStep(step + 1)} /> : <PrimaryButton label="Start Day 1" onPress={finish} />}
-        {step > 0 ? <QuietButton label="Back" style={{ alignSelf: 'center' }} onPress={() => setStep(step - 1)} /> : null}
+        {step < 3 ? <PrimaryButton label={step === 0 ? tr('Get started', 'להתחיל') : tr('Continue', 'להמשיך')} onPress={() => setStep(step + 1)} /> : <PrimaryButton label={tr('Start Day 1', 'להתחיל את יום 1')} onPress={finish} />}
+        {step > 0 ? <QuietButton label={tr('Back', 'חזרה')} style={{ alignSelf: 'center' }} onPress={() => setStep(step - 1)} /> : null}
       </View>
     </View>
   );

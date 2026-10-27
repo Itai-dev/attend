@@ -1,0 +1,11 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Attend",
+    "NSMicrophoneUsageDescription": "המיקרופון משמש כשמדברים עם הקול המנחה, כדי שיוכל להגיב. השמע מעובד באייפון הזה ולא נשמר.",
+    "NSSpeechRecognitionUsageDescription": "מה שאומרים לקול המנחה הופך למילים כאן באייפון, כדי שהקול יוכל לעקוב אחרי מה ששמים לב אליו.",
+    "NSPhotoLibraryUsageDescription": "אין שימוש בספריית התמונות. ההרשאה מופיעה רק כי אחד הרכיבים באפליקציה יכול לבקש אותה, והיא אף פעם לא מתבקשת."
+  },
+  "android": {
+    "app_name": "Attend"
+  }
+}

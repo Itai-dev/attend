@@ -20,7 +20,8 @@
           "audio"
         ],
         "NSPhotoLibraryUsageDescription": "Attend doesn't use your photo library. This permission is listed only because a component in the app could ask for it; it is never requested.",
-        "CFBundleDevelopmentRegion": "en"
+        "CFBundleDevelopmentRegion": "en",
+        "CFBundleAllowMixedLocalizations": true
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -41,6 +42,9 @@
           }
         ]
       }
+    },
+    "locales": {
+      "he": "./locales/he.json"
     },
     "android": {
       "package": "com.itaiagami.attend",

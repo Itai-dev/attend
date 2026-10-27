@@ -7,10 +7,11 @@ import { useData } from '@/data/store';
 import { latestPlace, WHERE_REGIONS } from '@/domain/checkin';
 import { presetById, voiceFor } from '@/domain/presets';
 import { programDay, type PracticeTheme } from '@/domain/program';
-import { REGIONS } from '@/domain/regions';
+import { regionName, REGIONS } from '@/domain/regions';
 import type { Place, SessionType } from '@/domain/types';
 import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
+import { heCount, tr } from '@/i18n';
 import { SESSION_LENGTHS, type SessionLength } from '@/engine/phases';
 import { previewVoice, stopPreview } from '@/voice/voicePreview';
 import { Enso } from '@/viz/Enso';
@@ -21,7 +22,7 @@ import { Enso } from '@/viz/Enso';
  * how long, which voice. Then one button.
  */
 
-const BLURB: Record<PracticeTheme, string> = {
+const BLURB_EN: Record<PracticeTheme, string> = {
   settle: 'Arriving in the body, with nothing to fix.',
   locate: 'Finding where a sensation is clearest, without judging it.',
   breath: 'Letting the breath move around the sensation.',
@@ -39,8 +40,27 @@ const BLURB: Record<PracticeTheme, string> = {
   open: 'Resting with the body as a whole.',
 };
 
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+// Hebrew: what the practice does, as an infinitive, so no line picks a gender for the reader.
+const BLURB_HE: Record<PracticeTheme, string> = {
+  settle: 'להגיע אל הגוף, בלי שום דבר לתקן.',
+  locate: 'למצוא איפה התחושה הכי ברורה, בלי לשפוט אותה.',
+  breath: 'לתת לנשימה לנוע סביב התחושה.',
+  edges: 'לשים לב איפה התחושה מתחילה, ואיפה היא דועכת.',
+  moves: 'להתבונן אם התחושה נשארת, נודדת או פועמת.',
+  texture: 'לתאר את המרקם שלה במקום לשפוט אותה.',
+  curious: 'לפגוש אותה בסקרנות, כמו שמתבוננים בענן.',
+  brace: 'לשים לב לדריכות בגוף, ולשחרר אותה איפה שאפשר.',
+  fear: 'לתת לפחד ולתחושה להיות זה לצד זה.',
+  urge: 'לתת לדחף לתקן לעלות ולחלוף.',
+  kind: 'לנסות טון רך יותר כלפי עצמכם.',
+  pleasant: 'להתעכב גם על מה שמרגיש קל.',
+  activity: 'להתכונן לצעד קטן לקראת המטרה שלכם.',
+  flare: 'משהו קצר ויציב לרגעים שזה חזק.',
+  open: 'לנוח עם הגוף כולו.',
+};
+
+function minutesWord(m: number) {
+  return tr(`${m} minutes`, heCount(m, 'דקה אחת', 'דקות'));
 }
 
 export function BeforeScreen() {
@@ -53,12 +73,12 @@ export function BeforeScreen() {
     const preset = presetById(params.preset);
     if (preset) {
       const theme: PracticeTheme = preset.type === 'flare' ? 'flare' : preset.type === 'fear' ? 'fear' : preset.type === 'sleep' ? 'open' : 'curious';
-      return { title: preset.title, kicker: 'ANY TIME', theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: voiceFor(preset.type, prefs.voices), day: undefined };
+      return { title: preset.title, kicker: tr('ANY TIME', 'בכל זמן'), theme, type: preset.type as SessionType, minutes: preset.minutes as SessionLength, voice: voiceFor(preset.type, prefs.voices), day: undefined };
     }
     const d = programDay(Number(params.day) || 1);
     return {
       title: d.practice.title,
-      kicker: `DAY ${d.day} · WEEK ${d.week}`,
+      kicker: tr(`DAY ${d.day} · WEEK ${d.week}`, `יום ${d.day} · שבוע ${d.week}`),
       theme: d.practice.theme,
       type: d.practice.sessionType,
       minutes: d.practice.minutes as SessionLength,
@@ -94,7 +114,7 @@ export function BeforeScreen() {
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom + space.l }]}>
       <View style={styles.top}>
-        <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
+        <IconButton icon="xmark" label={tr('Close', 'לסגור')} onPress={() => router.back()} tint={color.textSecondary} />
         <Txt variant="footnote" tone="tertiary">
           {plan.kicker}
         </Txt>
@@ -109,19 +129,22 @@ export function BeforeScreen() {
           {plan.title}
         </Txt>
         <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.s }}>
-          {BLURB[plan.theme]} Nothing to answer. Just listen.
+          {tr(`${BLURB_EN[plan.theme]} Nothing to answer. Just listen.`, `${BLURB_HE[plan.theme]} אין על מה לענות. רק להקשיב.`)}
         </Txt>
 
         <View style={styles.group}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Rests on ${place ? REGIONS[place.region].label : 'the whole body'}. Change`}
+            accessibilityLabel={tr(
+              `Rests on ${place ? REGIONS[place.region].label : 'the whole body'}. Change`,
+              `המוקד: ${place ? regionName(place.region) : 'כל הגוף'}. אפשר לשנות`,
+            )}
             onPress={() => setChoosing(!choosing)}
             style={styles.row}
           >
-            <Txt variant="body">Rests on</Txt>
+            <Txt variant="body">{tr('Rests on', 'המוקד')}</Txt>
             <Txt variant="body" tone="secondary">
-              {place ? cap(REGIONS[place.region].label) : 'Whole body'} ›
+              {place ? regionName(place.region) : tr('Whole body', 'כל הגוף')} ›
             </Txt>
           </Pressable>
           {choosing ? (
@@ -131,7 +154,7 @@ export function BeforeScreen() {
                 return (
                   <Chip
                     key={r}
-                    label={cap(REGIONS[r].label)}
+                    label={regionName(r)}
                     selected={on}
                     onPress={() => {
                       setPlace(r === 'whole_body' ? null : { region: r });
@@ -144,14 +167,14 @@ export function BeforeScreen() {
           ) : null}
           <View style={styles.hair} />
           <View style={styles.row}>
-            <Txt variant="body">Length</Txt>
-            <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="Length in minutes">
+            <Txt variant="body">{tr('Length', 'משך')}</Txt>
+            <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel={tr('Length in minutes', 'משך בדקות')}>
               {SESSION_LENGTHS.map((m) => (
                 <Pressable
                   key={m}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: m === minutes }}
-                  accessibilityLabel={`${m} minutes`}
+                  accessibilityLabel={minutesWord(m)}
                   onPress={() => {
                     haptic('select');
                     setMinutes(m);
@@ -168,7 +191,7 @@ export function BeforeScreen() {
           <View style={styles.hair} />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Voice: ${voiceName}. Tap for the next voice`}
+            accessibilityLabel={tr(`Voice: ${voiceName}. Tap for the next voice`, `קול: ${voiceName}. הקשה עוברת לקול הבא`)}
             onPress={() => {
               const i = GUIDE_VOICES.findIndex((v) => v.id === voice);
               const next = GUIDE_VOICES[(i + 1) % GUIDE_VOICES.length];
@@ -177,7 +200,7 @@ export function BeforeScreen() {
             }}
             style={styles.row}
           >
-            <Txt variant="body">Voice</Txt>
+            <Txt variant="body">{tr('Voice', 'קול')}</Txt>
             <Txt variant="body" tone="secondary">
               {voiceName} ›
             </Txt>
@@ -185,12 +208,12 @@ export function BeforeScreen() {
         </View>
 
         <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>
-          Headphones on · Sit or lie down · Eyes closed
+          {tr('Headphones on · Sit or lie down · Eyes closed', 'אוזניות · בישיבה או בשכיבה · בעיניים עצומות')}
         </Txt>
       </ScrollView>
 
       <View style={{ paddingHorizontal: space.xl }}>
-        <PrimaryButton label="Begin" detail={`${minutes} minutes`} onPress={begin} />
+        <PrimaryButton label={tr('Begin', 'להתחיל')} detail={minutesWord(minutes)} onPress={begin} />
       </View>
     </View>
   );

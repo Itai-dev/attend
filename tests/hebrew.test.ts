@@ -104,3 +104,13 @@ test('switching back to English restores the English words', async () => {
   const r = await runSession({}, { mode: 'guided', place: LOWER_BACK, minutes: 3, maxTurns: 200 });
   assert.match(r.spoken[0], /[A-Za-z]/);
 });
+
+test('a Hebrew app keeps its own words when a server sends the English script', async () => {
+  const r = await inHebrew(async () => {
+    const rejected = applyScript(JSON.parse(JSON.stringify(GUIDE_SCRIPT)));
+    const s = await runSession({}, { mode: 'guided', place: LOWER_BACK, minutes: 3, maxTurns: 200 });
+    return { rejected, spoken: s.spoken };
+  });
+  assert.ok(r.rejected.includes('ARRIVE') && r.rejected.includes('CLOSE'), r.rejected.join());
+  for (const l of r.spoken) assert.doesNotMatch(l, /[A-Za-z]/, l);
+});

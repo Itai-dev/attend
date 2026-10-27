@@ -152,6 +152,7 @@ function shapeOf(v: unknown): Shape | undefined {
 function texts(v: unknown): string[] {
   if (typeof v === 'string') return [v];
   if (Array.isArray(v)) return v.flatMap((x) => (Array.isArray(x) && typeof x[1] === 'number' ? [String(x[0])] : texts(x)));
+  if (v && typeof v === 'object') return Object.values(v).flatMap(texts);
   return [];
 }
 
@@ -180,6 +181,12 @@ export function applyScript(remote: unknown): string[] {
     for (const k of Object.keys(base)) {
       const r = (remote as Record<string, unknown>)[k];
       if (r === undefined) continue;
+      // A Hebrew app keeps its own words if a server sends English (one deployed before
+      // /script?lang=he existed answers every request with the English script).
+      if (isHe() && k !== 'voice' && texts(r).some((t) => !/[\u05d0-\u05ea]/.test(t))) {
+        rejected.push(k);
+        continue;
+      }
       if (k === 'voice' ? sameShape(base.voice, r) && /^[\w\s\[\]]{0,80}$/.test((r as { direction: string }).direction) : sameShape((base as Record<string, unknown>)[k], r))
         next[k] = r;
       else rejected.push(k);

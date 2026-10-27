@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { GUIDE_SCRIPT } from '../server/lib/guideScript';
 import { violatesGuideLanguage } from '../src/domain/safety';
-import { completeDay, currentDay, EMPTY_PROGRAM, PROGRAM, PROGRAM_DAYS, WEEKS } from '../src/domain/program';
+import { completeDay, currentDay, EMPTY_PROGRAM, PROGRAM, PROGRAM_DAYS, programDay, programTitle, WEEKS } from '../src/domain/program';
+import { setLang } from '../src/i18n';
 import { runSession } from './helpers';
 
 test('28 days, seven a week, each with a lesson and a practice', () => {
@@ -63,4 +64,88 @@ test('one new day a day; a missed day waits; nothing is lost', () => {
   assert.equal(completeDay(s, 2, '2026-10-05'), s);
   for (let d = 3; d <= 28; d++) s = completeDay(s, d, `2026-11-${String(d).padStart(2, '0')}`);
   assert.equal(currentDay(s, '2026-12-01').finished, true);
+});
+
+// ——— Hebrew (27 Oct 2026, docs/HEBREW.md) ———
+
+/** Every user-facing string in the program, read in the current language. */
+function programStrings(): { where: string; text: string }[] {
+  const out: { where: string; text: string }[] = [{ where: 'title', text: programTitle() }];
+  for (const w of [1, 2, 3, 4] as const) out.push({ where: `week ${w}`, text: WEEKS[w].name }, { where: `week ${w}`, text: WEEKS[w].about });
+  for (const d of PROGRAM) {
+    const where = `day ${d.day}`;
+    out.push({ where, text: d.lesson.title }, { where, text: d.practice.title });
+    for (const c of d.lesson.cards) for (const t of [...c.text, ...(c.notice ? [c.notice] : [])]) out.push({ where, text: t });
+  }
+  return out;
+}
+
+test('in Hebrew, every program string is Hebrew, gender-neutral, and in the guide’s voice', () => {
+  setLang('he');
+  try {
+    for (const { where, text } of programStrings()) {
+      assert.ok(text.trim().length > 0, where);
+      assert.match(text, /[א-ת]/, `${where}: ${text}`);
+      assert.doesNotMatch(text, /[A-Za-z]/, `${where}: ${text}`);
+      assert.doesNotMatch(text, /[א-ת]\/[א-ת]/, `${where}: slash gender form in ${text}`);
+      assert.ok(!violatesGuideLanguage(text), `${where}: ${text}`);
+    }
+  } finally {
+    setLang('en');
+  }
+});
+
+test('no Hebrew lesson tells the person their pain is safe, benign, or in their head', () => {
+  // Mirrors the English guard: safe, harmless/benign, nothing wrong, in your head, it's
+  // your brain, not damage, pain-free, cure.
+  const claims = [
+    /בטוח|בטוחה|בטוחים|מוגנים/,
+    /לא מסוכן|לא מזיק|שפיר|תמים/,
+    /(אין|שום) (שום )?(דבר|בעיה)|הכול בסדר|הכל בסדר|אין (סיבה|מה) לדאוג/,
+    /בראש|בדמיון/,
+    /מוח/,
+    /(אין|לא|בלי) (שום )?(סימן ל)?נזק/,
+    /ללא כאב|בלי כאב|נקי מכאב|חופשי מכאב/,
+    /ריפוי|לרפא|ירפא|תרופה ל/,
+  ];
+  setLang('he');
+  try {
+    for (const d of PROGRAM) {
+      for (const c of d.lesson.cards) {
+        for (const t of [...c.text, c.notice ?? '']) for (const re of claims) assert.doesNotMatch(t, re, `day ${d.day}: ${t}`);
+      }
+    }
+  } finally {
+    setLang('en');
+  }
+});
+
+test('Hebrew is chosen when read, and English comes back unchanged', () => {
+  const en = programDay(1);
+  assert.equal(en.lesson.title, 'Pain is real');
+  assert.equal(WEEKS[1].name, 'Understand');
+  assert.equal(programTitle(), 'Meeting pain without alarm');
+  setLang('he');
+  try {
+    assert.equal(en.lesson.title, 'הכאב אמיתי');
+    assert.equal(WEEKS[1].name, 'להבין');
+    // Every day keeps the English structure: same number of cards, same notices.
+    setLang('en');
+    const shape = PROGRAM.map((d) => d.lesson.cards.map((c) => [c.text.length, !!c.notice]));
+    setLang('he');
+    assert.deepEqual(PROGRAM.map((d) => d.lesson.cards.map((c) => [c.text.length, !!c.notice])), shape);
+    // A practice reused on several days keeps one Hebrew title.
+    const byEnglish = new Map<string, string>();
+    for (const d of PROGRAM) {
+      setLang('en');
+      const key = d.practice.title;
+      setLang('he');
+      const he = d.practice.title;
+      assert.equal(byEnglish.get(key) ?? he, he, key);
+      byEnglish.set(key, he);
+    }
+  } finally {
+    setLang('en');
+  }
+  assert.equal(en.practice.title, 'Arriving');
 });

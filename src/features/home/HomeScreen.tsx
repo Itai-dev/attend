@@ -8,10 +8,11 @@ import { currentTz, dayKey, latestPlace } from '@/domain/checkin';
 import { practiceStats, weekLine, weekStrip } from '@/domain/engagement';
 import { voiceFor } from '@/domain/presets';
 import { currentDay, EMPTY_PROGRAM, PROGRAM_DAYS, programDay, WEEKS } from '@/domain/program';
-import { speakPlace } from '@/domain/regions';
+import { sayPlace } from '@/domain/regions';
 import { Card, haptic, Icon, PrimaryButton, SettingsButton, Txt } from '@/design/components';
 import { Pill } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
+import { tr } from '@/i18n';
 import { scheduleReminders } from '@/voice/reminders';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { greeting } from '../shared/format';
@@ -35,7 +36,7 @@ export function HomeScreen() {
   const strip = useMemo(() => weekStrip(sessions, now, tz), [sessions, now, tz]);
   const stats = useMemo(() => practiceStats(sessions, now, tz), [sessions, now, tz]);
   const place = latestPlace(checkIns) ?? prefs.place;
-  const restsOn = today.practice.theme === 'open' || !place ? 'the body as a whole' : speakPlace(place.region, place.side);
+  const restsOn = today.practice.theme === 'open' || !place ? tr('the body as a whole', 'הגוף כולו') : sayPlace(place.region, place.side);
 
   // Keep the reminder in step with the latest practice: daily while practising, weekly after
   // four quiet days (voice/reminders.ts). Rescheduling is idempotent.
@@ -65,7 +66,7 @@ export function HomeScreen() {
         <SettingsButton />
       </View>
       <View style={{ flexDirection: 'row', marginTop: space.m }}>
-        <Pill label={finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`} />
+        <Pill label={finished ? tr('Program complete', 'התוכנית הושלמה') : tr(`Day ${day} of ${PROGRAM_DAYS}`, `יום ${day} מתוך ${PROGRAM_DAYS}`)} />
       </View>
 
       <Animated.View entering={FadeIn.duration(800)} style={{ marginTop: space.xl }}>
@@ -77,11 +78,13 @@ export function HomeScreen() {
 
       <Card style={styles.today}>
         <Txt variant="caption" style={styles.kicker}>
-          {finished ? 'ANY TIME' : `TODAY · WEEK ${today.week} · ${WEEKS[today.week].name.toUpperCase()}`}
+          {finished
+            ? tr('ANY TIME', 'בכל זמן')
+            : tr(`TODAY · WEEK ${today.week} · ${WEEKS[today.week].name.toUpperCase()}`, `היום · שבוע ${today.week} · ${WEEKS[today.week].name}`)}
         </Txt>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Lesson: ${today.lesson.title}. ${read ? 'Read.' : '2 minutes.'}`}
+          accessibilityLabel={tr(`Lesson: ${today.lesson.title}. ${read ? 'Read.' : '2 minutes.'}`, `שיעור: ${today.lesson.title}. ${read ? 'הושלם.' : '2 דקות.'}`)}
           onPress={() => router.push({ pathname: '/lesson/[day]', params: { day: String(day) } })}
           style={({ pressed }) => [styles.step, { opacity: pressed ? 0.6 : read ? 0.72 : 1 }]}
         >
@@ -91,7 +94,7 @@ export function HomeScreen() {
           <View style={{ flex: 1 }}>
             <Txt variant="body">{today.lesson.title}</Txt>
             <Txt variant="footnote" tone="secondary">
-              Lesson · 2 min
+              {tr('Lesson · 2 min', 'שיעור · 2 דק׳')}
             </Txt>
           </View>
         </Pressable>
@@ -102,27 +105,29 @@ export function HomeScreen() {
           <View style={{ flex: 1 }}>
             <Txt variant="headline">{today.practice.title}</Txt>
             <Txt variant="footnote" tone="secondary">
-              Practice · {today.practice.minutes} min · rests on {restsOn}
+              {tr(`Practice · ${today.practice.minutes} min · rests on ${restsOn}`, `תרגול · ${today.practice.minutes} דק׳ · המוקד: ${restsOn}`)}
             </Txt>
           </View>
         </View>
         {doneToday ? (
           <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
-            {finished ? 'All 28 days done. Every practice stays here.' : `Day ${day} is done. Day ${day + 1} opens tomorrow.`}
+            {finished
+              ? tr('All 28 days done. Every practice stays here.', 'כל 28 הימים הושלמו. כל התרגולים נשארים כאן.')
+              : tr(`Day ${day} is done. Day ${day + 1} opens tomorrow.`, `יום ${day} הושלם. יום ${day + 1} ייפתח מחר.`)}
           </Txt>
         ) : (
-          <PrimaryButton label={read ? `Begin Day ${day}` : `Continue Day ${day}`} onPress={go} style={{ marginTop: space.s }} />
+          <PrimaryButton label={read ? tr(`Begin Day ${day}`, `להתחיל את יום ${day}`) : tr(`Continue Day ${day}`, `להמשיך ליום ${day}`)} onPress={go} style={{ marginTop: space.s }} />
         )}
       </Card>
 
-      <Card label="Check in. How it is today, and where" onPress={() => router.push('/checkin')} style={styles.checkin}>
+      <Card label={tr('Check in. How it is today, and where', 'צ׳ק־אין. איך זה היום, ואיפה')} onPress={() => router.push('/checkin')} style={styles.checkin}>
         <View style={[styles.quickIcon, { backgroundColor: color.practiceSoft }]}>
           <Icon name="square.and.pencil" size={17} tint={color.practice} />
         </View>
         <View style={{ flex: 1 }}>
-          <Txt variant="headline">Check in</Txt>
+          <Txt variant="headline">{tr('Check in', 'צ׳ק־אין')}</Txt>
           <Txt variant="footnote" tone="secondary">
-            How it is today, and where
+            {tr('How it is today, and where', 'איך זה היום, ואיפה')}
           </Txt>
         </View>
         <Icon name="chevron.right" size={14} tint={color.textTertiary} />

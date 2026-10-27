@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { GUIDE_VOICES } from '../src/config';
-import { PRESET_CATEGORIES, PRESETS, recommendedPreset, SESSION_VOICES, voiceFor } from '../src/domain/presets';
+import { PRESET_CATEGORIES, PRESETS, presetById, presetCategories, presets, recommendedPreset, SESSION_VOICES, voiceFor } from '../src/domain/presets';
 import { violatesGuideLanguage } from '../src/domain/safety';
 import { SESSION_LENGTHS } from '../src/engine/phases';
 import { nextStep, WELCOME } from '../src/domain/welcome';
+import { setLang } from '../src/i18n';
 
 test('every preset speaks in a voice the app offers, at a length the engine plans for', () => {
   const voices = new Map<string, string>(GUIDE_VOICES.map((v) => [v.id, v.name]));
@@ -60,4 +61,25 @@ test('the welcome asks each thing once, in order, and always ends on the safety 
   }
   assert.deepEqual(seen, ['intro', 'focus', 'minutes', 'voice', 'safety']);
   assert.equal(nextStep(a, true), undefined);
+});
+
+test('in Hebrew every session and shelf has Hebrew words, under the same rules', () => {
+  setLang('he');
+  try {
+    const he = presets();
+    assert.deepEqual(he.map((p) => [p.id, p.type, p.minutes, p.voiceId]), PRESETS.map((p) => [p.id, p.type, p.minutes, p.voiceId]));
+    const lines = [...he.flatMap((p) => [p.title, p.blurb]), ...presetCategories().flatMap((c) => [c.title, c.detail])];
+    for (const l of lines) {
+      assert.match(l, /[א-ת]/, l);
+      assert.doesNotMatch(l, /[A-Za-z]/, l);
+      assert.doesNotMatch(l, /[א-ת]\/[א-ת]/, `slash gender form: ${l}`);
+      assert.ok(!violatesGuideLanguage(l), l);
+      assert.ok(!/(ציון|דירוג|סולם|רצף|קשה|\d+ ?%)/.test(l), l);
+    }
+    assert.equal(presetById('sleep-5')?.title, he.find((p) => p.id === 'sleep-5')?.title);
+    assert.match(recommendedPreset({ focus: 'flare', minutes: 3 }).title, /[א-ת]/);
+  } finally {
+    setLang('en');
+  }
+  assert.equal(presetById('sleep-5')?.title, 'Lights out');
 });
