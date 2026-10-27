@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { type ReactNode } from 'react';
 import {
+  I18nManager,
   Platform,
   Pressable,
   ScrollView,
@@ -157,7 +158,11 @@ const GLYPHS: Record<string, string> = {
   wind: '≋',
 };
 
-export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: ColorValue; weight?: SymbolViewProps['weight'] }) {
+/** Right to left, "forward" points left: directional symbols swap so a chevron still means next. */
+const MIRRORED: Record<string, string> = { 'chevron.right': 'chevron.left', 'chevron.left': 'chevron.right', 'arrow.right': 'arrow.left', 'arrow.left': 'arrow.right' };
+
+export function Icon({ name: given, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: ColorValue; weight?: SymbolViewProps['weight'] }) {
+  const name = I18nManager.isRTL ? (MIRRORED[given] ?? given) : given;
   if (Platform.OS === 'ios') {
     return (
       <SymbolView

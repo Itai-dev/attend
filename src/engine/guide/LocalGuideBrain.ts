@@ -1,6 +1,7 @@
 import { nounOf } from '../../domain/lexicon';
 import { isWithin } from '../../domain/bodyMap';
-import { REGIONS, speakPlace } from '../../domain/regions';
+import { REGIONS, sayPlace } from '../../domain/regions';
+import { tr } from '../../i18n';
 import type { BodySensation, SensationChange } from '../../domain/types';
 import { isClosing } from '../phases';
 import type { AskKind, GuideBrain, GuideContext, GuideLine, GuideTurn } from '../types';
@@ -31,19 +32,19 @@ const QUESTION_WINDOW_MS = 14_000;
 function fill(text: string, ctx: GuideContext, focus?: BodySensation): string {
   const word = focus?.descriptors[0] ?? ctx.unplacedDescriptors[0];
   const place = focus
-    ? speakPlace(focus.region, focus.side)
+    ? sayPlace(focus.region, focus.side)
     : ctx.place
-      ? speakPlace(ctx.place.region, ctx.place.side)
-      : 'your body';
+      ? sayPlace(ctx.place.region, ctx.place.side)
+      : tr('your body', 'הגוף');
   const dest = focus?.movement?.destinationRegion
-    ? speakPlace(focus.movement.destinationRegion, focus.movement.destinationSide)
+    ? sayPlace(focus.movement.destinationRegion, focus.movement.destinationSide)
     : '';
   const usual = ctx.memory.usual;
   return text
-    .replace('{usual}', usual ? speakPlace(usual.region, usual.side) : 'that place')
-    .replace('{usualWord}', usual?.words[0] ?? 'it')
-    .replace('{word}', word ?? 'that')
-    .replace('{noun}', word ? nounOf(word) : 'sensation')
+    .replace('{usual}', usual ? sayPlace(usual.region, usual.side) : tr('that place', 'המקום הזה'))
+    .replace('{usualWord}', usual?.words[0] ?? tr('it', 'זה'))
+    .replace('{word}', word ?? tr('that', 'זה'))
+    .replace('{noun}', word ? nounOf(word) : tr('sensation', 'התחושה'))
     .replace('{place}', place)
     .replace('{dest}', dest);
 }

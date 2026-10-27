@@ -12,6 +12,7 @@ import { buildMemory } from '../domain/memory';
 import { voiceFor } from '../domain/presets';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
+import { isHe } from '../i18n';
 import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
@@ -138,7 +139,8 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
     warmedAt[type] = Date.now();
   }
   const agent = lastAgent[type];
-  applyOpening(type, agent?.firstMessage);
+  // The agent's first message is written in English; a Hebrew session keeps its own opening.
+  if (!isHe()) applyOpening(type, agent?.firstMessage);
   const opening = [...new Set(ARRIVE[type].flatMap((v) => v.map(([text]) => text)))];
   const out = chooseOutput(voiceId, agent);
   if (out instanceof ElevenLabsSpeechOutput) {
@@ -183,7 +185,7 @@ async function refreshScript(): Promise<void> {
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 2500);
-    const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/script`, { headers: apiHeaders(), signal: ctl.signal });
+    const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/script${isHe() ? '?lang=he' : ''}`, { headers: apiHeaders(), signal: ctl.signal });
     clearTimeout(t);
     if (!res.ok) return;
     const rejected = applyScript(await res.json());
@@ -195,6 +197,8 @@ async function refreshScript(): Promise<void> {
 
 function chooseBrain(pref: string, agent?: AgentSettings): GuideBrain {
   const remote = () => new RemoteGuideBrain({ url: config.apiUrl, headers: apiHeaders(), model: config.guideModel, style: () => agent?.prompt });
+  // The model rephrases in English: a Hebrew session keeps the script's own words.
+  if (isHe()) return new LocalGuideBrain();
   if (__DEV__ && pref === 'local') return new LocalGuideBrain();
   if (__DEV__ && pref === 'claude' && hasRemote) return remote();
   return hasRemote ? remote() : new LocalGuideBrain();
