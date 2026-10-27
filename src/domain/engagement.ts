@@ -1,6 +1,7 @@
 import { dayKey } from './checkin';
 import type { ProgramState } from './program';
 import type { Session } from './types';
+import { heCount, isHe, tr } from '../i18n';
 
 /**
  * Engagement that rewards practice, never pain (docs/RESEARCH.md §5).
@@ -23,22 +24,29 @@ export function practiceSessions(sessions: Session[]): Session[] {
 
 const DAY = 86_400_000;
 
-/** Monday-first week containing `now`, as local day keys. */
+/**
+ * The week containing `now`, as local day keys: Monday-first in English, Sunday-first in
+ * Hebrew, because the Israeli week starts on Sunday and a strip that began on Monday would
+ * split someone's week in the wrong place. The language is read at call time.
+ */
 export function weekDays(now: number, tz: number): string[] {
   const local = new Date(now + tz * 60_000);
-  const dow = (local.getUTCDay() + 6) % 7; // Monday = 0
-  const monday = now - dow * DAY;
-  return Array.from({ length: 7 }, (_, i) => dayKey(monday + i * DAY, tz));
+  const dow = isHe() ? local.getUTCDay() : (local.getUTCDay() + 6) % 7; // first day = 0
+  const first = now - dow * DAY;
+  return Array.from({ length: 7 }, (_, i) => dayKey(first + i * DAY, tz));
 }
 
 export type WeekStripDay = { day: string; label: string; practised: boolean; today: boolean; future: boolean };
 
 const LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+/** Sunday to Saturday, as Hebrew calendars write them. */
+const HE_LABELS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 
 export function weekStrip(sessions: Session[], now: number, tz: number): WeekStripDay[] {
   const practised = new Set(practiceSessions(sessions).map((s) => dayKey(s.startedAt, tz)));
   const today = dayKey(now, tz);
-  return weekDays(now, tz).map((day, i) => ({ day, label: LABELS[i], practised: practised.has(day), today: day === today, future: day > today }));
+  const labels = tr(LABELS, HE_LABELS);
+  return weekDays(now, tz).map((day, i) => ({ day, label: labels[i], practised: practised.has(day), today: day === today, future: day > today }));
 }
 
 export type PracticeStats = { days: number; minutes: number; sessions: number; daysThisWeek: number; lastPractice?: number };
@@ -58,10 +66,11 @@ export function practiceStats(sessions: Session[], now: number, tz: number): Pra
 
 /** One line under the week strip. Never a count of missed days, never a judgement. */
 export function weekLine(stats: PracticeStats, now: number): string {
-  if (stats.sessions === 0) return 'Your first practice is waiting.';
+  if (stats.sessions === 0) return tr('Your first practice is waiting.', 'התרגול הראשון מחכה.');
   const away = stats.lastPractice ? Math.floor((now - stats.lastPractice) / DAY) : 0;
-  if (away >= 4) return 'Welcome back. Pick up wherever you like.';
-  if (stats.daysThisWeek === 0) return 'A new week. Nothing to catch up on.';
+  if (away >= 4) return tr('Welcome back. Pick up wherever you like.', 'ברוכים השבים. אפשר להמשיך מאיפה שנוח.');
+  if (stats.daysThisWeek === 0) return tr('A new week. Nothing to catch up on.', 'שבוע חדש. אין מה להשלים.');
+  if (isHe()) return `${heCount(stats.daysThisWeek, 'יום תרגול אחד', 'ימי תרגול', 'יומיים של תרגול')} השבוע.`;
   return stats.daysThisWeek === 1 ? '1 practice day this week.' : `${stats.daysThisWeek} practice days this week.`;
 }
 
@@ -79,6 +88,22 @@ export const MILESTONE_COPY: Record<MilestoneId, { label: string; detail: string
   program_done: { label: '28 days', detail: 'The whole program, done.' },
 };
 
+/** The same milestones in Hebrew: about showing up, in plural address or neutral (docs/HEBREW.md). */
+const HE_MILESTONE_COPY: Record<MilestoneId, { label: string; detail: string }> = {
+  first: { label: 'תרגול ראשון', detail: 'התחלתם.' },
+  three_days: { label: '3 ימים', detail: 'שלושה ימי תרגול.' },
+  seven_days: { label: 'שבוע שלם', detail: 'שבעה ימי תרגול מאז שהתחלתם.' },
+  flare_met: { label: 'גם בהתלקחות', detail: 'תרגלתם גם בהתלקחות.' },
+  first_moment: { label: 'צעד ראשון', detail: 'שמרתם רגע בדרך למטרה.' },
+  halfway: { label: 'חצי הדרך', detail: '14 ימים בתוכנית.' },
+  program_done: { label: '28 ימים', detail: 'התוכנית כולה הושלמה.' },
+};
+
+/** Milestone words in the app's language, read at call time. */
+export function milestoneCopy(): Record<MilestoneId, { label: string; detail: string }> {
+  return tr(MILESTONE_COPY, HE_MILESTONE_COPY);
+}
+
 export function milestones(input: { sessions: Session[]; program: ProgramState; moments: number; tz: number }): Milestone[] {
   const own = practiceSessions(input.sessions);
   const days = new Set(own.map((s) => dayKey(s.startedAt, input.tz))).size;
@@ -92,7 +117,8 @@ export function milestones(input: { sessions: Session[]; program: ProgramState; 
     halfway: programDone >= 14,
     program_done: programDone >= 28,
   };
-  return (Object.keys(MILESTONE_COPY) as MilestoneId[]).map((id) => ({ id, ...MILESTONE_COPY[id], earned: earned[id] }));
+  const copy = milestoneCopy();
+  return (Object.keys(MILESTONE_COPY) as MilestoneId[]).map((id) => ({ id, ...copy[id], earned: earned[id] }));
 }
 
 /** Milestones earned by the latest session: earned with it, not without it. */

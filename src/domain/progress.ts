@@ -1,5 +1,6 @@
 import { dayKey, MIN_DAYS_FOR_PICTURE, painDays, practiceDays, type CheckIn } from './checkin';
 import type { Session } from './types';
+import { heCount, isHe, tr } from '../i18n';
 
 /**
  * Progress: the pain record over weeks, beside the days practised.
@@ -35,6 +36,14 @@ export type Progress = {
 export const PROGRESS_MEANING =
   'Each dot is the highest number you entered that day. A day without a dot had no check-in — not a day without pain. Pain moves for many reasons; this is a record to look at, not a verdict on you or on the practice.';
 
+const HE_PROGRESS_MEANING =
+  'כל נקודה היא המספר הגבוה ביותר שהוזן באותו יום. יום בלי נקודה הוא יום בלי צ׳ק־אין – לא יום בלי כאב. כאב משתנה מהרבה סיבות; זה תיעוד שאפשר להסתכל עליו, לא פסק דין עליכם או על התרגול.';
+
+/** The sentence about what the picture does not mean, in the app's language. */
+export function progressMeaning(): string {
+  return tr(PROGRESS_MEANING, HE_PROGRESS_MEANING);
+}
+
 export function buildProgress(checkIns: CheckIn[], sessions: Session[], opts: { now?: number; tz: number; days?: number }): Progress {
   const now = opts.now ?? Date.now();
   const n = opts.days ?? PROGRESS_DAYS;
@@ -56,9 +65,16 @@ export function buildProgress(checkIns: CheckIn[], sessions: Session[], opts: { 
   const weeks = Math.round(n / 7);
   const summary =
     checkInDays === 0 && practiceDayCount === 0
-      ? 'Nothing recorded yet.'
-      : `In the last ${weeks} weeks: checked in on ${plural(checkInDays, 'day')}, practised on ${plural(practiceDayCount, 'day')}.`;
+      ? tr('Nothing recorded yet.', 'עוד לא נרשם כלום.')
+      : isHe()
+        ? `ב־${weeks} השבועות האחרונים: ${checkInDays ? `צ׳ק־אין ${onDays(checkInDays)}` : 'בלי צ׳ק־אין'}, ${practiceDayCount ? `תרגול ${onDays(practiceDayCount)}` : 'בלי תרגול'}.`
+        : `In the last ${weeks} weeks: checked in on ${plural(checkInDays, 'day')}, practised on ${plural(practiceDayCount, 'day')}.`;
   return { days, checkInDays, practiceDays: practiceDayCount, enough: checkInDays >= MIN_DAYS_FOR_PICTURE, summary };
+}
+
+/** "ביום אחד", "ביומיים", "ב־6 ימים". None is said as "בלי …" by the caller, never "ב־0 ימים". */
+function onDays(n: number) {
+  return heCount(n, 'ביום אחד', 'ימים', 'ביומיים').replace(/^(\d)/, 'ב־$1');
 }
 
 function plural(n: number, word: string) {

@@ -12,7 +12,7 @@ import { buildMemory } from '../domain/memory';
 import { voiceFor } from '../domain/presets';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
-import { isHe } from '../i18n';
+import { isHe, tr } from '../i18n';
 import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
@@ -252,12 +252,12 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
 
       if (!(await input.isAvailable())) {
         setStatus('unavailable');
-        setError({ code: 'unavailable', message: 'Speech recognition is not available on this device.' });
+        setError({ code: 'unavailable', message: tr('Speech recognition is not available on this device.', 'זיהוי דיבור לא זמין במכשיר הזה.') });
         return;
       }
       if (!(await input.requestPermission())) {
         setStatus('unavailable');
-        setError({ code: 'permission', message: 'Attend needs the microphone and speech recognition to hear you.' });
+        setError({ code: 'permission', message: tr('Attend needs the microphone and speech recognition to hear you.', 'כדי לשמוע, צריך גישה למיקרופון ולזיהוי דיבור.') });
         return;
       }
 
@@ -361,11 +361,11 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     setDevInput(input instanceof DevTextInput ? input : undefined);
     if (!hasRemote || !(await input.isAvailable())) {
       setStatus('idle');
-      return { answers: {}, ended: true, error: { code: 'unavailable', message: 'Listening isn’t available here.' } };
+      return { answers: {}, ended: true, error: { code: 'unavailable', message: tr('Listening isn’t available here.', 'אי אפשר להקשיב כאן.') } };
     }
     if (!(await input.requestPermission())) {
       setStatus('idle');
-      return { answers: {}, ended: true, error: { code: 'permission', message: 'Microphone or speech recognition not allowed.' } };
+      return { answers: {}, ended: true, error: { code: 'permission', message: tr('Microphone or speech recognition not allowed.', 'אין הרשאה למיקרופון או לזיהוי דיבור.') } };
     }
     const welcomeVoice = GUIDE_VOICES[0];
     const ambience = prefs.ambience === false ? undefined : new Ambience();

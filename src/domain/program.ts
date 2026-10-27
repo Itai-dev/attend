@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import type { SessionType } from './types';
 
 /**
@@ -13,6 +14,10 @@ import type { SessionType } from './types';
  * weigh their own signs, and point anything new or changing to a doctor.
  *
  * Pure data and pure functions: no React, so the whole program is checked in tests.
+ *
+ * Hebrew (27 Oct 2026, docs/HEBREW.md) is a parallel table read at call time through
+ * getters: the language is set at launch, but Node tests switch it after this module has
+ * loaded, so nothing user-facing may be baked into a module-level value.
  */
 
 export type PracticeTheme =
@@ -46,17 +51,46 @@ export type ProgramDay = {
   practice: { title: string; theme: PracticeTheme; minutes: 3 | 5 | 7 | 10; sessionType: SessionType };
 };
 
-export const PROGRAM_TITLE = 'Meeting pain without alarm';
+/** The program's name, in the app's language. A function, not a constant: see the note above. */
+export function programTitle(): string {
+  // "בהלה" (fright), not "אזעקה": in Hebrew the feeling and the alarm system are two words.
+  return tr('Meeting pain without alarm', 'לפגוש את הכאב בלי בהלה');
+}
 export const PROGRAM_DAYS = 28;
 
-export const WEEKS: Record<1 | 2 | 3 | 4, { name: string; about: string }> = {
+type Week = 1 | 2 | 3 | 4;
+type WeekCopy = { name: string; about: string };
+
+const WEEKS_EN: Record<Week, WeekCopy> = {
   1: { name: 'Understand', about: 'How pain works, and why it can stay loud' },
   2: { name: 'Notice', about: 'Watching a sensation with curiosity' },
   3: { name: 'Soften', about: 'Fear, bracing, and the urge to fix' },
   4: { name: 'Live', about: 'Back to what you want to do' },
 };
 
+const WEEKS_HE: Record<Week, WeekCopy> = {
+  1: { name: 'להבין', about: 'איך כאב עובד, ולמה הוא יכול להישאר חזק' },
+  2: { name: 'לשים לב', about: 'להתבונן בתחושה בסקרנות' },
+  3: { name: 'לרכך', about: 'פחד, דריכות, והדחף לתקן' },
+  4: { name: 'לחיות', about: 'בחזרה למה שרוצים לעשות' },
+};
+
+function weekCopy(w: Week): Readonly<WeekCopy> {
+  return {
+    get name() {
+      return tr(WEEKS_EN[w].name, WEEKS_HE[w].name);
+    },
+    get about() {
+      return tr(WEEKS_EN[w].about, WEEKS_HE[w].about);
+    },
+  };
+}
+
+/** `WEEKS[w].name` reads in the app's language at the moment it is read. */
+export const WEEKS: Record<Week, Readonly<WeekCopy>> = { 1: weekCopy(1), 2: weekCopy(2), 3: weekCopy(3), 4: weekCopy(4) };
+
 const DOCTOR = 'If your pain is new, changing, or worries you, have it checked by a doctor before practising with it.';
+const DOCTOR_HE = 'אם הכאב חדש, משתנה או מדאיג אתכם, כדאי לבדוק אותו אצל רופא לפני שמתרגלים איתו.';
 
 type Def = [title: string, cards: LessonCard[], practice: string, theme: PracticeTheme, minutes: 3 | 5 | 7 | 10];
 
@@ -378,12 +412,26 @@ function sessionTypeFor(theme: PracticeTheme): SessionType {
   return 'notice';
 }
 
-export const PROGRAM: ProgramDay[] = DAYS.map(([title, cards, practice, theme, minutes], i) => ({
-  day: i + 1,
-  week: (Math.floor(i / 7) + 1) as 1 | 2 | 3 | 4,
-  lesson: { title, cards },
-  practice: { title: practice, theme, minutes, sessionType: sessionTypeFor(theme) },
-}));
+export const PROGRAM: ProgramDay[] = DAYS.map(([title, cards, practice, theme, minutes], i) => {
+  const en = { title, cards };
+  const [heTitle, heCards] = DAYS_HE[i];
+  const he = { title: heTitle, cards: heCards };
+  return {
+    day: i + 1,
+    week: (Math.floor(i / 7) + 1) as 1 | 2 | 3 | 4,
+    get lesson() {
+      return tr(en, he);
+    },
+    practice: {
+      get title() {
+        return tr(practice, PRACTICE_HE[practice] ?? practice);
+      },
+      theme,
+      minutes,
+      sessionType: sessionTypeFor(theme),
+    },
+  };
+});
 
 export function programDay(day: number): ProgramDay {
   return PROGRAM[Math.max(1, Math.min(PROGRAM_DAYS, day)) - 1];
