@@ -1,4 +1,5 @@
 import type { BodyRegion, Side } from './types';
+import { isHe } from '../i18n';
 
 /**
  * Where a region sits on the abstract figure, and how the guide says it.
@@ -161,4 +162,84 @@ function pluralLabel(label: string): string {
 export function isLateralCapable(region: BodyRegion): boolean {
   const info = REGIONS[region];
   return info.paired || info.sided;
+}
+
+/**
+ * Hebrew names (27 Oct 2026). Always definite and never possessive ("הכתף", not "הכתף שלך"):
+ * a possessive would need a gender for the listener, and the definite form is how Hebrew
+ * speakers say it anyway. `f` is the noun's gender, for "left" and "right" to agree with it;
+ * `both` is the pair, for "שתי הכתפיים". `bare` is the label without the article, for chips.
+ */
+type HeRegion = { the: string; bare: string; f: boolean; both?: string };
+
+export const HE_REGIONS: Record<BodyRegion, HeRegion> = {
+  head: { the: 'הראש', bare: 'ראש', f: false },
+  head_back: { the: 'העורף', bare: 'עורף', f: false },
+  forehead: { the: 'המצח', bare: 'מצח', f: false },
+  temple: { the: 'הרקה', bare: 'רקה', f: true, both: 'שתי הרקות' },
+  eye: { the: 'העין', bare: 'עין', f: true, both: 'שתי העיניים' },
+  jaw: { the: 'הלסת', bare: 'לסת', f: true },
+  face: { the: 'הפנים', bare: 'פנים', f: false },
+  neck: { the: 'הצוואר', bare: 'צוואר', f: false },
+  throat: { the: 'הגרון', bare: 'גרון', f: false },
+  shoulder: { the: 'הכתף', bare: 'כתף', f: true, both: 'שתי הכתפיים' },
+  upper_back: { the: 'הגב העליון', bare: 'גב עליון', f: false },
+  mid_back: { the: 'אמצע הגב', bare: 'אמצע הגב', f: false },
+  lower_back: { the: 'הגב התחתון', bare: 'גב תחתון', f: false },
+  sacrum: { the: 'בסיס עמוד השדרה', bare: 'בסיס עמוד השדרה', f: false },
+  spine: { the: 'עמוד השדרה', bare: 'עמוד השדרה', f: false },
+  chest: { the: 'החזה', bare: 'חזה', f: false },
+  ribs: { the: 'הצלעות', bare: 'צלעות', f: true },
+  abdomen: { the: 'הבטן', bare: 'בטן', f: true },
+  pelvis: { the: 'האגן', bare: 'אגן', f: false },
+  hip: { the: 'מפרק הירך', bare: 'מפרק הירך', f: false, both: 'שני מפרקי הירך' },
+  glute: { the: 'הישבן', bare: 'ישבן', f: false, both: 'שני צידי הישבן' },
+  arm: { the: 'היד', bare: 'יד', f: true, both: 'שתי הידיים' },
+  upper_arm: { the: 'הזרוע', bare: 'זרוע', f: true, both: 'שתי הזרועות' },
+  elbow: { the: 'המרפק', bare: 'מרפק', f: false, both: 'שני המרפקים' },
+  forearm: { the: 'האמה', bare: 'אמה', f: true, both: 'שתי האמות' },
+  wrist: { the: 'פרק היד', bare: 'פרק יד', f: false, both: 'שני פרקי הידיים' },
+  hand: { the: 'כף היד', bare: 'כף יד', f: true, both: 'שתי כפות הידיים' },
+  leg: { the: 'הרגל', bare: 'רגל', f: true, both: 'שתי הרגליים' },
+  thigh: { the: 'הירך', bare: 'ירך', f: true, both: 'שתי הירכיים' },
+  knee: { the: 'הברך', bare: 'ברך', f: true, both: 'שתי הברכיים' },
+  calf: { the: 'שריר השוק', bare: 'שריר השוק', f: false, both: 'שני שרירי השוק' },
+  shin: { the: 'עצם השוק', bare: 'עצם השוק', f: true, both: 'שתי עצמות השוק' },
+  ankle: { the: 'הקרסול', bare: 'קרסול', f: false, both: 'שני הקרסוליים' },
+  foot: { the: 'כף הרגל', bare: 'כף רגל', f: true, both: 'שתי כפות הרגליים' },
+  whole_body: { the: 'כל הגוף', bare: 'כל הגוף', f: false },
+};
+
+function heSide(r: HeRegion, side: 'left' | 'right'): string {
+  if (side === 'left') return r.f ? 'שמאלית' : 'שמאלי';
+  return r.f ? 'ימנית' : 'ימני';
+}
+
+/** The place in Hebrew, definite, as the guide says it: "הכתף השמאלית", "הצד הימני של הצוואר". */
+export function hePlace(region: BodyRegion, side?: Side): string {
+  const r = HE_REGIONS[region];
+  const info = REGIONS[region];
+  if (region === 'whole_body') return r.the;
+  if (side === 'bilateral') {
+    if (info.paired && r.both) return r.both;
+    return `שני הצדדים של ${r.the}`;
+  }
+  if (side === 'left' || side === 'right') {
+    // "הכתף השמאלית": the article goes on the adjective too. Compound names ("כף היד")
+    // take the adjective at the end, which agrees with the head noun's gender.
+    if (info.paired) return `${r.the} ה${heSide(r, side)}`;
+    if (info.sided) return `הצד ה${side === 'left' ? 'שמאלי' : 'ימני'} של ${r.the}`;
+  }
+  if (side === 'center' && info.sided) return `מרכז ${r.the}`;
+  return r.the;
+}
+
+/** The place in the app's language, for the guide and the screens. The engine keeps speakPlace. */
+export function sayPlace(region: BodyRegion, side?: Side): string {
+  return isHe() ? hePlace(region, side) : speakPlace(region, side);
+}
+
+/** A region's short name in the app's language, for chips: "Neck", "צוואר". */
+export function regionName(region: BodyRegion): string {
+  return isHe() ? HE_REGIONS[region].bare : REGIONS[region].label.charAt(0).toUpperCase() + REGIONS[region].label.slice(1);
 }

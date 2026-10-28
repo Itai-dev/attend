@@ -19,7 +19,9 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSPhotoLibraryUsageDescription": "Attend doesn't use your photo library. This permission is listed only because a component in the app could ask for it; it is never requested."
+        "NSPhotoLibraryUsageDescription": "Attend doesn't use your photo library. This permission is listed only because a component in the app could ask for it; it is never requested.",
+        "CFBundleDevelopmentRegion": "en",
+        "CFBundleAllowMixedLocalizations": true
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -41,6 +43,9 @@
         ]
       }
     },
+    "locales": {
+      "he": "./locales/he.json"
+    },
     "android": {
       "package": "com.itaiagami.attend",
       "adaptiveIcon": {
@@ -58,12 +63,31 @@
     "plugins": [
       "expo-router",
       [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": [
+              "en",
+              "he"
+            ],
+            "android": [
+              "en",
+              "he"
+            ]
+          },
+          "supportsRTL": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#F3EEE5",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120,
-          "dark": { "backgroundColor": "#1C1A17", "image": "./assets/images/splash-icon.png" }
+          "dark": {
+            "backgroundColor": "#1C1A17",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
       "expo-sqlite",

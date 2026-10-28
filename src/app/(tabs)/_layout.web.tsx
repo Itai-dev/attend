@@ -1,6 +1,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import { useData } from '@/data/store';
 import { color } from '@/design/theme';
+import { tr } from '@/i18n';
 
 /** Web preview only: JS tabs styled like the native bar. */
 export default function TabsLayout() {
@@ -18,9 +19,9 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: color.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Today' }} />
-      <Tabs.Screen name="explore" options={{ title: 'Explore' }} />
-      <Tabs.Screen name="you" options={{ title: prefs.name?.trim() || 'You' }} />
+      <Tabs.Screen name="index" options={{ title: tr('Today', 'היום') }} />
+      <Tabs.Screen name="explore" options={{ title: tr('Explore', 'גילוי') }} />
+      <Tabs.Screen name="you" options={{ title: prefs.name?.trim() || tr('You', 'אני') }} />
     </Tabs>
   );
 }

@@ -90,7 +90,8 @@ src/
   design/      Tokens and a handful of components. System type, Dynamic Type.
   features/    Screens. app/ holds routes only.
 supabase/functions/attend   The proxy: POST /guide (Claude), GET /tts (ElevenLabs).
-server/                     The voice server on Vercel: GET /tts (ElevenLabs v4), GET /script, POST /guide.
+server/                     The voice server on Vercel: GET /tts (ElevenLabs v4), GET /script[?lang=he], POST /guide.
+src/i18n/                   English or Hebrew, from the language iOS gives the app (docs/HEBREW.md).
 server/lib/agents.ts        The ElevenLabs agents (one per session type). Edit pace, tone prompt and
                             first message in the ElevenLabs dashboard; read via GET /agent. The voice
                             itself is one per session type, in code (SESSION_VOICES, domain/presets.ts),

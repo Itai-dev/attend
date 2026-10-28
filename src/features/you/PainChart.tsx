@@ -4,6 +4,7 @@ import { PAIN_MAX } from '@/domain/checkin';
 import type { ProgressDay } from '@/domain/progress';
 import { Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
+import { heCount, isHe } from '@/i18n';
 
 /**
  * The pain record over weeks: the highest pain each day as a dot, the days practised as ticks
@@ -16,7 +17,11 @@ export function PainChart({ days }: { days: ProgressDay[] }) {
   const [w, setW] = useState(0);
   const step = days.length > 1 ? w / (days.length - 1) : 0;
   const onLayout = (e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width);
-  const label = `Pain over the last ${days.length} days. ${days.filter((d) => d.peak !== undefined).length} days with a check-in, ${days.filter((d) => d.practised).length} days practised.`;
+  const checked = days.filter((d) => d.peak !== undefined).length;
+  const practised = days.filter((d) => d.practised).length;
+  const label = isHe()
+    ? `הכאב ב־${days.length} הימים האחרונים. צ׳ק־אין: ${heCount(checked, 'יום אחד', 'ימים', 'יומיים')}. תרגול: ${heCount(practised, 'יום אחד', 'ימים', 'יומיים')}.`
+    : `Pain over the last ${days.length} days. ${checked} days with a check-in, ${practised} days practised.`;
   return (
     <View onLayout={onLayout} accessible accessibilityRole="image" accessibilityLabel={label}>
       <View style={{ height: CHART_H }}>
@@ -42,13 +47,13 @@ export function PainChart({ days }: { days: ProgressDay[] }) {
         <View style={styles.legendItem}>
           <View style={[styles.dot, { position: 'relative' }]} />
           <Txt variant="footnote" tone="tertiary">
-            Highest pain that day
+            {isHe() ? 'הכאב הגבוה ביותר באותו יום' : 'Highest pain that day'}
           </Txt>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.tick, { position: 'relative' }]} />
           <Txt variant="footnote" tone="tertiary">
-            Practised
+            {isHe() ? 'תרגול' : 'Practised'}
           </Txt>
         </View>
       </View>

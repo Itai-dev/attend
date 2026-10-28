@@ -1,5 +1,12 @@
 import { GUIDE_SCRIPT, type GuideScript } from '../../../server/lib/guideScript';
+import { GUIDE_SCRIPT_HE } from '../../../server/lib/guideScript.he';
 import { violatesGuideLanguage } from '../../domain/safety';
+import { isHe } from '../../i18n';
+
+/** The script bundled for the app's language (Hebrew since 27 Oct 2026). */
+export function bundledScript(): GuideScript {
+  return isHe() ? GUIDE_SCRIPT_HE : GUIDE_SCRIPT;
+}
 
 /**
  * The guide's voice, written down.
@@ -76,6 +83,7 @@ export let CLOSE = GUIDE_SCRIPT.CLOSE;
 export let VOICE_DIRECTION = GUIDE_SCRIPT.voice.direction;
 
 function setAll(s: GuideScript) {
+  setFixed();
   ARRIVE = s.ARRIVE;
   SCAN_BRIEF = s.SCAN_BRIEF;
   SCAN_SHORT = s.SCAN_SHORT;
@@ -144,6 +152,7 @@ function shapeOf(v: unknown): Shape | undefined {
 function texts(v: unknown): string[] {
   if (typeof v === 'string') return [v];
   if (Array.isArray(v)) return v.flatMap((x) => (Array.isArray(x) && typeof x[1] === 'number' ? [String(x[0])] : texts(x)));
+  if (v && typeof v === 'object') return Object.values(v).flatMap(texts);
   return [];
 }
 
@@ -165,13 +174,20 @@ function sameShape(bundled: unknown, remote: unknown): boolean {
  * Returns the sections that were rejected.
  */
 export function applyScript(remote: unknown): string[] {
-  const next = { ...GUIDE_SCRIPT } as Record<string, unknown>;
+  const base = bundledScript();
+  const next = { ...base } as Record<string, unknown>;
   const rejected: string[] = [];
   if (remote && typeof remote === 'object') {
-    for (const k of Object.keys(GUIDE_SCRIPT)) {
+    for (const k of Object.keys(base)) {
       const r = (remote as Record<string, unknown>)[k];
       if (r === undefined) continue;
-      if (k === 'voice' ? sameShape(GUIDE_SCRIPT.voice, r) && /^[\w\s\[\]]{0,80}$/.test((r as { direction: string }).direction) : sameShape((GUIDE_SCRIPT as Record<string, unknown>)[k], r))
+      // A Hebrew app keeps its own words if a server sends English (one deployed before
+      // /script?lang=he existed answers every request with the English script).
+      if (isHe() && k !== 'voice' && texts(r).some((t) => !/[\u05d0-\u05ea]/.test(t))) {
+        rejected.push(k);
+        continue;
+      }
+      if (k === 'voice' ? sameShape(base.voice, r) && /^[\w\s\[\]]{0,80}$/.test((r as { direction: string }).direction) : sameShape((base as Record<string, unknown>)[k], r))
         next[k] = r;
       else rejected.push(k);
     }
@@ -192,41 +208,84 @@ export function applyOpening(type: keyof GuideScript['ARRIVE'], text: unknown): 
   return true;
 }
 
-/** Back to the words bundled with the app. */
+/** Back to the words bundled with the app, in its language. */
 export function resetScript() {
-  setAll(GUIDE_SCRIPT);
+  setAll(bundledScript());
 }
 
-export const SAFETY_ASK: string[] = [
-  'Before we go on: is this a sensation you know well, or is it something new?',
-];
-export const SAFETY_CLOSE: Line[] = [
-  ["Let's pause the practice here.", 3000],
-  ['This practice is meant for sensations you already know well.', 3500],
-  ['Something new or changing deserves a proper look from a doctor, or another medical professional.', 4000],
-  ['If it feels severe or urgent, please contact emergency services now.', 3500],
-  ['You can open your eyes.', 0],
-];
-export const CRISIS_CLOSE: Line[] = [
-  ["I'm going to stop the practice here.", 2500],
-  ['What you just said matters more than this session.', 3000],
-  ["If you might act on these thoughts, please contact your local emergency number, or a crisis line, now.", 3500],
-  ['If you can, reach out to someone you trust, and let them know how you are.', 3500],
-  ['You can open your eyes.', 0],
-];
-export const EARLY_CLOSE: Line[] = [
-  ["Okay. Let's stop here.", 3000],
-  ['Notice the room around you.', 4000],
-  ["When you're ready, open your eyes.", 0],
-];
-export const RESUME: Line = ["Let's continue.", 2500];
+// Fixed lines: never sent to a model, never edited remotely. Set with the script, so they
+// follow the app's language.
+export let SAFETY_ASK: string[] = [];
+export let SAFETY_CLOSE: Line[] = [];
+export let CRISIS_CLOSE: Line[] = [];
+export let EARLY_CLOSE: Line[] = [];
+export let RESUME: Line = ['', 0];
 /**
  * "Is this serious?", "Why does it hurt?" — fixed, like the safety lines: the guide can't
  * know, says so, and points to a professional for anything new or changing. Never a
  * reassurance in either direction.
  */
-export const ANSWER_CAUSE: Line[] = [
-  ["I can't tell what's causing it. That's a question for a doctor.", 3500],
-  ['If it feels new, or is changing, or worries you, have it looked at.', 4000],
-  ['Here, we only notice it.', 3000],
-];
+export let ANSWER_CAUSE: Line[] = [];
+
+function setFixed() {
+  if (isHe()) {
+    SAFETY_ASK = ['לפני שנמשיך: זו תחושה שאתם מכירים היטב, או משהו חדש?'];
+    SAFETY_CLOSE = [
+      ['נעצור כאן את התרגול.', 3000],
+      ['התרגול הזה מיועד לתחושות שכבר מוכרות לכם היטב.', 3500],
+      ['משהו חדש, או משהו שמשתנה, כדאי להראות לרופא, או לאיש מקצוע רפואי אחר.', 4000],
+      ['אם זה מרגיש חמור או דחוף, פנו עכשיו לשירותי החירום.', 3500],
+      ['אפשר לפקוח את העיניים.', 0],
+    ];
+    CRISIS_CLOSE = [
+      ['כאן התרגול נעצר.', 2500],
+      ['מה שאמרתם עכשיו חשוב יותר מהתרגול הזה.', 3000],
+      ['אם יש סיכוי שתפעלו לפי המחשבות האלה, התקשרו עכשיו למגן דוד אדום, מאה ואחת, או לקו התמיכה של ערן, אחת, שתיים, אפס, אחת.', 4000],
+      ['אם אפשר, פנו למישהו שאתם סומכים עליו, וספרו לו מה שלומכם.', 3500],
+      ['אפשר לפקוח את העיניים.', 0],
+    ];
+    EARLY_CLOSE = [
+      ['טוב. נעצור כאן.', 3000],
+      ['שימו לב לחדר שסביבכם.', 4000],
+      ['כשתרצו, פקחו את העיניים.', 0],
+    ];
+    RESUME = ['נמשיך.', 2500];
+    ANSWER_CAUSE = [
+      ['אין לי דרך לדעת מה גורם לזה. זו שאלה לרופא.', 3500],
+      ['אם זה מרגיש חדש, או משתנה, או מדאיג אתכם, כדאי לבדוק את זה.', 4000],
+      ['כאן, אנחנו רק שמים לב לזה.', 3000],
+    ];
+    return;
+  }
+  SAFETY_ASK = [
+    'Before we go on: is this a sensation you know well, or is it something new?',
+  ];
+  SAFETY_CLOSE = [
+    ["Let's pause the practice here.", 3000],
+    ['This practice is meant for sensations you already know well.', 3500],
+    ['Something new or changing deserves a proper look from a doctor, or another medical professional.', 4000],
+    ['If it feels severe or urgent, please contact emergency services now.', 3500],
+    ['You can open your eyes.', 0],
+  ];
+  CRISIS_CLOSE = [
+    ["I'm going to stop the practice here.", 2500],
+    ['What you just said matters more than this session.', 3000],
+    ["If you might act on these thoughts, please contact your local emergency number, or a crisis line, now.", 3500],
+    ['If you can, reach out to someone you trust, and let them know how you are.', 3500],
+    ['You can open your eyes.', 0],
+  ];
+  EARLY_CLOSE = [
+    ["Okay. Let's stop here.", 3000],
+    ['Notice the room around you.', 4000],
+    ["When you're ready, open your eyes.", 0],
+  ];
+  RESUME = ["Let's continue.", 2500];
+  ANSWER_CAUSE = [
+    ["I can't tell what's causing it. That's a question for a doctor.", 3500],
+    ['If it feels new, or is changing, or worries you, have it looked at.', 4000],
+    ['Here, we only notice it.', 3000],
+  ];
+}
+
+// The language is known before this module loads (src/i18n/device.ts).
+resetScript();

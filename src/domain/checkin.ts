@@ -1,4 +1,5 @@
 import type { BodyRegion, Place, Session } from './types';
+import { tr } from '../i18n';
 
 /**
  * The pain record, ported from Pattern (pattern-native, src/painScale.ts and src/model.ts)
@@ -36,16 +37,24 @@ export type CheckIn = {
 /**
  * Pattern's scale, version 3: five categories used identically everywhere.
  * 0 = No pain · 1–3 = Mild · 4–6 = Moderate · 7–9 = Severe · 10 = Most intense.
+ *
+ * In Hebrew the words describe the pain (כאב is masculine), never the person, in everyday
+ * words rather than the clinical "חמור": אין כאב · קל · בינוני · חזק · הכי חזק.
  */
+const PAIN_WORDS = ['No pain', 'Mild', 'Moderate', 'Severe', 'Most intense'];
+const HE_PAIN_WORDS = ['אין כאב', 'קל', 'בינוני', 'חזק', 'הכי חזק'];
+
 export function painLabel(v: number): string {
   const i = clampPain(v);
-  if (i === 0) return 'No pain';
-  if (i <= 3) return 'Mild';
-  if (i <= 6) return 'Moderate';
-  if (i <= 9) return 'Severe';
-  return 'Most intense';
+  const words = tr(PAIN_WORDS, HE_PAIN_WORDS);
+  if (i === 0) return words[0];
+  if (i <= 3) return words[1];
+  if (i <= 6) return words[2];
+  if (i <= 9) return words[3];
+  return words[4];
 }
 
+/** English ends of the scale. Screens use painLabel(0) and painLabel(PAIN_MAX), which follow the language. */
 export const PAIN_END_LOW = 'No pain';
 export const PAIN_END_HIGH = 'Most intense';
 

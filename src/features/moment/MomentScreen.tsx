@@ -6,6 +6,7 @@ import { useData } from '@/data/store';
 import { newId } from '@/domain/ids';
 import { haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
+import { tr } from '@/i18n';
 
 /**
  * A moment: something the person did toward their goal, or a time the pain was quieter than
@@ -30,34 +31,38 @@ export function MomentScreen() {
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom + space.l }]}>
       <View style={styles.top}>
-        <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
+        <IconButton icon="xmark" label={tr('Close', 'לסגור')} onPress={() => router.back()} tint={color.textSecondary} />
       </View>
       <View style={{ paddingHorizontal: space.l, flex: 1 }}>
         <Txt variant="display" accessibilityRole="header">
-          Save a moment
+          {tr('Save a moment', 'לשמור רגע')}
         </Txt>
         <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
           {prefs.goal
-            ? `A step toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}, or a time the pain was quieter than you expected.`
-            : 'A step you took, or a time the pain was quieter than you expected.'}
+            ? tr(
+                `A step toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}, or a time the pain was quieter than you expected.`,
+                // The goal is shown as typed, between dashes: Hebrew can't fold any phrase into "toward".
+                `צעד בדרך למטרה – ${prefs.goal} – או רגע שבו הכאב היה שקט יותר ממה שציפיתם.`,
+              )
+            : tr('A step you took, or a time the pain was quieter than you expected.', 'צעד שעשיתם, או רגע שבו הכאב היה שקט יותר ממה שציפיתם.')}
         </Txt>
         <TextInput
           value={text}
           onChangeText={setText}
-          placeholder="Built Lego on the floor for half an hour"
+          placeholder={tr('Built Lego on the floor for half an hour', 'בניתי לגו על הרצפה חצי שעה')}
           placeholderTextColor={color.textTertiary}
-          accessibilityLabel="Your moment"
+          accessibilityLabel={tr('Your moment', 'הרגע שלכם')}
           multiline
           maxLength={160}
           autoFocus
           style={styles.input}
         />
         <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.s }}>
-          Stays on this iPhone.
+          {tr('Stays on this iPhone.', 'נשאר באייפון הזה.')}
         </Txt>
       </View>
       <View style={{ paddingHorizontal: space.l }}>
-        <PrimaryButton label="Save" disabled={!ready} style={{ opacity: ready ? 1 : 0.4 }} onPress={save} />
+        <PrimaryButton label={tr('Save', 'לשמור')} disabled={!ready} style={{ opacity: ready ? 1 : 0.4 }} onPress={save} />
       </View>
     </View>
   );

@@ -7,8 +7,9 @@ import { CATEGORY_ART, SOUND_ART, type ArtKey } from '@/design/art';
 import { haptic, SettingsButton, TitledScroll, Txt } from '@/design/components';
 import { CoverArt, Pill } from '@/design/media';
 import { space, radius } from '@/design/theme';
-import { PRESET_CATEGORIES, PRESETS, recommendedPreset, type Preset } from '@/domain/presets';
-import { SOUNDS } from '@/domain/sounds';
+import { presetCategories, presets, recommendedPreset, type Preset } from '@/domain/presets';
+import { sounds } from '@/domain/sounds';
+import { heCount, tr } from '@/i18n';
 import { startPreset } from '../shared/startPreset';
 
 /**
@@ -46,7 +47,11 @@ function Tile({ art, seed, width, height, title, detail, label, onPress }: { art
 }
 
 function presetLabel(p: Preset) {
-  return `${p.title}. ${p.minutes} minutes, ${p.voiceName}'s voice.`;
+  return tr(`${p.title}. ${p.minutes} minutes, ${p.voiceName}'s voice.`, `${p.title}. ${heCount(p.minutes, 'דקה אחת', 'דקות')}, בקול של ${p.voiceName}.`);
+}
+
+function min(n: number) {
+  return tr(`${n} min`, `${n} דק׳`);
 }
 
 export function ExploreScreen() {
@@ -59,10 +64,10 @@ export function ExploreScreen() {
   const featured = recommendedPreset({ focus: prefs.focus, minutes: prefs.sessionMinutes === 7 ? undefined : prefs.sessionMinutes });
 
   return (
-    <TitledScroll title="Explore" right={<SettingsButton />}>
+    <TitledScroll title={tr('Explore', 'גילוי')} right={<SettingsButton />}>
       <View style={styles.pills}>
-        <Pill label="Sessions" on={tab === 'sessions'} onPress={() => setTab('sessions')} />
-        <Pill label="Sounds" on={tab === 'sounds'} onPress={() => setTab('sounds')} />
+        <Pill label={tr('Sessions', 'תרגולים')} on={tab === 'sessions'} onPress={() => setTab('sessions')} />
+        <Pill label={tr('Sounds', 'צלילים')} on={tab === 'sounds'} onPress={() => setTab('sounds')} />
       </View>
 
       {tab === 'sessions' ? (
@@ -73,13 +78,13 @@ export function ExploreScreen() {
             width={full}
             height={200}
             title={featured.title}
-            detail={`${featured.minutes} min · ${featured.blurb}`}
-            label={`Suggested for you. ${presetLabel(featured)}`}
+            detail={`${min(featured.minutes)} · ${featured.blurb}`}
+            label={`${tr('Suggested for you.', 'הצעה בשבילכם.')} ${presetLabel(featured)}`}
             onPress={() => startPreset(featured)}
           />
 
-          {PRESET_CATEGORIES.map((c) => {
-            const items = PRESETS.filter((p) => p.category === c.id);
+          {presetCategories().map((c) => {
+            const items = presets().filter((p) => p.category === c.id);
             return (
               <View key={c.id} style={{ marginTop: space.xxl }}>
                 <Txt variant="title2" accessibilityRole="header">
@@ -98,7 +103,7 @@ export function ExploreScreen() {
                       width={shelfTile}
                       height={shelfTile * 1.15}
                       title={p.title}
-                      detail={`${p.minutes} min · ${p.voiceName}`}
+                      detail={`${min(p.minutes)} · ${p.voiceName}`}
                       label={presetLabel(p)}
                       onPress={() => startPreset(p)}
                     />
@@ -111,10 +116,10 @@ export function ExploreScreen() {
       ) : (
         <Animated.View key="sounds" entering={FadeIn.duration(400)}>
           <Txt variant="callout" tone="secondary" style={{ marginBottom: space.l }}>
-            Nature on its own, no voice. To rest with, sleep to, or keep you company.
+            {tr('Nature on its own, no voice. To rest with, sleep to, or keep you company.', 'רק טבע, בלי קול מנחה. לנוח, להירדם, או שיהיה איתכם ברקע.')}
           </Txt>
           <View style={styles.grid}>
-            {SOUNDS.map((s, i) => (
+            {sounds().map((s, i) => (
               <Tile
                 key={s.id}
                 art={SOUND_ART[s.id]}

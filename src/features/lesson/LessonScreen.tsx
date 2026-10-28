@@ -7,6 +7,7 @@ import { useData } from '@/data/store';
 import { EMPTY_PROGRAM, markRead, programDay, WEEKS } from '@/domain/program';
 import { haptic, IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
+import { tr } from '@/i18n';
 import { Enso } from '@/viz/Enso';
 
 /**
@@ -31,16 +32,16 @@ export function LessonScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.m, paddingBottom: insets.bottom + space.l }]}>
-      <View style={styles.bars} accessibilityLabel={`Card ${i + 1} of ${cards.length}`}>
+      <View style={styles.bars} accessibilityLabel={tr(`Card ${i + 1} of ${cards.length}`, `כרטיס ${i + 1} מתוך ${cards.length}`)}>
         {cards.map((_, k) => (
           <View key={k} style={[styles.bar, k <= i && { backgroundColor: color.text }]} />
         ))}
       </View>
       <View style={styles.top}>
         <Txt variant="footnote" tone="tertiary">
-          Day {day.day} · Week {day.week} · {WEEKS[day.week].name}
+          {tr(`Day ${day.day} · Week ${day.week} · ${WEEKS[day.week].name}`, `יום ${day.day} · שבוע ${day.week} · ${WEEKS[day.week].name}`)}
         </Txt>
-        <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
+        <IconButton icon="xmark" label={tr('Close', 'לסגור')} onPress={() => router.back()} tint={color.textSecondary} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -63,7 +64,7 @@ export function LessonScreen() {
           {card.notice ? (
             <View style={styles.notice}>
               <Txt variant="caption" style={{ color: color.practice, letterSpacing: 1.2 }}>
-                NOTICE
+                {tr('NOTICE', 'לשים לב')}
               </Txt>
               <Txt variant="callout" style={{ marginTop: space.xs }}>
                 {card.notice}
@@ -75,17 +76,21 @@ export function LessonScreen() {
 
       <View style={styles.footer}>
         {last ? (
-          <PrimaryButton label="Start the practice" detail={`${day.practice.title} · ${day.practice.minutes} min`} onPress={finish} />
+          <PrimaryButton
+            label={tr('Start the practice', 'להתחיל את התרגול')}
+            detail={tr(`${day.practice.title} · ${day.practice.minutes} min`, `${day.practice.title} · ${day.practice.minutes} דק׳`)}
+            onPress={finish}
+          />
         ) : (
           <PrimaryButton
-            label="Next"
+            label={tr('Next', 'להמשיך')}
             onPress={() => {
               haptic('select');
               setI(i + 1);
             }}
           />
         )}
-        {i > 0 ? <QuietButton label="Back" style={{ alignSelf: 'center' }} onPress={() => setI(i - 1)} /> : null}
+        {i > 0 ? <QuietButton label={tr('Back', 'חזרה')} style={{ alignSelf: 'center' }} onPress={() => setI(i - 1)} /> : null}
       </View>
     </View>
   );

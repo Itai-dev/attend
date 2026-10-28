@@ -8,6 +8,8 @@
  * instead of crashing at launch.
  */
 
+import { tr } from '../i18n';
+
 type NotificationsModule = typeof import('expo-notifications');
 
 let cached: NotificationsModule | null | undefined;
@@ -49,6 +51,24 @@ const DAILY = [
   'Your next day of the program is here.',
 ];
 const WEEKLY = 'Whenever you’d like to come back, your practice is here.';
+const HE_DAILY = [
+  'כמה דקות שקטות מחכות, מתי שתרצו.',
+  'התרגול של היום מחכה. בעיניים עצומות, רק להקשיב.',
+  'זמן לקצת תשומת לב, בלי בהלה.',
+  'היום הבא בתוכנית כבר כאן.',
+];
+const HE_WEEKLY = 'מתי שתרצו לחזור, התרגול כאן.';
+
+/**
+ * The reminder's words in the app's language. A reminder already scheduled keeps the words
+ * it was scheduled with; the next scheduleReminders call (a setting change, a session)
+ * writes it again in the current language.
+ */
+export function reminderBody(quiet: boolean, date = new Date()): string {
+  if (quiet) return tr(WEEKLY, HE_WEEKLY);
+  const daily = tr(DAILY, HE_DAILY);
+  return daily[date.getDate() % daily.length];
+}
 
 export type ReminderSettings = { enabled: boolean; hour: number; minute: number };
 
@@ -65,13 +85,13 @@ export async function scheduleReminders(settings: ReminderSettings | undefined, 
     const quiet = lastPractice !== undefined && Date.now() - lastPractice > 4 * 86_400_000;
     if (quiet) {
       await n.scheduleNotificationAsync({
-        content: { title: 'Attend', body: WEEKLY },
+        content: { title: 'Attend', body: reminderBody(true) },
         trigger: { type: n.SchedulableTriggerInputTypes.WEEKLY, weekday: ((new Date().getDay() + 2) % 7) + 1, hour: settings.hour, minute: settings.minute },
       });
       return;
     }
     await n.scheduleNotificationAsync({
-      content: { title: 'Attend', body: DAILY[new Date().getDate() % DAILY.length] },
+      content: { title: 'Attend', body: reminderBody(false) },
       trigger: { type: n.SchedulableTriggerInputTypes.DAILY, hour: settings.hour, minute: settings.minute },
     });
   } catch {

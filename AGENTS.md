@@ -109,6 +109,14 @@ Explore's tiles use muted Japanese dye colours (`design/art.ts`); still no red.
 **Colour is never a verdict.** Calm, no red anywhere, including the body visualisation. The body map
 is labelled as an interpretation of what was said, never a scan or a measurement.
 
+**Hebrew (27 Oct 2026).** The app speaks English or Hebrew, following the language iOS
+gives it (the phone's, or Attend's own under Settings → Attend → Language), and lays out right
+to left in Hebrew. Every user-facing string goes through `tr(en, he)` from `src/i18n`, chosen
+at call time; the guide's Hebrew words are `server/lib/guideScript.he.ts`. Hebrew copy
+follows `docs/HEBREW.md`: never gender the person (plural address, infinitive buttons), no
+translationese. Hebrew sessions use the local guide only (the model rephrases in English).
+A change to English copy needs its Hebrew too; `tests/hebrew.test.ts` guards the spoken script.
+
 ## Structure rules
 
 - `domain/` and `engine/` stay free of React and Expo, so they run in Node tests.

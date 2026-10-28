@@ -3,12 +3,13 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
-import { currentTz, PAIN_END_HIGH, PAIN_END_LOW, PAIN_MAX, painLabel, WHERE_REGIONS as WHERE } from '@/domain/checkin';
+import { currentTz, PAIN_MAX, painLabel, WHERE_REGIONS as WHERE } from '@/domain/checkin';
 import { newId } from '@/domain/ids';
-import { REGIONS } from '@/domain/regions';
+import { regionName } from '@/domain/regions';
 import type { BodyRegion, Place } from '@/domain/types';
 import { Chip, haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
+import { tr } from '@/i18n';
 
 /**
  * The check-in, from Pattern: how much it hurts right now, and where. Pain is the only
@@ -21,10 +22,6 @@ import { color, HIT, radius, space } from '@/design/theme';
  * The places are Attend's own regions, so the place a check-in names is the place a guided
  * session rests on, in the same words.
  */
-
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 export function CheckinScreen() {
   const insets = useSafeAreaInsets();
@@ -63,11 +60,11 @@ export function CheckinScreen() {
         }}
       >
         <View style={styles.top}>
-          <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.text} />
+          <IconButton icon="xmark" label={tr('Close', 'לסגור')} onPress={() => router.back()} tint={color.text} />
         </View>
 
         <Txt variant="display" accessibilityRole="header">
-          How much does it hurt right now?
+          {tr('How much does it hurt right now?', 'כמה כואב עכשיו?')}
         </Txt>
 
         <View style={styles.readout} accessibilityLiveRegion="polite">
@@ -75,11 +72,11 @@ export function CheckinScreen() {
             {pain === null ? '–' : pain}
           </Txt>
           <Txt variant="title2" tone="secondary" style={{ fontWeight: '600' }}>
-            {pain === null ? 'Choose a number' : painLabel(pain)}
+            {pain === null ? tr('Choose a number', 'לבחור מספר') : painLabel(pain)}
           </Txt>
         </View>
 
-        <View style={styles.scale} accessibilityRole="radiogroup" accessibilityLabel="Pain, from 0, no pain, to 10, most intense">
+        <View style={styles.scale} accessibilityRole="radiogroup" accessibilityLabel={tr('Pain, from 0, no pain, to 10, most intense', `כאב, מ־0, ${painLabel(0)}, עד 10, ${painLabel(PAIN_MAX)}`)}>
           {Array.from({ length: PAIN_MAX + 1 }, (_, n) => {
             const on = n === pain;
             return (
@@ -103,34 +100,34 @@ export function CheckinScreen() {
         </View>
         <View style={styles.ends}>
           <Txt variant="footnote" tone="tertiary">
-            0 · {PAIN_END_LOW}
+            0 · {painLabel(0)}
           </Txt>
           <Txt variant="footnote" tone="tertiary">
-            {PAIN_END_HIGH} · 10
+            {painLabel(PAIN_MAX)} · 10
           </Txt>
         </View>
 
         <Txt variant="title2" accessibilityRole="header" style={{ marginTop: space.xxl, marginBottom: space.m }}>
-          Where, if you like
+          {tr('Where, if you like', 'איפה, אם רוצים')}
         </Txt>
         <View style={styles.where}>
           {WHERE.map((r) => (
-            <Chip key={r} label={cap(REGIONS[r].label)} selected={places.includes(r)} onPress={() => toggle(r)} />
+            <Chip key={r} label={regionName(r)} selected={places.includes(r)} onPress={() => toggle(r)} />
           ))}
         </View>
         <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
-          When you name one place, your next session rests there.
+          {tr('When you name one place, your next session rests there.', 'כשבוחרים מקום אחד, תשומת הלב בתרגול הבא תנוח שם.')}
         </Txt>
 
         <PrimaryButton
-          label="Save"
+          label={tr('Save', 'לשמור')}
           style={{ marginTop: space.xxl, opacity: pain === null ? 0.4 : 1 }}
           disabled={pain === null || saving}
           accessibilityState={{ disabled: pain === null || saving }}
           onPress={save}
         />
         <Txt variant="footnote" tone="tertiary" align="center" style={{ marginTop: space.l }}>
-          Stays on this iPhone. Only you see it.
+          {tr('Stays on this iPhone. Only you see it.', 'נשאר באייפון הזה. רק אתם רואים אותו.')}
         </Txt>
       </ScrollView>
     </View>
