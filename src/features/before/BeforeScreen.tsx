@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GUIDE_VOICES, hasRemote } from '@/config';
+import { guideVoices, hasRemote } from '@/config';
 import { useData } from '@/data/store';
 import { latestPlace, WHERE_REGIONS } from '@/domain/checkin';
 import { presetById, voiceFor } from '@/domain/presets';
@@ -92,7 +92,7 @@ export function BeforeScreen() {
   const [choosing, setChoosing] = useState(false);
   const [minutes, setMinutes] = useState<SessionLength>(plan.minutes);
   const [voice, setVoice] = useState(plan.voice);
-  const voiceName = GUIDE_VOICES.find((v) => v.id === voice)?.name ?? GUIDE_VOICES[0].name;
+  const voiceName = guideVoices().find((v) => v.id === voice)?.name ?? guideVoices()[0].name;
 
   const begin = () => {
     stopPreview();
@@ -193,8 +193,9 @@ export function BeforeScreen() {
             accessibilityRole="button"
             accessibilityLabel={tr(`Voice: ${voiceName}. Tap for the next voice`, `קול: ${voiceName}. הקשה עוברת לקול הבא`)}
             onPress={() => {
-              const i = GUIDE_VOICES.findIndex((v) => v.id === voice);
-              const next = GUIDE_VOICES[(i + 1) % GUIDE_VOICES.length];
+              const voices = guideVoices();
+              const i = voices.findIndex((v) => v.id === voice);
+              const next = voices[(i + 1) % voices.length];
               setVoice(next.id);
               if (hasRemote) previewVoice(next.id);
             }}

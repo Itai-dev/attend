@@ -83,3 +83,22 @@ test('in Hebrew every session and shelf has Hebrew words, under the same rules',
   }
   assert.equal(presetById('sleep-5')?.title, 'Lights out');
 });
+
+test('Hebrew sessions speak with native Hebrew voices, and a pick stays in its own language', async () => {
+  const { setLang } = await import('../src/i18n');
+  const { HEBREW_VOICES } = await import('../src/config');
+  const { SESSION_VOICES_HE } = await import('../src/domain/presets');
+  const hebrew = new Set<string>(HEBREW_VOICES.map((v) => v.id));
+  const danit = 's0T0DT6EAPeX57MQpn3I';
+  setLang('he');
+  try {
+    for (const t of ['notice', 'flare', 'sleep', 'fear'] as const) {
+      assert.ok(hebrew.has(voiceFor(t)), t);
+      assert.equal(voiceFor(t, { [t]: SESSION_VOICES.notice.voiceId }), SESSION_VOICES_HE[t].voiceId, 'an English pick is not used in Hebrew');
+    }
+    assert.equal(voiceFor('flare', { flare: danit }), danit);
+  } finally {
+    setLang('en');
+  }
+  assert.equal(voiceFor('flare', { flare: danit }), SESSION_VOICES.flare.voiceId, 'a Hebrew pick is not used in English');
+});

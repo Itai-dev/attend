@@ -1,5 +1,6 @@
 import type { SessionType } from './types';
 import { isHe } from '../i18n';
+import { HEBREW_VOICES } from '../config';
 
 /**
  * Ready-made sessions for Explore and Today. Each one is a session type, a length and the
@@ -67,9 +68,28 @@ export const SESSION_VOICES: Record<SessionType, { voiceId: string; voiceName: s
   fear: SARAH,
 };
 
-/** The voice for a session of this type: the person's choice for that type, else its own. */
+/**
+ * Hebrew sessions speak with native Israeli voices (28 Oct 2026). The same idea as above:
+ * Danit, natural and calm, for everyday noticing and for sleep; Herzl, calm and measured,
+ * to lean on in a flare; Itamar, clear and steady, for worry.
+ */
+export const SESSION_VOICES_HE: Record<SessionType, { voiceId: string; voiceName: string }> = {
+  notice: { voiceId: 's0T0DT6EAPeX57MQpn3I', voiceName: 'דנית' },
+  flare: { voiceId: '6Ijsl5024dyMrE00loVE', voiceName: 'הרצל' },
+  sleep: { voiceId: 's0T0DT6EAPeX57MQpn3I', voiceName: 'דנית' },
+  fear: { voiceId: 'l7Q9rbdCC6j3J5dNlOOg', voiceName: 'איתמר' },
+};
+
+/**
+ * The voice for a session of this type: the person's choice for that type, else its own.
+ * A choice only counts in its own language: a voice picked in English never reads Hebrew
+ * with an English accent, and a Hebrew voice never reads English.
+ */
 export function voiceFor(type: SessionType, chosen?: Partial<Record<SessionType, string>>): string {
-  return chosen?.[type] ?? SESSION_VOICES[type].voiceId;
+  const own = isHe() ? SESSION_VOICES_HE : SESSION_VOICES;
+  const pick = chosen?.[type];
+  const hebrew = !!pick && HEBREW_VOICES.some((v) => v.id === pick);
+  return pick && hebrew === isHe() ? pick : own[type].voiceId;
 }
 
 /** English data; screens read `presets()`, `presetById()` and `recommendedPreset()`, which pick the language at call time. */

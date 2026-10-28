@@ -1,3 +1,4 @@
+import { isHe } from './i18n';
 /**
  * Build-time configuration. EXPO_PUBLIC_* values are inlined into the bundle,
  * so nothing here may be a secret: the API key below is a public gateway key
@@ -34,6 +35,27 @@ export const GUIDE_VOICES = [
   { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', detail: 'Deep, steady' },
   { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', detail: 'Low, measured' },
 ] as const;
+
+/**
+ * The Hebrew guide voices (28 Oct 2026): native Israeli speakers from the ElevenLabs voice
+ * library. The premade voices above read Hebrew with an English accent; these were compared
+ * on the guide's own lines (clarity, steadiness of pitch) and Zina, the most dramatic, left
+ * out. Library voices need a paid ElevenLabs plan, which this account has.
+ */
+export const HEBREW_VOICES = [
+  { id: 's0T0DT6EAPeX57MQpn3I', name: 'דנית', detail: 'טבעית, רגועה' },
+  { id: 'l7Q9rbdCC6j3J5dNlOOg', name: 'איתמר', detail: 'ברור, מדוד' },
+  { id: '6Ijsl5024dyMrE00loVE', name: 'הרצל', detail: 'רגוע, חם' },
+  { id: '8sZ9Z3Jy28CGLLCmKEHn', name: 'ויקטור', detail: 'חם, יציב' },
+  { id: 'ZiofZHcEBTn5sRySe5h8', name: 'נמרוד', detail: 'חם, בטוח' },
+] as const;
+
+export type GuideVoice = { id: string; name: string; detail: string };
+
+/** The voices offered in the app's language. A Hebrew session never speaks with an English voice. */
+export function guideVoices(): readonly GuideVoice[] {
+  return isHe() ? HEBREW_VOICES : GUIDE_VOICES;
+}
 
 /** Headers every request to the proxy carries. */
 export function apiHeaders(): Record<string, string> {

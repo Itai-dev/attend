@@ -66,7 +66,15 @@ Forms in the past or about the person ("you began") become neutral or plural:
 
 Spoken by ElevenLabs, eyes closed. Everything above applies, plus:
 
-- **Plural imperatives** ("עצמו את העיניים", "שימו לב", "הניחו לנשימה"). Calm, never commanding.
+- **Talk like an Israeli teacher, not a translation (28 Oct 2026).** Three forms, mixed:
+  "אפשר ל…" for an invitation ("אפשר לעצום את העיניים"), a plain statement for what is
+  happening ("הקשב נח על הכתף", "הנשימה באה והולכת"), and a plural imperative for an action
+  ("הביאו את הקשב", "הרגישו"). Not "תנו ל…" for every English "let" — it is the calque that
+  made the first version sound translated — and not "שימו לב" at the start of every line.
+- **"הקשב", not "תשומת הלב",** in the spoken script: it is what Israeli mindfulness teachers
+  say, it is shorter, and the voice says it more clearly. Written screens may use either.
+- **Questions without a question to answer** are natural in Hebrew guidance ("ומה המרקם
+  שלה?") and read as wondering, not asking: the session still never waits for an answer.
 - **Short lines, commas for breath.** The number after each line is the silence that follows;
   keep the English silences.
 - **Say it the way it will be heard.** No abbreviations, no gershayim, no digits: write
@@ -93,7 +101,7 @@ Spoken by ElevenLabs, eyes closed. Everything above applies, plus:
 | pain record | יומן הכאב |
 | sensation | תחושה |
 | somatic tracking | מעקב סומטי |
-| attention | תשומת לב |
+| attention | תשומת לב (written), קשב (spoken) |
 | milestones | אבני דרך |
 | goal | מטרה |
 | a moment (saved toward the goal) | רגע |
@@ -112,3 +120,11 @@ Spoken by ElevenLabs, eyes closed. Everything above applies, plus:
 
 The pain number is what the person entered, 0–10, with five words (from Pattern). In
 Hebrew the five words describe the pain, never the person: no "אתם בסדר".
+
+## The Hebrew voices
+
+Hebrew sessions speak with native Israeli voices from the ElevenLabs library
+(`HEBREW_VOICES` in `src/config.ts`, defaults per session type in `SESSION_VOICES_HE`):
+Danit for everyday noticing and sleep, Herzl for a flare, Itamar for worry; Viktor and
+Nimrod can be picked. The English premade voices read Hebrew with an English accent and are
+never used for a Hebrew session; a voice picked in one language is not carried into the other.

@@ -2,7 +2,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
-import { apiHeaders, config, GUIDE_VOICES, hasRemote } from '../config';
+import { apiHeaders, config, GUIDE_VOICES, guideVoices, hasRemote } from '../config';
 import { repository } from '../data/repository';
 import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
@@ -154,7 +154,7 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
 
 /** Only voices the app offers; an id saved by an older build counts as no choice. */
 function knownVoice(id?: string): string | undefined {
-  return GUIDE_VOICES.find((v) => v.id === id)?.id;
+  return guideVoices().find((v) => v.id === id)?.id;
 }
 
 /**
