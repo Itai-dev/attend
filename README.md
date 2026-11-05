@@ -156,6 +156,12 @@ local or from the model — that claims safety, diagnoses, or turns into cheerle
   In the developer-only conversational mode, the words of the session also go to Claude.
   Nothing is stored there.
 - No analytics.
+- **Share a page** (5 Nov 2026): the person's tab can make a one-sheet PDF (practice days,
+  minutes, the program, the pain record over eight weeks, `domain/share.ts`) and hand it to the
+  iOS share sheet. It is built on the phone and leaves it only when the person sends it, to
+  whoever they choose; the app never knows whether it was sent. This is deliberately instead of
+  a therapist dashboard, which would need an account, a server holding pain records, and
+  someone watching.
 - Settings → Delete all sessions.
 
 ---
