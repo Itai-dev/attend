@@ -39,6 +39,20 @@ export const CATEGORY_ART = { familiar: 'moss', flare: 'amber', sleep: 'night', 
 /** The nature sounds in Explore: stream, waves, rain, wind. */
 export const SOUND_ART = { notice: 'teal', flare: 'slate', sleep: 'night', fear: 'moss' } as const satisfies Record<string, ArtKey>;
 
+/**
+ * The small pictures on the tiles (5 Nov 2026), placeholders until there is illustration: drawn
+ * in grain, in the tile's own light colour (viz/shaders.ts, MOTIF_SKSL). The index is the
+ * shader's: keep the order.
+ */
+export const MOTIFS = ['ring', 'sun', 'moon', 'pair', 'stream', 'waves', 'rain', 'pines'] as const;
+export type Motif = (typeof MOTIFS)[number];
+
+/** Any-time sessions: a ring to meet what's here, a low sun for a flare, a moon for sleep, two circles side by side for worry. */
+export const CATEGORY_MOTIF = { familiar: 'ring', flare: 'sun', sleep: 'moon', worry: 'pair' } as const satisfies Record<keyof typeof CATEGORY_ART, Motif>;
+
+/** The sounds, by what they are: stream, waves, rain, wind in pines. */
+export const SOUND_MOTIF = { notice: 'stream', flare: 'waves', sleep: 'rain', fear: 'pines' } as const satisfies Record<keyof typeof SOUND_ART, Motif>;
+
 /** Where the two glows sit, varied by a seed so two covers of one colour still differ. */
 export function glowSpots(seed: number): Array<{ x: number; y: number; r: number; a: number }> {
   const f = (n: number) => {

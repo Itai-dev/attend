@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SOUND_ART } from '@/design/art';
+import { SOUND_ART, SOUND_MOTIF } from '@/design/art';
 import { haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { CoverArt } from '@/design/media';
 import { color, radius, space } from '@/design/theme';
@@ -112,7 +112,7 @@ export function SoundScreen() {
         <IconButton icon="xmark" label={tr('Close', 'לסגור')} onPress={() => router.back()} tint={color.textSecondary} />
       </View>
       <Animated.View entering={FadeIn.duration(700)} style={styles.body}>
-        <CoverArt art={SOUND_ART[sound.id]} seed={sound.title.length} size={Math.min(width - space.xl * 2, 320)} height={220} rounded={radius.l} />
+        <CoverArt art={SOUND_ART[sound.id]} motif={SOUND_MOTIF[sound.id]} seed={sound.title.length} size={Math.min(width - space.xl * 2, 320)} height={220} rounded={radius.l} />
         <Txt variant="display" align="center" style={{ marginTop: space.xl }}>
           {sound.title}
         </Txt>
