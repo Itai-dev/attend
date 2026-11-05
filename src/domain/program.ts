@@ -358,7 +358,7 @@ const DAYS: Def[] = [
     [
       { text: ['Sometimes the alarm rings mid-activity. That is part of the road.'] },
       { text: ['A short practice in the moment can help: stop, breathe, find the edges, carry on or rest.'] },
-      { text: ['The 3-minute flare practice is always on Today.'] },
+      { text: ['The 3-minute flare practice is always in Explore.'] },
     ],
     'In the moment',
     'flare',
@@ -609,7 +609,7 @@ const DAYS_HE: DefHe[] = [
     [
       { text: ['לפעמים האזעקה נדלקת באמצע פעילות. זה חלק מהדרך.'] },
       { text: ['תרגול קצר ברגע עצמו יכול לעזור: לעצור, לנשום, למצוא את הקצוות, ואז להמשיך או לנוח.'] },
-      { text: ['תרגול ההתלקחות של 3 דקות נמצא תמיד בלשונית היום.'] },
+      { text: ['תרגול ההתלקחות של 3 דקות נמצא תמיד במסך גילוי.'] },
     ],
   ],
   [

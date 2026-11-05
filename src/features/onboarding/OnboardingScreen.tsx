@@ -12,6 +12,7 @@ import type { BodyRegion } from '@/domain/types';
 import { Chip, haptic, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { CoverArt } from '@/design/media';
 import { color, HIT, radius, space } from '@/design/theme';
+import { goals, localGoal } from '@/domain/goals';
 import { tr } from '@/i18n';
 import { requestReminderPermission, scheduleReminders } from '@/voice/reminders';
 import { Enso } from '@/viz/Enso';
@@ -26,21 +27,6 @@ import { Enso } from '@/viz/Enso';
  * practice back to (docs/RESEARCH.md §4).
  */
 
-// The goal is stored as the words shown, so each language keeps its own list, index for index:
-// a goal picked in one language is still the same chip in the other.
-const GOALS_EN = ['Long walks', 'Playing with my kids', 'Sleeping through', 'Working without breaks', 'Sport', 'Time with friends'];
-const GOALS_HE = ['הליכות ארוכות', 'משחק עם הילדים', 'לילה שלם של שינה', 'יום עבודה מלא', 'ספורט', 'זמן עם חברים'];
-
-function goals() {
-  return tr(GOALS_EN, GOALS_HE);
-}
-
-/** A stored goal from the chips, in the app's language: the chip at the same place in the other list. */
-function localGoal(g: string | undefined) {
-  if (!g) return g;
-  const i = Math.max(GOALS_EN.indexOf(g), GOALS_HE.indexOf(g));
-  return i >= 0 ? goals()[i] : g;
-}
 
 function durations(): Array<{ value: NonNullable<Prefs['painFor']>; label: string }> {
   return [

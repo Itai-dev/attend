@@ -119,9 +119,10 @@ const HE_PRESETS: Record<string, { title: string; blurb: string }> = {
   'worry-3': { title: 'רגע של דאגה', blurb: 'כמה דקות יציבות, כשהדאגה חזקה יותר מהתחושה.' },
 };
 
+/** A preset in Hebrew: its Hebrew words and its type's Hebrew voice, so the tile names the voice that will speak. */
 function local(p: Preset): Preset {
   const he = isHe() ? HE_PRESETS[p.id] : undefined;
-  return he ? { ...p, ...he } : p;
+  return he ? { ...p, ...he, ...SESSION_VOICES_HE[p.type] } : p;
 }
 
 /** The presets in the app's language. English returns PRESETS itself. */

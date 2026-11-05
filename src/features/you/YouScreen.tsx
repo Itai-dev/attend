@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useData } from '@/data/store';
 import { currentTz, MIN_DAYS_FOR_PICTURE } from '@/domain/checkin';
+import { localGoal } from '@/domain/goals';
 import { milestones, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM, PROGRAM_DAYS } from '@/domain/program';
 import { buildProgress, progressMeaning } from '@/domain/progress';
@@ -69,6 +70,7 @@ export function YouScreen() {
   }, [sessions]);
   const lastMoment = prefs.moments?.[0];
   const name = prefs.name?.trim();
+  const goal = localGoal(prefs.goal);
   const [sharing, setSharing] = useState(false);
 
   return (
@@ -85,9 +87,9 @@ export function YouScreen() {
               ? tr(`Practising since ${longDate(first)}`, `מתרגלים מאז ${longDate(first)}`)
               : tr('Your first practice is waiting on Today', 'התרגול הראשון מחכה בלשונית היום')}
           </Txt>
-          {prefs.goal ? (
+          {goal ? (
             <Txt variant="callout" style={{ color: color.milestone }}>
-              {tr(`Toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}`, `המטרה: ${prefs.goal}`)}
+              {tr(`Toward ${goal.charAt(0).toLowerCase() + goal.slice(1)}`, `המטרה: ${goal}`)}
             </Txt>
           ) : null}
         </View>
@@ -179,7 +181,7 @@ export function YouScreen() {
           disabled={sharing}
           onPress={() => {
             setSharing(true);
-            void sharePage({ name, goal: prefs.goal, sessions, checkIns, program, now: Date.now(), tz }).finally(() => setSharing(false));
+            void sharePage({ name, goal, sessions, checkIns, program, now: Date.now(), tz }).finally(() => setSharing(false));
           }}
           style={styles.link}
           hitSlop={8}
