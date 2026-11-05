@@ -100,3 +100,91 @@ half4 main(float2 fragCoord) {
   return half4(col, 1.0);
 }
 `;
+
+/**
+ * ECLIPSE: the mark (tools/make-mark.py), alive (5 Nov 2026). A thick ring of grain, level,
+ * eclipsed on the right by an unseen disc 1.4x its size, so it dissolves along a curve.
+ *
+ * In the session it follows the guide's voice: as a line is spoken the ring loosens into
+ * grain (the disc moves in, the edges soften, particles drift and shimmer); in the silence
+ * after it, it gathers back into the mark. Between lines it breathes very slowly. Under
+ * Reduce Motion it is the still mark.
+ *
+ * `uOpaque` 1 draws the background (the session, full screen); 0 draws the mark alone with
+ * alpha (the small mark on other screens).
+ */
+export const ECLIPSE_SKSL = `
+uniform float2 uRes;
+uniform float uTime;
+uniform float uMotion;
+uniform float uLevel;
+uniform float uSpeak;
+uniform float uDim;
+uniform float3 uBg;
+uniform float3 uInk;
+uniform float uOpaque;
+uniform float uSize;
+uniform float uGrain;
+
+// No sin(): on GPUs its precision breaks down at large arguments and the grain lines up
+// in diagonal streaks.
+float hash(float2 p) {
+  p = fract(p * float2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+float noise(float2 p) {
+  float2 i = floor(p);
+  float2 f = fract(p);
+  float2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + float2(1.0, 0.0)), u.x), mix(hash(i + float2(0.0, 1.0)), hash(i + float2(1.0, 1.0)), u.x), u.y);
+}
+
+half4 main(float2 fragCoord) {
+  float s = min(uRes.x, uRes.y);
+  float2 p = (fragCoord - uRes * 0.5) / s;
+  float t = uTime * uMotion;
+
+  // The voice, or, where the voice can't be measured, a slow swell while the guide speaks.
+  float swell = uSpeak * (0.22 + 0.12 * sin(t * 1.3));
+  float L = clamp(max(uLevel, swell), 0.0, 1.0) * uMotion;
+
+  float breath = sin(t * 6.2831853 / 10.0) * uMotion;
+  float ro = uSize * (1.0 + 0.015 * breath);
+  float ri = ro * 0.52;
+
+  // Particles drift as it loosens: the sampled radius wanders with a slow noise field.
+  float rho = length(p);
+  float drift = noise(fragCoord / (s * 0.018) + float2(t * 0.35, -t * 0.25)) - 0.35;
+  rho -= L * 0.05 * drift * ro / 0.31;
+
+  float outSoft = (0.07 + 0.12 * L) * ro;
+  float inSoft = (0.045 + 0.07 * L) * ro;
+  float band = smoothstep(ri - inSoft, ri + inSoft, rho) * (1.0 - smoothstep(ro - outSoft, ro + outSoft, rho));
+  band = pow(band, 0.8);
+
+  // The eclipse: the mark's disc at rest, moving in and softening with the voice.
+  float moonDx = (1.95 - 0.4 * L) * ro;
+  float moonR = 1.4 * ro;
+  float moonSoft = (0.45 + 0.3 * L) * ro;
+  float md = length(p - float2(moonDx, 0.0));
+  float moon = smoothstep(moonR - moonSoft, moonR + moonSoft, md);
+
+  float density = clamp(band * moon, 0.0, 1.0);
+
+  // Grain: a fixed screen of thresholds, so the mark is made of particles, not a blur. While
+  // the voice is loud some of them re-roll a few times a second: the grain shimmers.
+  float2 cell = floor(fragCoord / uGrain);
+  float h = hash(cell);
+  float h2 = hash(cell + floor(t * 6.0) * 17.0);
+  // Kept above zero, so where there is no mark there is no grain at all.
+  float thr = 0.03 + 0.97 * mix(h, h2, 0.55 * L);
+  float a = smoothstep(thr - 0.02, thr + 0.02, density) * uDim;
+
+  if (uOpaque > 0.5) {
+    return half4(mix(uBg, uInk, a), 1.0);
+  }
+  return half4(uInk * a, a);
+}
+`;

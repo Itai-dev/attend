@@ -33,6 +33,8 @@ export type RunnerDeps = {
   voice: VoiceIO;
   onState: (s: RunnerState) => void;
   onLevel?: (level: number) => void;
+  /** The guide's own loudness while it speaks (and the gong's), for the session visual. */
+  onVoiceLevel?: (level: number) => void;
   onDraft?: (d: EngineDraft) => void;
   /** Developer-only: every line and answer, for the debug panel. Never shown to the person. */
   onDebug?: (entry: { who: 'guide' | 'user' | 'silence' | 'system'; text: string }) => void;
@@ -68,6 +70,7 @@ export class SessionRunner {
   private pausedTotal = 0;
   private status: RunnerStatus = 'preparing';
   private unsubLevel?: () => void;
+  private unsubVoiceLevel?: () => void;
 
   constructor(private readonly d: RunnerDeps) {}
 
@@ -88,6 +91,7 @@ export class SessionRunner {
   async run(): Promise<{ session: Session; moments: SessionMoment[] }> {
     const { engine, voice } = this.d;
     this.unsubLevel = voice.input.onLevel?.((l) => this.d.onLevel?.(l));
+    this.unsubVoiceLevel = voice.output.onLevel?.((l) => this.d.onVoiceLevel?.(l));
     // Setup must never hold the session hostage: a voice list or audio mode that
     // never resolves (it happens on some platforms) times out and the session goes on.
     try {
@@ -155,6 +159,8 @@ export class SessionRunner {
       if (engine.done && !this.hardStop && engine.closedCalmly) await this.gong();
     } finally {
       this.unsubLevel?.();
+      this.unsubVoiceLevel?.();
+      this.d.onVoiceLevel?.(0);
       this.d.voice.output.stop();
       await this.d.voice.input.end?.().catch(() => {});
       await this.d.voice.output.end?.().catch(() => {});

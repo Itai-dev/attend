@@ -12,7 +12,8 @@ import { color, space } from '@/design/theme';
 import { SESSION_LENGTHS } from '@/engine/phases';
 import { isHe, tr } from '@/i18n';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
-import { BreathingField, type BreathMode } from '@/viz/BreathingField';
+import type { BreathMode } from '@/viz/BreathingField';
+import { EclipseField } from '@/viz/EclipseField';
 import { clock } from '../shared/format';
 import { DevPanel } from './DevPanel';
 
@@ -117,8 +118,8 @@ export function SessionScreen() {
     <View style={styles.root}>
       <StatusBar hidden />
       {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
-      {/* The moving orb, not the ensō (22 Oct 2026): a still line read as static during a session. */}
-      <BreathingField width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
+      {/* The mark, alive (5 Nov 2026): the ring loosens into grain with the guide's voice and gathers in the silence. */}
+      <EclipseField width={width} height={height} mode={breathMode(vs.status)} level={vs.voiceLevel} opaque size={0.27} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
         <Txt variant="caption" tone="tertiary" style={[styles.status, isHe() && styles.statusHe]} accessibilityLiveRegion="none">

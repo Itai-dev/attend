@@ -1,20 +1,23 @@
 import { Skia, type SkRuntimeEffect } from '@shopify/react-native-skia';
-import { BREATH_SKSL } from './shaders';
+import { BREATH_SKSL, ECLIPSE_SKSL } from './shaders';
 
 /**
- * The breathing orb's shader, compiled lazily on first use, not at import time: on web,
- * CanvasKit is only loaded once SkiaGate has finished, and compiling earlier would throw.
+ * The shaders, compiled lazily on first use, not at import time: on web, CanvasKit is only
+ * loaded once SkiaGate has finished, and compiling earlier would throw.
  */
-let cache: SkRuntimeEffect | null | undefined;
+type Name = 'breath' | 'eclipse';
+const SOURCE: Record<Name, string> = { breath: BREATH_SKSL, eclipse: ECLIPSE_SKSL };
+const cache = new Map<Name, SkRuntimeEffect | null>();
 
-export function effect(_name: 'breath'): SkRuntimeEffect | null {
-  if (cache !== undefined) return cache;
+export function effect(name: Name): SkRuntimeEffect | null {
+  if (cache.has(name)) return cache.get(name) ?? null;
+  let fx: SkRuntimeEffect | null = null;
   try {
-    cache = Skia.RuntimeEffect.Make(BREATH_SKSL);
-    if (!cache && __DEV__) console.warn('[attend] breath shader failed to compile');
+    fx = Skia.RuntimeEffect.Make(SOURCE[name]);
+    if (!fx && __DEV__) console.warn(`[attend] ${name} shader failed to compile`);
   } catch (err) {
-    if (__DEV__) console.warn('[attend] breath shader error', err);
-    cache = null;
+    if (__DEV__) console.warn(`[attend] ${name} shader error`, err);
   }
-  return cache;
+  cache.set(name, fx);
+  return fx;
 }

@@ -1,0 +1,84 @@
+import { Canvas, Fill, Shader, useClock } from '@shopify/react-native-skia';
+import { useEffect, useMemo } from 'react';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useDerivedValue, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import { useColors } from '../design/theme';
+import type { BreathMode } from './BreathingField';
+import { effect } from './effects';
+
+/**
+ * The mark, alive (5 Nov 2026): the ring of grain from the icon (tools/make-mark.py), drawn by
+ * ECLIPSE_SKSL. In the session it follows the guide's voice: a spoken line loosens it into
+ * grain, and in the silence after, it gathers back into the mark. Elsewhere it is the small
+ * still-breathing mark. It follows the appearance: sumi ink on washi by day, rice paper on
+ * charcoal at night. Under Reduce Motion it is the still mark.
+ */
+
+function rgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+type Props = {
+  width: number;
+  height: number;
+  mode: BreathMode;
+  /** The guide's loudness, 0..1. Without it the ring swells gently while the guide speaks. */
+  level?: SharedValue<number>;
+  /** 0..1 overall strength, for fades. */
+  dim?: number;
+  /** Draw the background too (the full-screen session). Off: the mark alone, over any screen. */
+  opaque?: boolean;
+  /** The ring's outer radius as a fraction of the shorter side. */
+  size?: number;
+  style?: StyleProp<ViewStyle>;
+};
+
+export function EclipseField({ width, height, mode, level, dim = 1, opaque = false, size = 0.31, style }: Props) {
+  const fx = effect('eclipse');
+  const c = useColors();
+  const bg = useMemo(() => rgb(c.bg), [c.bg]);
+  const ink = useMemo(() => rgb(c.text), [c.text]);
+  const reduceMotion = useReducedMotion();
+  const clock = useClock();
+  const speak = useSharedValue(0);
+  const strength = useSharedValue(dim);
+
+  useEffect(() => {
+    speak.value = withTiming(mode === 'speaking' ? 1 : 0, { duration: 1400 });
+  }, [mode, speak]);
+
+  useEffect(() => {
+    strength.value = withTiming(mode === 'paused' ? dim * 0.4 : dim, { duration: 1600 });
+  }, [dim, mode, strength]);
+
+  // Grain of about two device pixels on a phone, whatever the mark's size.
+  const grain = Math.max(0.6, Math.min(width, height) / 600);
+
+  const uniforms = useDerivedValue(
+    () => ({
+      uRes: [width, height],
+      uTime: reduceMotion ? 0 : clock.value / 1000,
+      uMotion: reduceMotion ? 0 : 1,
+      uLevel: level ? level.value : 0,
+      uSpeak: speak.value,
+      uDim: strength.value,
+      uBg: bg,
+      uInk: ink,
+      uOpaque: opaque ? 1 : 0,
+      uSize: size,
+      uGrain: grain,
+    }),
+    [width, height, reduceMotion, level, bg, ink, opaque, size, grain],
+  );
+
+  if (!fx) return <View style={[{ width, height, backgroundColor: opaque ? c.bg : undefined }, style]} />;
+  return (
+    // Skia's web canvas does not accept style arrays; flatten them.
+    <Canvas style={StyleSheet.flatten([{ width, height }, style])}>
+      <Fill>
+        <Shader source={fx} uniforms={uniforms} />
+      </Fill>
+    </Canvas>
+  );
+}
