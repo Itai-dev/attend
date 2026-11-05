@@ -102,13 +102,15 @@ half4 main(float2 fragCoord) {
 `;
 
 /**
- * ECLIPSE: the mark (tools/make-mark.py), alive (5 Nov 2026). A thick ring of grain, level,
- * eclipsed on the right by an unseen disc 1.4x its size, so it dissolves along a curve.
+ * ECLIPSE: the ring of grain (5 Nov 2026), two ways.
  *
- * In the session it follows the guide's voice: as a line is spoken the ring loosens into
- * grain (the disc moves in, the edges soften, particles drift and shimmer); in the silence
- * after it, it gathers back into the mark. Between lines it breathes very slowly. Under
- * Reduce Motion it is the still mark.
+ * The mark (`uEclipse` 1, tools/make-mark.py): eclipsed on the right by an unseen disc 1.4x
+ * its size, so it dissolves along a curve. The other screens show it, breathing slowly.
+ *
+ * The session (`uEclipse` 0): a whole, perfect ring at rest, and only the guide's voice
+ * changes it. As a line is spoken the ring loosens into grain all the way round, more in some
+ * places than others, the places drifting slowly round the circle; in the silence after it, it
+ * gathers back into the whole ring. Under Reduce Motion it is still.
  *
  * `uOpaque` 1 draws the background (the session, full screen); 0 draws the mark alone with
  * alpha (the small mark on other screens).
@@ -125,6 +127,7 @@ uniform float3 uInk;
 uniform float uOpaque;
 uniform float uSize;
 uniform float uGrain;
+uniform float uEclipse;
 
 // No sin(): on GPUs its precision breaks down at large arguments and the grain lines up
 // in diagonal streaks.
@@ -150,17 +153,23 @@ half4 main(float2 fragCoord) {
   float swell = uSpeak * (0.22 + 0.12 * sin(t * 1.3));
   float L = clamp(max(uLevel, swell), 0.0, 1.0) * uMotion;
 
+  // Round the ring, the voice lands unevenly: some arcs loosen more, and the loosest arcs
+  // drift slowly round the circle, like sound moving through it. On the mark this is off.
+  float ang = atan(p.y, p.x);
+  float arc = noise(float2(cos(ang), sin(ang)) * 1.6 + float2(t * 0.22, -t * 0.17));
+  float local = L * mix(1.0, 0.35 + 1.1 * arc, 1.0 - uEclipse);
+
   float breath = sin(t * 6.2831853 / 10.0) * uMotion;
-  float ro = uSize * (1.0 + 0.015 * breath);
+  float ro = uSize * (1.0 + 0.015 * breath + 0.035 * local * (1.0 - uEclipse));
   float ri = ro * 0.52;
 
   // Particles drift as it loosens: the sampled radius wanders with a slow noise field.
   float rho = length(p);
   float drift = noise(fragCoord / (s * 0.018) + float2(t * 0.35, -t * 0.25)) - 0.35;
-  rho -= L * 0.05 * drift * ro / 0.31;
+  rho -= local * 0.1 * drift * ro / 0.31;
 
-  float outSoft = (0.07 + 0.12 * L) * ro;
-  float inSoft = (0.045 + 0.07 * L) * ro;
+  float outSoft = (0.07 + 0.28 * local) * ro;
+  float inSoft = (0.045 + 0.16 * local) * ro;
   float band = smoothstep(ri - inSoft, ri + inSoft, rho) * (1.0 - smoothstep(ro - outSoft, ro + outSoft, rho));
   band = pow(band, 0.8);
 
@@ -169,9 +178,12 @@ half4 main(float2 fragCoord) {
   float moonR = 1.4 * ro;
   float moonSoft = (0.45 + 0.3 * L) * ro;
   float md = length(p - float2(moonDx, 0.0));
-  float moon = smoothstep(moonR - moonSoft, moonR + moonSoft, md);
+  float moon = mix(1.0, smoothstep(moonR - moonSoft, moonR + moonSoft, md), uEclipse);
 
-  float density = clamp(band * moon, 0.0, 1.0);
+  // Loud, the ring itself thins into grain: patches of it open up and fill again, so it breaks
+  // down into smaller dots and is rebuilt as the voice falls.
+  float holes = noise(fragCoord / (s * 0.03) + float2(-t * 0.5, t * 0.4));
+  float density = clamp(band * moon * (1.0 - 0.75 * local * smoothstep(0.25, 0.75, holes)), 0.0, 1.0);
 
   // Grain: a fixed screen of thresholds, so the mark is made of particles, not a blur. While
   // the voice is loud some of them re-roll a few times a second: the grain shimmers.
@@ -179,7 +191,7 @@ half4 main(float2 fragCoord) {
   float h = hash(cell);
   float h2 = hash(cell + floor(t * 6.0) * 17.0);
   // Kept above zero, so where there is no mark there is no grain at all.
-  float thr = 0.03 + 0.97 * mix(h, h2, 0.55 * L);
+  float thr = 0.03 + 0.97 * mix(h, h2, 0.55 * local);
   float a = smoothstep(thr - 0.02, thr + 0.02, density) * uDim;
 
   if (uOpaque > 0.5) {

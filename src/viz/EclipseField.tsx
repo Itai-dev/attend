@@ -7,10 +7,10 @@ import type { BreathMode } from './BreathingField';
 import { effect } from './effects';
 
 /**
- * The mark, alive (5 Nov 2026): the ring of grain from the icon (tools/make-mark.py), drawn by
- * ECLIPSE_SKSL. In the session it follows the guide's voice: a spoken line loosens it into
- * grain, and in the silence after, it gathers back into the mark. Elsewhere it is the small
- * still-breathing mark. It follows the appearance: sumi ink on washi by day, rice paper on
+ * The ring of grain (5 Nov 2026), drawn by ECLIPSE_SKSL. With `eclipse` it is the mark from the
+ * icon (tools/make-mark.py), breathing slowly on the app's other screens. Without, it is the
+ * session's ring: whole and perfect at rest, loosening into grain with the guide's voice and
+ * gathering back in the silence. It follows the appearance: sumi ink on washi by day, rice paper on
  * charcoal at night. Under Reduce Motion it is the still mark.
  */
 
@@ -31,10 +31,12 @@ type Props = {
   opaque?: boolean;
   /** The ring's outer radius as a fraction of the shorter side. */
   size?: number;
+  /** The mark's eclipse on the right. Off in the session, where the ring is whole until the voice moves it. */
+  eclipse?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-export function EclipseField({ width, height, mode, level, dim = 1, opaque = false, size = 0.31, style }: Props) {
+export function EclipseField({ width, height, mode, level, dim = 1, opaque = false, size = 0.31, eclipse = true, style }: Props) {
   const fx = effect('eclipse');
   const c = useColors();
   const bg = useMemo(() => rgb(c.bg), [c.bg]);
@@ -68,8 +70,9 @@ export function EclipseField({ width, height, mode, level, dim = 1, opaque = fal
       uOpaque: opaque ? 1 : 0,
       uSize: size,
       uGrain: grain,
+      uEclipse: eclipse ? 1 : 0,
     }),
-    [width, height, reduceMotion, level, bg, ink, opaque, size, grain],
+    [width, height, reduceMotion, level, bg, ink, opaque, size, grain, eclipse],
   );
 
   if (!fx) return <View style={[{ width, height, backgroundColor: opaque ? c.bg : undefined }, style]} />;
