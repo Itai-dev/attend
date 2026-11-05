@@ -221,7 +221,11 @@ export class SessionEngine {
   /** The guide has decided what to say; remember it before it is spoken. */
   recordGuideTurn(turn: GuideTurn): void {
     for (const l of turn.lines) {
-      this.usedLines.add(l.key ?? l.text);
+      // Re-added at the end, so the set runs from the line spoken longest ago to the latest:
+      // when a pool runs dry the brain repeats the oldest line, never the one just said.
+      const key = l.key ?? l.text;
+      this.usedLines.delete(key);
+      this.usedLines.add(key);
       this.history.push({ role: 'guide', text: l.text });
     }
     if (turn.expectsResponse) {

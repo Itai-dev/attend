@@ -92,9 +92,22 @@ test('a Hebrew guided session is spoken in Hebrew from the gong to the end', asy
         assert.ok(/[א-ת]/.test(l), `${type}: not Hebrew: ${l}`);
         assert.doesNotMatch(l, /[A-Za-z{}]/, `${type}: English or an unfilled slot: ${l}`);
         assert.ok(!violatesGuideLanguage(l), l);
+        // A guided session never asks, not even a question it doesn't wait for (AGENTS.md).
+        assert.ok(!l.trim().endsWith('?'), `${type}: a question in a guided session: ${l}`);
+        // The program teaches not to check the body; the guide doesn't tell anyone to.
+        assert.doesNotMatch(l, /בדקו/, `${type}: ${l}`);
       }
       if (place === LEFT_SHOULDER) assert.match(r.spoken.join(' '), /הכתף השמאלית/);
       assert.match(r.spoken[r.spoken.length - 1], /פקחו את העיניים|רק לנוח/);
+    }
+  }
+});
+
+test('Hebrew guided themes never ask, in any session', async () => {
+  for (const type of ['notice', 'flare', 'sleep', 'fear'] as const) {
+    for (const theme of ['settle', 'locate', 'breath', 'edges', 'moves', 'texture', 'curious', 'brace', 'fear', 'urge', 'kind', 'pleasant', 'activity', 'flare', 'open'] as const) {
+      const r = await inHebrew(() => runSession({}, { mode: 'guided', type, place: LOWER_BACK, theme, minutes: 10, maxTurns: 200 }));
+      assert.ok(!r.spoken.some((l) => l.trim().endsWith('?')), `${type}/${theme}: ${r.spoken.filter((l) => l.trim().endsWith('?')).join(' | ')}`);
     }
   }
 });

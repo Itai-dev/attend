@@ -85,3 +85,41 @@ test('a guided session never speaks a warning, and no program theme asks a quest
     }
   }
 });
+
+test('a session with no place never speaks of a sensation nobody named', async () => {
+  const { setLang } = await import('../src/i18n');
+  const { resetScript } = await import('../src/engine/guide/lines');
+  for (const lang of ['en', 'he'] as const) {
+    setLang(lang);
+    resetScript();
+    try {
+      for (const type of ['notice', 'flare', 'sleep', 'fear'] as const) {
+        for (const theme of ['curious', 'flare', 'fear', 'edges', 'kind', 'open'] as const) {
+          const r = await runSession({}, { mode: 'guided', type, theme, minutes: 10, maxTurns: 200 });
+          const said = r.spoken.join(' | ');
+          const named = lang === 'en' ? /\bthe sensation\b|\bcheck it\b|\bbreaths with it\b|\bmoments with it\b|\bthe edges\b/i : /התחושה|איתה|הקצוות/;
+          assert.doesNotMatch(said, named, `${lang} ${type}/${theme}: ${said.match(named)?.[0]}`);
+        }
+      }
+    } finally {
+      setLang('en');
+      resetScript();
+    }
+  }
+});
+
+test('a theme speaks its lines in the order written', async () => {
+  const r = await runSession({}, { mode: 'guided', type: 'notice', theme: 'kind', place: { region: 'lower_back' }, minutes: 7, maxTurns: 200 });
+  const said = r.spoken.join(' | ');
+  assert.ok(said.indexOf('Imagine the sensation belongs') < said.indexOf('Offer yourself the same tone'), said);
+});
+
+test('a long whole-body session never repeats a line it said moments ago', async () => {
+  const r = await runSession({}, { mode: 'guided', type: 'notice', theme: 'open', minutes: 10, maxTurns: 200 });
+  const at = new Map<string, number>();
+  r.spoken.forEach((l, i) => {
+    const before = at.get(l);
+    assert.ok(before === undefined || i - before > 12, `"${l}" again after ${before === undefined ? 0 : i - before} lines`);
+    at.set(l, i);
+  });
+});
