@@ -56,7 +56,12 @@ function pick<T>(variants: T[], ctx: GuideContext, key: (v: T) => string): T {
     const v = variants[(start + i) % variants.length];
     if (!ctx.usedLines.has(key(v))) return v;
   }
-  return variants[start];
+  // Every variant has been spoken: repeat the one heard longest ago. A random pick could
+  // repeat the line from two turns back, which a listener with eyes closed hears as a loop.
+  const order = new Map<string, number>();
+  let i = 0;
+  for (const k of ctx.usedLines) order.set(k, i++);
+  return variants.reduce((a, b) => ((order.get(key(b)) ?? -1) < (order.get(key(a)) ?? -1) ? b : a));
 }
 
 function pickText(variants: string[], ctx: GuideContext): string {
