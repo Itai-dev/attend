@@ -97,10 +97,12 @@ never red; see `design/theme.ts`). The mark (5 Nov 2026) is a thick ring of grai
 the right so it dissolves along a curve: the cycle, softening (`tools/make-mark.py` draws the
 icon, splash and PDFs; `viz/EclipseField.tsx` draws it live). It marks the app's other screens
 (`viz/Enso.tsx`). The session's ring is a particle system (`viz/particles.ts`,
-`viz/ParticleRing.tsx`): about 2,400 round particles, each sprung to a home on the ring, never
-quite still. The guide's voice drives it closely: each syllable's attack kicks particles off
-their homes and loudness slackens their springs, unevenly round the circle, so the ring
-breaks into smaller dots, and in the gap after, the springs rebuild it. Its one exception to
+`viz/ParticleRing.tsx`): about 2,400 round particles in a ring with depth (a torus in slow,
+gently tilting perspective). Each is born, wanders at random in three dimensions, fades and
+is born again elsewhere after a few seconds, so the ring is always being built and unbuilt.
+The guide's voice drives it closely: each syllable's attack kicks particles off their homes,
+loudness slackens their springs, shakes them harder and shortens their lives, unevenly
+round the circle, so the ring breaks into smaller dots, and in the gap after it gathers. Its one exception to
 "one colour": the particles the voice has moved take on soft afterimage colours, like rubbed
 eyes (violet, teal, gold, green; never red). Sumi on washi by day, rice paper on charcoal at night;
 still under Reduce Motion. A gong

@@ -4,14 +4,15 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useFrameCallback, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useColors } from '../design/theme';
 import type { BreathMode } from './BreathingField';
-import { look, makeRing, restState, STRIDE, stepRing } from './particles';
+import { ALPHA, COLOR, makeRing, restState, SIZE, STRIDE, SX, SY, stepRing } from './particles';
 
 /**
- * The session's ring as a particle system (5 Nov 2026; see viz/particles.ts for the physics).
- * Stepped every frame on the UI thread and drawn with one Atlas call: each particle is a round
- * dot sprite, moved and tinted per frame. Sumi ink on washi by day, rice paper on charcoal at
- * night, with the afterimage colours showing in the particles the voice has moved. Under Reduce
- * Motion the particles rest at home: a still ring.
+ * The session's ring as a particle system (5 Nov 2026; see viz/particles.ts): particles that
+ * are born, wander in three dimensions and fade, in a slowly tilting ring with depth. Stepped
+ * every frame on the UI thread (the step also works out where and how each is drawn) and
+ * drawn with one Atlas call: a round dot sprite per particle, moved, sized and tinted. Sumi
+ * ink on washi by day, rice paper on charcoal at night, with the afterimage colours in the
+ * particles the voice has moved. Under Reduce Motion it is one still frame of the ring.
  */
 
 const COUNT = 2400;
@@ -34,6 +35,13 @@ function dotImage(): SkImage | null {
     dot = null;
   }
   return dot;
+}
+
+/** The ring at its first moment, already placed on screen: also the still frame under Reduce Motion. */
+function firstFrame(ring: ReturnType<typeof makeRing>, cx: number, cy: number, R: number): number[] {
+  const st = restState(ring, R);
+  stepRing(ring, st, { cx, cy, R, dt: 0, t: 0, level: 0, attack: 0 });
+  return st;
 }
 
 function rgb(hex: string): [number, number, number] {
@@ -61,7 +69,7 @@ export function ParticleRing({ width, height, mode, level, dim = 1, size = 0.27,
   const cx = width / 2;
   const cy = height / 2;
   const R = Math.min(width, height) * size;
-  const sim = useSharedValue<number[]>(restState(ring, cx, cy, R));
+  const sim = useSharedValue<number[]>(firstFrame(ring, cx, cy, R));
   const clock = useSharedValue(0);
   const heard = useSharedValue(0);
   const speak = useSharedValue(0);
@@ -76,7 +84,7 @@ export function ParticleRing({ width, height, mode, level, dim = 1, size = 0.27,
   }, [mode, dim, speak, strength]);
 
   useEffect(() => {
-    sim.value = restState(ring, cx, cy, R);
+    sim.value = firstFrame(ring, cx, cy, R);
   }, [ring, cx, cy, R, sim]);
 
   useFrameCallback((frame) => {
@@ -101,21 +109,22 @@ export function ParticleRing({ width, height, mode, level, dim = 1, size = 0.27,
   const transforms = useRSXformBuffer(COUNT, (val, i) => {
     'worklet';
     const st = sim.value;
-    const l = look(ring, i, st[i * STRIDE + 4], heard.value);
-    const s = l.size / SPRITE;
-    val.set(s, 0, st[i * STRIDE] - l.size / 2, st[i * STRIDE + 1] - l.size / 2);
+    const j = i * STRIDE;
+    const d = st[j + SIZE];
+    val.set(d / SPRITE, 0, st[j + SX] - d / 2, st[j + SY] - d / 2);
   });
 
   const colors = useColorBuffer(COUNT, (col, i) => {
     'worklet';
-    const l = look(ring, i, sim.value[i * STRIDE + 4], heard.value);
+    const st = sim.value;
+    const j = i * STRIDE;
     // On paper the afterimage colours are an ink: deeper, and used more lightly.
     const k = paper ? 0.8 : 1;
-    const amt = l.color * (paper ? 0.65 : 1);
+    const amt = st[j + COLOR] * (paper ? 0.65 : 1);
     col[0] = ink[0] + (ring.tint[i * 3] * k - ink[0]) * amt;
     col[1] = ink[1] + (ring.tint[i * 3 + 1] * k - ink[1]) * amt;
     col[2] = ink[2] + (ring.tint[i * 3 + 2] * k - ink[2]) * amt;
-    col[3] = l.alpha * strength.value;
+    col[3] = st[j + ALPHA] * strength.value;
   });
 
   if (!image) return <View style={[{ width, height, backgroundColor: c.bg }, style]} />;
