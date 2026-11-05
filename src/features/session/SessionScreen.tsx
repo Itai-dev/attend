@@ -13,7 +13,7 @@ import { SESSION_LENGTHS } from '@/engine/phases';
 import { isHe, tr } from '@/i18n';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import type { BreathMode } from '@/viz/BreathingField';
-import { EclipseField } from '@/viz/EclipseField';
+import { ParticleRing } from '@/viz/ParticleRing';
 import { clock } from '../shared/format';
 import { DevPanel } from './DevPanel';
 
@@ -118,8 +118,8 @@ export function SessionScreen() {
     <View style={styles.root}>
       <StatusBar hidden />
       {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
-      {/* A whole ring at rest (5 Nov 2026): the guide's voice loosens it into grain, the silence gathers it back. */}
-      <EclipseField width={width} height={height} mode={breathMode(vs.status)} level={vs.voiceLevel} opaque eclipse={false} alive size={0.27} style={StyleSheet.absoluteFill} />
+      {/* A ring of particles (5 Nov 2026): the guide's voice breaks it apart, the silence rebuilds it. */}
+      <ParticleRing width={width} height={height} mode={breathMode(vs.status)} level={vs.voiceLevel} size={0.27} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
         <Txt variant="caption" tone="tertiary" style={[styles.status, isHe() && styles.statusHe]} accessibilityLiveRegion="none">
