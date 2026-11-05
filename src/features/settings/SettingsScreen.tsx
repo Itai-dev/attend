@@ -208,12 +208,16 @@ export function SettingsScreen() {
               התרגולים והצ׳ק־אינים נשמרים רק באייפון הזה. אין חשבון. התרגולים מונחים: הם אף פעם לא משתמשים במיקרופון, ושום דבר שנאמר לא נשמע. המקום שעליו הקול המנחה מכוון את
               תשומת הלב נלקח מהצ׳ק־אין האחרון, ונקרא כאן בטלפון. בברכה הקולית בהתחלה, מה שאומרים הופך למילים במכשיר עצמו, והשמע אף פעם לא נשמר.
               {hasRemote ? ' המשפטים של הקול המנחה מוקראים דרך שירות הקול של Attend, באמצעות ElevenLabs. שום דבר עליכם לא נשלח איתם.' : ''}
+              {' '}
+              דף לשיתוף עם המטפלים שלכם נעשה כאן בטלפון ויוצא ממנו רק כשאתם שולחים אותו, למי שאתם בוחרים.
             </Txt>
           ) : (
             <Txt variant="callout" tone="secondary">
               Your sessions and check-ins are stored only on this iPhone. There is no account. Sessions are guided: they never use the microphone, and nothing you say is heard. Where the guide rests
               your attention comes from your latest check-in, read here on the phone. In the spoken welcome, what you say is turned into words on the device and the audio is never saved.
               {hasRemote ? ' The guide’s lines are voiced through Attend’s voice service by ElevenLabs. Nothing about you is sent with them.' : ''}
+              {' '}
+              A page to share with your therapist is made here on the phone and leaves it only when you send it, to whoever you choose.
             </Txt>
           )}
         </View>
