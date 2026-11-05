@@ -9,7 +9,8 @@ import { SOUND_ART } from '@/design/art';
 import { haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { CoverArt } from '@/design/media';
 import { color, radius, space } from '@/design/theme';
-import { soundById, SOUND_LENGTHS, SOUNDS, type SoundLength } from '@/domain/sounds';
+import { soundById, SOUND_LENGTHS, sounds, type SoundLength } from '@/domain/sounds';
+import { heCount, isHe, tr } from '@/i18n';
 import { Soundscape } from '@/voice/soundscape';
 import { BreathingField } from '@/viz/BreathingField';
 import { clock } from '../shared/format';
@@ -21,7 +22,7 @@ import { clock } from '../shared/format';
  */
 export function SoundScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const sound = soundById(id) ?? SOUNDS[0];
+  const sound = soundById(id) ?? sounds()[0];
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [length, setLength] = useState<SoundLength>(20);
@@ -78,17 +79,17 @@ export function SoundScreen() {
         <StatusBar hidden />
         <BreathingField width={width} height={height} mode={paused ? 'paused' : 'idle'} style={StyleSheet.absoluteFill} />
         <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
-          <Txt variant="caption" tone="tertiary" style={styles.status}>
-            {paused ? 'Paused' : sound.title}
+          <Txt variant="caption" tone="tertiary" style={[styles.status, isHe() && styles.statusHe]}>
+            {paused ? tr('Paused', 'מושהה') : sound.title}
           </Txt>
-          <Txt variant="caption" tone="tertiary" style={[styles.status, { opacity: 0.6 }]}>
+          <Txt variant="caption" tone="tertiary" style={[styles.status, isHe() && styles.statusHe, { opacity: 0.6 }]}>
             {clock(left)}
           </Txt>
         </View>
         <View style={[styles.controls, { paddingBottom: insets.bottom + space.xl }]}>
           <IconButton
             icon={paused ? 'play.fill' : 'pause.fill'}
-            label={paused ? 'Resume' : 'Pause'}
+            label={paused ? tr('Resume', 'להמשיך') : tr('Pause', 'להשהות')}
             variant="filled"
             size={60}
             iconSize={20}
@@ -99,7 +100,7 @@ export function SoundScreen() {
               setPaused(!paused);
             }}
           />
-          <IconButton icon="xmark" label="End" variant="filled" size={60} iconSize={18} tint={color.textSecondary} onPress={() => void finish()} />
+          <IconButton icon="xmark" label={tr('End', 'לסיים')} variant="filled" size={60} iconSize={18} tint={color.textSecondary} onPress={() => void finish()} />
         </View>
       </View>
     );
@@ -108,7 +109,7 @@ export function SoundScreen() {
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom + space.l }]}>
       <View style={styles.close}>
-        <IconButton icon="xmark" label="Close" onPress={() => router.back()} tint={color.textSecondary} />
+        <IconButton icon="xmark" label={tr('Close', 'לסגור')} onPress={() => router.back()} tint={color.textSecondary} />
       </View>
       <Animated.View entering={FadeIn.duration(700)} style={styles.body}>
         <CoverArt art={SOUND_ART[sound.id]} seed={sound.title.length} size={Math.min(width - space.xl * 2, 320)} height={220} rounded={radius.l} />
@@ -119,13 +120,13 @@ export function SoundScreen() {
           {sound.detail} · {sound.place}
         </Txt>
 
-        <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel="How long">
+        <View style={styles.lengths} accessibilityRole="radiogroup" accessibilityLabel={tr('How long', 'כמה זמן')}>
           {SOUND_LENGTHS.map((m) => (
             <Pressable
               key={m}
               accessibilityRole="radio"
               accessibilityState={{ checked: m === length }}
-              accessibilityLabel={m ? `${m} minutes` : 'Until I stop it'}
+              accessibilityLabel={m ? tr(`${m} minutes`, heCount(m, 'דקה אחת', 'דקות')) : tr('Until I stop it', 'עד שאעצור')}
               onPress={() => {
                 haptic('select');
                 setLength(m);
@@ -133,14 +134,18 @@ export function SoundScreen() {
               style={[styles.len, m === length && styles.lenOn]}
             >
               <Txt variant="callout" tone={m === length ? 'inverse' : 'secondary'} style={{ fontWeight: '600' }}>
-                {m ? `${m} min` : '∞'}
+                {m ? tr(`${m} min`, `${m} דק׳`) : '∞'}
               </Txt>
             </Pressable>
           ))}
         </View>
       </Animated.View>
       <View style={{ paddingHorizontal: space.xl }}>
-        <PrimaryButton label="Play" detail={length ? `${length} minutes` : 'Until you stop it'} onPress={begin} />
+        <PrimaryButton
+          label={tr('Play', 'להשמיע')}
+          detail={length ? tr(`${length} minutes`, heCount(length, 'דקה אחת', 'דקות')) : tr('Until you stop it', 'עד שתעצרו')}
+          onPress={begin}
+        />
       </View>
     </View>
   );
@@ -155,5 +160,7 @@ const styles = StyleSheet.create({
   lenOn: { backgroundColor: color.text },
   top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
   status: { letterSpacing: 2, textTransform: 'uppercase', fontSize: 11 },
+  // Hebrew has no capitals to make a small word quiet and legible; a touch larger does it instead.
+  statusHe: { fontSize: 12 },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', justifyContent: 'center', gap: space.xxl },
 });

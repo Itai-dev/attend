@@ -5,9 +5,11 @@ import { useData } from '@/data/store';
 import { currentTz, MIN_DAYS_FOR_PICTURE } from '@/domain/checkin';
 import { milestones, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM, PROGRAM_DAYS } from '@/domain/program';
-import { buildProgress, PROGRESS_MEANING } from '@/domain/progress';
+import { buildProgress, progressMeaning } from '@/domain/progress';
 import { Card, Icon, SettingsButton, TitledScroll, Txt } from '@/design/components';
 import { color, HIT, radius, space } from '@/design/theme';
+import { isHe, tr } from '@/i18n';
+import { longDate } from '../shared/format';
 import { PainChart } from './PainChart';
 
 /**
@@ -35,15 +37,15 @@ function AskName() {
   };
   return (
     <Card style={{ padding: space.l, marginTop: space.l }}>
-      <Txt variant="headline">What should we call you?</Txt>
+      <Txt variant="headline">{tr('What should we call you?', 'איך לקרוא לכם?')}</Txt>
       <TextInput
         value={name}
         onChangeText={setName}
         onSubmitEditing={save}
         onBlur={save}
-        placeholder="Your first name"
+        placeholder={tr('Your first name', 'שם פרטי')}
         placeholderTextColor={color.textTertiary}
-        accessibilityLabel="Your name"
+        accessibilityLabel={tr('Your name', 'השם שלכם')}
         autoCapitalize="words"
         returnKeyType="done"
         maxLength={30}
@@ -68,7 +70,7 @@ export function YouScreen() {
   const name = prefs.name?.trim();
 
   return (
-    <TitledScroll title={name || 'You'} right={<SettingsButton />}>
+    <TitledScroll title={name || tr('You', 'אני')} right={<SettingsButton />}>
       <View style={styles.who}>
         <View style={styles.avatar}>
           <Txt variant="title" style={{ color: color.onAccent }}>
@@ -77,11 +79,13 @@ export function YouScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Txt variant="callout" tone="secondary">
-            {first ? `Practising since ${new Date(first).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}` : 'Your first practice is waiting on Today'}
+            {first
+              ? tr(`Practising since ${longDate(first)}`, `מתרגלים מאז ${longDate(first)}`)
+              : tr('Your first practice is waiting on Today', 'התרגול הראשון מחכה בלשונית היום')}
           </Txt>
           {prefs.goal ? (
             <Txt variant="callout" style={{ color: color.milestone }}>
-              Toward {prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}
+              {tr(`Toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}`, `המטרה: ${prefs.goal}`)}
             </Txt>
           ) : null}
         </View>
@@ -91,9 +95,9 @@ export function YouScreen() {
 
       <View style={styles.tiles}>
         {[
-          [stats.days, stats.days === 1 ? 'practice day' : 'practice days'],
-          [stats.minutes, 'minutes'],
-          [`${Object.keys(program.done).length}/${PROGRAM_DAYS}`, 'program days'],
+          [stats.days, stats.days === 1 ? tr('practice day', 'יום תרגול') : tr('practice days', 'ימי תרגול')],
+          [stats.minutes, isHe() && stats.minutes === 1 ? 'דקה' : tr('minutes', 'דקות')],
+          [`${Object.keys(program.done).length}/${PROGRAM_DAYS}`, tr('program days', 'ימים בתוכנית')],
         ].map(([n, label]) => (
           <View key={String(label)} style={styles.tile}>
             <Txt variant="title">{String(n)}</Txt>
@@ -104,8 +108,8 @@ export function YouScreen() {
         ))}
       </View>
 
-      <Section>Milestones</Section>
-      <View style={styles.marks} accessible accessibilityLabel={`Milestones: ${marks.filter((m) => m.earned).map((m) => m.label).join(', ') || 'none yet'}.`}>
+      <Section>{tr('Milestones', 'אבני דרך')}</Section>
+      <View style={styles.marks} accessible accessibilityLabel={`${tr('Milestones', 'אבני דרך')}: ${marks.filter((m) => m.earned).map((m) => m.label).join(', ') || tr('none yet', 'עוד אין')}.`}>
         {marks.map((m) => (
           <View key={m.id} style={styles.mark}>
             <View style={[styles.badge, m.earned ? styles.badgeOn : styles.badgeOff]}>
@@ -120,22 +124,29 @@ export function YouScreen() {
 
       {prefs.goal ? (
         <Card style={styles.goal}>
-          <Txt variant="callout">{lastMoment ? `Last moment you saved: “${lastMoment.text}”` : 'Did something toward it, however small? Save it as a moment.'}</Txt>
+          <Txt variant="callout">
+            {lastMoment
+              ? tr(`Last moment you saved: “${lastMoment.text}”`, `הרגע האחרון ששמרתם: ${lastMoment.text}`)
+              : tr('Did something toward it, however small? Save it as a moment.', 'עשיתם צעד לקראתה, אפילו קטן? אפשר לשמור אותו כרגע.')}
+          </Txt>
           <Pressable accessibilityRole="button" onPress={() => router.push('/moment')} style={styles.link} hitSlop={8}>
             <Txt variant="callout" style={{ color: color.milestone, fontWeight: '600' }}>
-              Save a moment
+              {tr('Save a moment', 'לשמור רגע')}
             </Txt>
           </Pressable>
         </Card>
       ) : null}
 
-      <Section>Pain record</Section>
+      <Section>{tr('Pain record', 'יומן הכאב')}</Section>
       <Card style={{ padding: space.l }}>
         {progress.enough ? (
           <PainChart days={progress.days} />
         ) : (
           <Txt variant="callout" tone="secondary">
-            Not a picture yet. After check-ins on {MIN_DAYS_FOR_PICTURE} different days, your pain over the weeks appears here, beside the days you practised.
+            {tr(
+              `Not a picture yet. After check-ins on ${MIN_DAYS_FOR_PICTURE} different days, your pain over the weeks appears here, beside the days you practised.`,
+              `עוד אין תמונה. אחרי צ׳ק־אין ב־${MIN_DAYS_FOR_PICTURE} ימים שונים, הכאב לאורך השבועות יופיע כאן, לצד הימים שבהם תרגלתם.`,
+            )}
           </Txt>
         )}
         <Txt variant="callout" style={{ marginTop: space.l }}>
@@ -143,11 +154,11 @@ export function YouScreen() {
         </Txt>
         {/* The sentence about what this is not belongs inside the card it qualifies (Pattern). */}
         <Txt variant="footnote" tone="tertiary" style={{ marginTop: space.m }}>
-          {PROGRESS_MEANING}
+          {progressMeaning()}
         </Txt>
         <Pressable accessibilityRole="button" onPress={() => router.push('/checkin')} style={styles.link} hitSlop={8}>
           <Txt variant="callout" style={{ color: color.practice, fontWeight: '600' }}>
-            Check in
+            {tr('Check in', 'לעשות צ׳ק־אין')}
           </Txt>
         </Pressable>
       </Card>

@@ -11,6 +11,7 @@ import { quoteFor } from '@/domain/quotes';
 import type { Session, SessionFeeling } from '@/domain/types';
 import { Chip, Icon, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
+import { heCount, isHe, tr } from '@/i18n';
 import { useVoiceSession } from '@/voice/VoiceSessionProvider';
 import { Enso } from '@/viz/Enso';
 
@@ -21,14 +22,31 @@ import { Enso } from '@/viz/Enso';
  * practice marked complete and one line to leave on (domain/quotes.ts), and the app is left.
  */
 
-const FEELINGS: Array<{ value: SessionFeeling; label: string }> = [
-  { value: 'settled', label: 'Settled' },
-  { value: 'curious', label: 'Curious' },
-  { value: 'restless', label: 'Restless' },
-  { value: 'hard', label: 'Hard today' },
+const FEELINGS: Array<{ value: SessionFeeling; label: string; he: string }> = [
+  // Hebrew uses nouns: an adjective ("רגוע", "רגועה") would choose the person's gender.
+  { value: 'settled', label: 'Settled', he: 'רוגע' },
+  { value: 'curious', label: 'Curious', he: 'סקרנות' },
+  { value: 'restless', label: 'Restless', he: 'חוסר מנוחה' },
+  { value: 'hard', label: 'Hard today', he: 'קשה היום' },
 ];
 
 const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+/** Feminine, to agree with דקה. */
+const HE_WORDS = ['אפס', 'דקה אחת', 'שתי', 'שלוש', 'ארבע', 'חמש', 'שש', 'שבע', 'שמונה', 'תשע', 'עשר', 'אחת־עשרה', 'שתים־עשרה'];
+
+/** "Five quiet minutes, done." In Hebrew the caption above already says it's done. */
+function quietMinutes(minutes: number): string {
+  if (!isHe()) return `${WORDS[minutes] ?? minutes} quiet minutes, done.`;
+  if (minutes === 1) return 'דקה אחת של שקט.';
+  return `${HE_WORDS[minutes] ?? minutes} דקות של שקט.`;
+}
+
+/** Captions are tracked for Latin; Hebrew letters pulled apart read as broken words. */
+const NO_TRACKING = { letterSpacing: 0 };
+
+function completeLabel(day: number | undefined): string {
+  return day ? tr(`DAY ${day} COMPLETE`, `יום ${day} הושלם`) : tr('PRACTICE COMPLETE', 'התרגול הושלם');
+}
 
 function withoutDay(p: ProgramState, day?: number): ProgramState {
   if (!day || !p.done[day]) return p;
@@ -45,8 +63,8 @@ export function RecapRoute() {
   if (session) return <AfterScreen session={session} />;
   return (
     <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
-      <Txt tone="secondary">This session is no longer here.</Txt>
-      <QuietButton label="Back" onPress={() => router.navigate('/')} />
+      <Txt tone="secondary">{tr('This session is no longer here.', 'התרגול הזה כבר לא כאן.')}</Txt>
+      <QuietButton label={tr('Back', 'לחזור')} onPress={() => router.navigate('/')} />
     </View>
   );
 }
@@ -99,56 +117,61 @@ export function AfterScreen({ session }: { session: Session }) {
             variant="caption"
             style={{
               color: color.practice,
-              letterSpacing: 1.4,
+              letterSpacing: isHe() ? 0 : 1.4,
               marginTop: space.xs,
             }}
           >
-            {dayDone ? `DAY ${session.programDay} COMPLETE` : 'PRACTICE COMPLETE'}
+            {completeLabel(dayDone ? session.programDay : undefined)}
           </Txt>
           <Txt variant="display" align="center" style={{ marginTop: space.s }}>
-            {early ? `You stopped after ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}. That still counts.` : `${WORDS[minutes] ?? minutes} quiet minutes, done.`}
+            {early
+              ? tr(
+                  `You stopped after ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}. That still counts.`,
+                  `עצרתם אחרי ${heCount(minutes, 'דקה אחת', 'דקות', 'שתי דקות')}. גם זה נחשב.`,
+                )
+              : quietMinutes(minutes)}
           </Txt>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(900).duration(900)} style={styles.tiles}>
           <View style={styles.tile}>
             <Txt variant="title">{String(stats.daysThisWeek)}</Txt>
-            <Txt variant="caption" tone="tertiary" align="center">
-              {stats.daysThisWeek === 1 ? 'day this week' : 'days this week'}
+            <Txt variant="caption" tone="tertiary" align="center" style={isHe() ? NO_TRACKING : undefined}>
+              {stats.daysThisWeek === 1 ? tr('day this week', 'יום השבוע') : tr('days this week', 'ימים השבוע')}
             </Txt>
           </View>
           <View style={styles.tile}>
             <Txt variant="title">{String(stats.minutes)}</Txt>
-            <Txt variant="caption" tone="tertiary" align="center">
-              minutes, all time
+            <Txt variant="caption" tone="tertiary" align="center" style={isHe() ? NO_TRACKING : undefined}>
+              {tr('minutes, all time', 'דקות בסך הכול')}
             </Txt>
           </View>
           <View style={styles.tile}>
             <Txt variant="title">{`${Object.keys(program.done).length}/${PROGRAM_DAYS}`}</Txt>
-            <Txt variant="caption" tone="tertiary" align="center">
-              days of the program
+            <Txt variant="caption" tone="tertiary" align="center" style={isHe() ? NO_TRACKING : undefined}>
+              {tr('days of the program', 'ימים בתוכנית')}
             </Txt>
           </View>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(1300).duration(900)}>
           <Txt variant="headline" style={{ marginTop: space.xl }}>
-            How did that feel?
+            {tr('How did that feel?', 'איך היה התרגול?')}
           </Txt>
           <View style={styles.feelings}>
             {FEELINGS.map((f) => (
-              <Chip key={f.value} label={f.label} selected={session.feeling === f.value} style={{ flexGrow: 1 }} onPress={() => setFeeling(session.id, session.feeling === f.value ? null : f.value)} />
+              <Chip key={f.value} label={tr(f.label, f.he)} selected={session.feeling === f.value} style={{ flexGrow: 1 }} onPress={() => setFeeling(session.id, session.feeling === f.value ? null : f.value)} />
             ))}
           </View>
-          <Txt variant="caption" tone="tertiary" style={{ marginTop: space.s }}>
-            Optional. About the practice, not the pain.
+          <Txt variant="caption" tone="tertiary" style={[{ marginTop: space.s }, isHe() && NO_TRACKING]}>
+            {tr('Optional. About the practice, not the pain.', 'לא חובה. על התרגול, לא על הכאב.')}
           </Txt>
 
           {earned.map((m) => (
-            <View key={m.id} style={styles.milestone} accessible accessibilityLabel={`New milestone: ${m.label}. ${m.detail}`}>
+            <View key={m.id} style={styles.milestone} accessible accessibilityLabel={tr(`New milestone: ${m.label}. ${m.detail}`, `אבן דרך חדשה: ${m.label}. ${m.detail}`)}>
               <Icon name="star.fill" size={22} tint={color.milestone} />
               <View style={{ flex: 1 }}>
-                <Txt variant="headline">New milestone: {m.label.charAt(0).toLowerCase() + m.label.slice(1)}</Txt>
+                <Txt variant="headline">{tr(`New milestone: ${m.label.charAt(0).toLowerCase() + m.label.slice(1)}`, `אבן דרך חדשה: ${m.label}`)}</Txt>
                 <Txt variant="footnote" tone="secondary">
                   {m.detail}
                 </Txt>
@@ -167,10 +190,10 @@ export function AfterScreen({ session }: { session: Session }) {
       >
         {next ? (
           <Txt variant="footnote" tone="tertiary" align="center">
-            Tomorrow · Day {next.day} · {next.lesson.title}
+            {tr(`Tomorrow · Day ${next.day} · ${next.lesson.title}`, `מחר · יום ${next.day} · ${next.lesson.title}`)}
           </Txt>
         ) : null}
-        <PrimaryButton label="Continue" onPress={() => setClosing(true)} />
+        <PrimaryButton label={tr('Continue', 'להמשיך')} onPress={() => setClosing(true)} />
       </View>
     </View>
   );
@@ -183,12 +206,12 @@ function Closing({ session, dayDone, onDone }: { session: Session; dayDone: bool
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.l, paddingHorizontal: space.l }]}>
       <View style={styles.closing}>
-        <Animated.View entering={ZoomIn.duration(900).easing(Easing.out(Easing.cubic))} style={styles.seal} accessible accessibilityLabel={dayDone ? `Day ${session.programDay} complete` : 'Practice complete'}>
+        <Animated.View entering={ZoomIn.duration(900).easing(Easing.out(Easing.cubic))} style={styles.seal} accessible accessibilityLabel={dayDone ? tr(`Day ${session.programDay} complete`, `יום ${session.programDay} הושלם`) : tr('Practice complete', 'התרגול הושלם')}>
           <Icon name="checkmark" size={30} tint={color.practice} weight="medium" />
         </Animated.View>
         <Animated.View entering={FadeIn.delay(300).duration(1200)}>
-          <Txt variant="caption" align="center" style={{ color: color.practice, letterSpacing: 1.4, marginTop: space.l }}>
-            {dayDone ? `DAY ${session.programDay} COMPLETE` : 'PRACTICE COMPLETE'}
+          <Txt variant="caption" align="center" style={{ color: color.practice, letterSpacing: isHe() ? 0 : 1.4, marginTop: space.l }}>
+            {completeLabel(dayDone ? session.programDay : undefined)}
           </Txt>
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(900).duration(1400)} style={{ marginTop: space.xxxl }}>
@@ -201,7 +224,7 @@ function Closing({ session, dayDone, onDone }: { session: Session; dayDone: bool
         </Animated.View>
       </View>
       <Animated.View entering={FadeIn.delay(1800).duration(900)}>
-        <PrimaryButton label="Done" onPress={onDone} />
+        <PrimaryButton label={tr('Done', 'לסיים')} onPress={onDone} />
       </Animated.View>
     </View>
   );

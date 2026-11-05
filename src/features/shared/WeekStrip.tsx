@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import type { WeekStripDay } from '@/domain/engagement';
 import { Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
+import { heCount, tr } from '@/i18n';
 
 /**
  * This week, Monday to Sunday: a filled dot for each practice day. A day without practice
@@ -11,7 +12,15 @@ import { color, space } from '@/design/theme';
 export function WeekStrip({ days }: { days: WeekStripDay[] }) {
   const done = days.filter((d) => d.practised).length;
   return (
-    <View style={styles.row} accessible accessibilityLabel={`This week: practised on ${done} ${done === 1 ? 'day' : 'days'}.`}>
+    <View
+      style={styles.row}
+      accessible
+      accessibilityLabel={tr(
+        `This week: practised on ${done} ${done === 1 ? 'day' : 'days'}.`,
+        // Counts practice only; a week without any yet is said plainly, never as a lack.
+        done ? `השבוע תרגלתם ${heCount(done, 'יום אחד', 'ימים', 'יומיים')}.` : 'השבוע עוד אין תרגול.',
+      )}
+    >
       {days.map((d) => (
         <View key={d.day} style={styles.col}>
           <Txt variant="caption" tone={d.today ? 'primary' : 'tertiary'} style={d.today ? { fontWeight: '700' } : undefined}>

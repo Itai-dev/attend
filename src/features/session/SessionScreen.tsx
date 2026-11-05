@@ -10,6 +10,7 @@ import type { Place, SessionType } from '@/domain/types';
 import { IconButton, PrimaryButton, QuietButton, Txt } from '@/design/components';
 import { color, space } from '@/design/theme';
 import { SESSION_LENGTHS } from '@/engine/phases';
+import { isHe, tr } from '@/i18n';
 import { useVoiceSession, type SessionStatus } from '@/voice/VoiceSessionProvider';
 import { BreathingField, type BreathMode } from '@/viz/BreathingField';
 import { clock } from '../shared/format';
@@ -27,6 +28,18 @@ export const STATUS_WORD: Partial<Record<SessionStatus, string>> = {
   listening: 'Listening',
   paused: 'Paused',
 };
+
+/** In Hebrew, nouns: a verb would need a gender for the guide, which has none (docs/HEBREW.md). */
+const HE_STATUS_WORD: Partial<Record<SessionStatus, string>> = {
+  preparing: 'הכנה',
+  speaking: 'דיבור',
+  listening: 'הקשבה',
+  paused: 'מושהה',
+};
+
+export function statusWord(s: SessionStatus): string | undefined {
+  return tr(STATUS_WORD, HE_STATUS_WORD)[s];
+}
 
 export function breathMode(s: SessionStatus): BreathMode {
   if (s === 'speaking') return 'speaking';
@@ -98,7 +111,7 @@ export function SessionScreen() {
 
   const paused = vs.status === 'paused';
   const blocked = vs.status === 'unavailable' || (vs.status === 'error' && !!vs.error);
-  const word = STATUS_WORD[vs.status];
+  const word = statusWord(vs.status);
 
   return (
     <View style={styles.root}>
@@ -108,7 +121,7 @@ export function SessionScreen() {
       <BreathingField width={width} height={height} mode={breathMode(vs.status)} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
-        <Txt variant="caption" tone="tertiary" style={styles.status} accessibilityLiveRegion="none">
+        <Txt variant="caption" tone="tertiary" style={[styles.status, isHe() && styles.statusHe]} accessibilityLiveRegion="none">
           {word ?? ' '}
         </Txt>
         <Txt variant="caption" tone="tertiary" style={[styles.status, { opacity: 0.6 }]}>
@@ -119,10 +132,10 @@ export function SessionScreen() {
       {hint && !blocked ? (
         <Animated.View entering={FadeIn.duration(1200).delay(400)} exiting={FadeOut.duration(1600)} style={styles.hint} pointerEvents="none">
           <Txt variant="title2" align="center" style={{ fontWeight: '300' }}>
-            Put the phone down.
+            {tr('Put the phone down.', 'הניחו את הטלפון.')}
           </Txt>
           <Txt variant="title2" align="center" tone="secondary" style={{ fontWeight: '300' }}>
-            Close your eyes.
+            {tr('Close your eyes.', 'עצמו את העיניים.')}
           </Txt>
         </Animated.View>
       ) : null}
@@ -130,15 +143,18 @@ export function SessionScreen() {
       {blocked ? (
         <View style={styles.blocked}>
           <Txt variant="title2" align="center">
-            {vs.error?.code === 'permission' ? 'Attend can’t hear you yet.' : 'Listening isn’t available here.'}
+            {vs.error?.code === 'permission' ? tr('Attend can’t hear you yet.', 'עוד אין גישה למיקרופון.') : tr('Listening isn’t available here.', 'אי אפשר להקשיב כאן.')}
           </Txt>
           <Txt variant="callout" tone="secondary" align="center" style={{ marginTop: space.s, marginBottom: space.xl }}>
             {vs.error?.code === 'permission'
-              ? 'Allow the microphone and speech recognition in Settings. What you say is turned into words on this iPhone and never saved as audio.'
-              : 'This build has no on-device speech recognition. A development build adds it.'}
+              ? tr(
+                  'Allow the microphone and speech recognition in Settings. What you say is turned into words on this iPhone and never saved as audio.',
+                  'אפשר לאשר מיקרופון וזיהוי דיבור בהגדרות. מה שאומרים הופך למילים כאן באייפון, ולא נשמר כהקלטה.',
+                )
+              : tr('This build has no on-device speech recognition. A development build adds it.', 'בגרסה הזו אין זיהוי דיבור במכשיר. גרסת פיתוח מוסיפה אותו.')}
           </Txt>
           {vs.error?.code === 'permission' && Platform.OS !== 'web' ? (
-            <PrimaryButton label="Open Settings" onPress={() => Linking.openSettings()} />
+            <PrimaryButton label={tr('Open Settings', 'לפתוח את ההגדרות')} onPress={() => Linking.openSettings()} />
           ) : null}
           {__DEV__ ? (
             <QuietButton
@@ -151,7 +167,7 @@ export function SessionScreen() {
             />
           ) : null}
           <QuietButton
-            label="Close"
+            label={tr('Close', 'לסגור')}
             style={{ alignSelf: 'center', marginTop: space.s }}
             onPress={() => {
               vs.end();
@@ -166,14 +182,14 @@ export function SessionScreen() {
           {confirmEnd ? (
             <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.confirm}>
               <Txt variant="footnote" tone="secondary">
-                Tap again to end
+                {tr('Tap again to end', 'נגיעה נוספת לסיום')}
               </Txt>
             </Animated.View>
           ) : null}
           <View style={styles.buttons}>
             <IconButton
               icon={paused ? 'play.fill' : 'pause.fill'}
-              label={paused ? 'Resume session' : 'Pause session'}
+              label={paused ? tr('Resume session', 'להמשיך את התרגול') : tr('Pause session', 'להשהות את התרגול')}
               variant="filled"
               size={60}
               iconSize={20}
@@ -182,7 +198,7 @@ export function SessionScreen() {
             />
             <IconButton
               icon="xmark"
-              label={confirmEnd ? 'Confirm end session' : 'End session'}
+              label={confirmEnd ? tr('Confirm end session', 'לאשר את סיום התרגול') : tr('End session', 'לסיים את התרגול')}
               variant="filled"
               size={60}
               iconSize={18}
@@ -207,6 +223,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   top: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', gap: 4 },
   status: { letterSpacing: 2, textTransform: 'uppercase', fontSize: 11 },
+  // Hebrew has no capitals, and tracking pulls its letters apart.
+  statusHe: { letterSpacing: 0, fontSize: 12 },
   // Below the orb, never across it.
   hint: { position: 'absolute', left: space.xl, right: space.xl, top: '66%', gap: 2 },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },

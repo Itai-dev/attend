@@ -1,5 +1,6 @@
 // Web preview entry: CanvasKit (Skia for web) must be loaded before any module
 // that captures it is evaluated, so the router is started only once it is ready.
+import './src/i18n/device';
 import '@expo/metro-runtime';
 import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
 

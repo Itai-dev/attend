@@ -1,6 +1,7 @@
 import { consolidateChanges, primarySensation } from './bodyMap';
 import { descriptorInfo } from './lexicon';
-import { REGIONS, speakPlace } from './regions';
+import { REGIONS, sayPlace, speakPlace } from './regions';
+import { isHe } from '../i18n';
 import type {
   Place,
   SessionMode,
@@ -263,6 +264,7 @@ export function buildRecap(input: RecapInput): Recap {
  * that would be manufactured.
  */
 function guidedRecap(input: RecapInput): Recap {
+  if (isHe()) return heGuidedRecap(input);
   const place = input.place ? speakPlace(input.place.region, input.place.side) : undefined;
   const secs = input.signals.observedSeconds;
   const time = secs >= 90 ? `for about ${Math.round(secs / 60)} minutes` : secs >= 45 ? 'for about a minute' : 'for a short while';
@@ -283,6 +285,36 @@ function guidedRecap(input: RecapInput): Recap {
       ? `The session ended early. Attention rested on ${place} ${time}.`
       : `Attention rested on ${place} ${time}, with nothing to answer and nothing to fix.`,
     oneLiner: `Attention rested on ${place}.`,
+    changeLines: [],
+  };
+}
+
+/**
+ * The guided recap in Hebrew (27 Oct 2026): the same facts, neutral or plural address. It is
+ * stored with the session, not shown today; written anyway so a Hebrew session never keeps
+ * English words. The place is definite ("הכתף השמאלית"), so it follows "על" and "עם", never "ב".
+ */
+function heGuidedRecap(input: RecapInput): Recap {
+  const place = input.place ? sayPlace(input.place.region, input.place.side) : undefined;
+  const secs = input.signals.observedSeconds;
+  const time = secs >= 90 ? `במשך כ־${Math.round(secs / 60)} דקות` : secs >= 45 ? 'במשך כדקה' : 'לזמן קצר';
+  const early = input.outcome === 'ended_early';
+  if (!place) {
+    return {
+      title: 'זמן עם הגוף כולו.',
+      summary: early
+        ? 'התרגול הסתיים מוקדם, אחרי שכבר התחיל לשקוע.'
+        : 'התרגול נשאר עם הגוף כולו: איפה שהוא נתמך, ואיך הנשימה נעה.',
+      oneLiner: 'מנוחה עם הגוף כולו.',
+      changeLines: [],
+    };
+  }
+  return {
+    title: `זמן עם ${place}.`,
+    summary: early
+      ? `התרגול הסתיים מוקדם. תשומת הלב נחה על ${place} ${time}.`
+      : `תשומת הלב נחה על ${place} ${time}, בלי שום דבר לענות עליו ובלי שום דבר לתקן.`,
+    oneLiner: `תשומת הלב נחה על ${place}.`,
     changeLines: [],
   };
 }

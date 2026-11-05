@@ -2,7 +2,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
-import { apiHeaders, config, GUIDE_VOICES, hasRemote } from '../config';
+import { apiHeaders, config, GUIDE_VOICES, guideVoices, hasRemote } from '../config';
 import { repository } from '../data/repository';
 import { useData } from '../data/store';
 import { DESCRIPTORS } from '../domain/lexicon';
@@ -12,6 +12,7 @@ import { buildMemory } from '../domain/memory';
 import { voiceFor } from '../domain/presets';
 import { REGIONS } from '../domain/regions';
 import type { Place, SessionMode, SessionType } from '../domain/types';
+import { isHe, tr } from '../i18n';
 import { applyOpening, applyScript, ARRIVE, SCAN_BRIEF, SCAN_FULL, SCAN_SHORT, VOICE_DIRECTION } from '../engine/guide/lines';
 import { LocalGuideBrain } from '../engine/guide/LocalGuideBrain';
 import { RemoteGuideBrain } from '../engine/guide/RemoteGuideBrain';
@@ -138,7 +139,8 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
     warmedAt[type] = Date.now();
   }
   const agent = lastAgent[type];
-  applyOpening(type, agent?.firstMessage);
+  // The agent's first message is written in English; a Hebrew session keeps its own opening.
+  if (!isHe()) applyOpening(type, agent?.firstMessage);
   const opening = [...new Set(ARRIVE[type].flatMap((v) => v.map(([text]) => text)))];
   const out = chooseOutput(voiceId, agent);
   if (out instanceof ElevenLabsSpeechOutput) {
@@ -152,7 +154,7 @@ async function warmSession(type: SessionType, voiceId?: string): Promise<AgentSe
 
 /** Only voices the app offers; an id saved by an older build counts as no choice. */
 function knownVoice(id?: string): string | undefined {
-  return GUIDE_VOICES.find((v) => v.id === id)?.id;
+  return guideVoices().find((v) => v.id === id)?.id;
 }
 
 /**
@@ -183,7 +185,7 @@ async function refreshScript(): Promise<void> {
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 2500);
-    const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/script`, { headers: apiHeaders(), signal: ctl.signal });
+    const res = await fetch(`${config.apiUrl.replace(/\/$/, '')}/script${isHe() ? '?lang=he' : ''}`, { headers: apiHeaders(), signal: ctl.signal });
     clearTimeout(t);
     if (!res.ok) return;
     const rejected = applyScript(await res.json());
@@ -195,6 +197,8 @@ async function refreshScript(): Promise<void> {
 
 function chooseBrain(pref: string, agent?: AgentSettings): GuideBrain {
   const remote = () => new RemoteGuideBrain({ url: config.apiUrl, headers: apiHeaders(), model: config.guideModel, style: () => agent?.prompt });
+  // The model rephrases in English: a Hebrew session keeps the script's own words.
+  if (isHe()) return new LocalGuideBrain();
   if (__DEV__ && pref === 'local') return new LocalGuideBrain();
   if (__DEV__ && pref === 'claude' && hasRemote) return remote();
   return hasRemote ? remote() : new LocalGuideBrain();
@@ -248,12 +252,12 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
 
       if (!(await input.isAvailable())) {
         setStatus('unavailable');
-        setError({ code: 'unavailable', message: 'Speech recognition is not available on this device.' });
+        setError({ code: 'unavailable', message: tr('Speech recognition is not available on this device.', 'זיהוי דיבור לא זמין במכשיר הזה.') });
         return;
       }
       if (!(await input.requestPermission())) {
         setStatus('unavailable');
-        setError({ code: 'permission', message: 'Attend needs the microphone and speech recognition to hear you.' });
+        setError({ code: 'permission', message: tr('Attend needs the microphone and speech recognition to hear you.', 'כדי לשמוע, צריך גישה למיקרופון ולזיהוי דיבור.') });
         return;
       }
 
@@ -357,11 +361,11 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
     setDevInput(input instanceof DevTextInput ? input : undefined);
     if (!hasRemote || !(await input.isAvailable())) {
       setStatus('idle');
-      return { answers: {}, ended: true, error: { code: 'unavailable', message: 'Listening isn’t available here.' } };
+      return { answers: {}, ended: true, error: { code: 'unavailable', message: tr('Listening isn’t available here.', 'אי אפשר להקשיב כאן.') } };
     }
     if (!(await input.requestPermission())) {
       setStatus('idle');
-      return { answers: {}, ended: true, error: { code: 'permission', message: 'Microphone or speech recognition not allowed.' } };
+      return { answers: {}, ended: true, error: { code: 'permission', message: tr('Microphone or speech recognition not allowed.', 'אין הרשאה למיקרופון או לזיהוי דיבור.') } };
     }
     const welcomeVoice = GUIDE_VOICES[0];
     const ambience = prefs.ambience === false ? undefined : new Ambience();

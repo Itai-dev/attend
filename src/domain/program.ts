@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import type { SessionType } from './types';
 
 /**
@@ -13,6 +14,10 @@ import type { SessionType } from './types';
  * weigh their own signs, and point anything new or changing to a doctor.
  *
  * Pure data and pure functions: no React, so the whole program is checked in tests.
+ *
+ * Hebrew (27 Oct 2026, docs/HEBREW.md) is a parallel table read at call time through
+ * getters: the language is set at launch, but Node tests switch it after this module has
+ * loaded, so nothing user-facing may be baked into a module-level value.
  */
 
 export type PracticeTheme =
@@ -46,17 +51,46 @@ export type ProgramDay = {
   practice: { title: string; theme: PracticeTheme; minutes: 3 | 5 | 7 | 10; sessionType: SessionType };
 };
 
-export const PROGRAM_TITLE = 'Meeting pain without alarm';
+/** The program's name, in the app's language. A function, not a constant: see the note above. */
+export function programTitle(): string {
+  // "בהלה" (fright), not "אזעקה": in Hebrew the feeling and the alarm system are two words.
+  return tr('Meeting pain without alarm', 'לפגוש את הכאב בלי בהלה');
+}
 export const PROGRAM_DAYS = 28;
 
-export const WEEKS: Record<1 | 2 | 3 | 4, { name: string; about: string }> = {
+type Week = 1 | 2 | 3 | 4;
+type WeekCopy = { name: string; about: string };
+
+const WEEKS_EN: Record<Week, WeekCopy> = {
   1: { name: 'Understand', about: 'How pain works, and why it can stay loud' },
   2: { name: 'Notice', about: 'Watching a sensation with curiosity' },
   3: { name: 'Soften', about: 'Fear, bracing, and the urge to fix' },
   4: { name: 'Live', about: 'Back to what you want to do' },
 };
 
+const WEEKS_HE: Record<Week, WeekCopy> = {
+  1: { name: 'להבין', about: 'איך כאב עובד, ולמה הוא יכול להישאר חזק' },
+  2: { name: 'לשים לב', about: 'להתבונן בתחושה בסקרנות' },
+  3: { name: 'לרכך', about: 'פחד, דריכות, והדחף לתקן' },
+  4: { name: 'לחיות', about: 'בחזרה למה שרוצים לעשות' },
+};
+
+function weekCopy(w: Week): Readonly<WeekCopy> {
+  return {
+    get name() {
+      return tr(WEEKS_EN[w].name, WEEKS_HE[w].name);
+    },
+    get about() {
+      return tr(WEEKS_EN[w].about, WEEKS_HE[w].about);
+    },
+  };
+}
+
+/** `WEEKS[w].name` reads in the app's language at the moment it is read. */
+export const WEEKS: Record<Week, Readonly<WeekCopy>> = { 1: weekCopy(1), 2: weekCopy(2), 3: weekCopy(3), 4: weekCopy(4) };
+
 const DOCTOR = 'If your pain is new, changing, or worries you, have it checked by a doctor before practising with it.';
+const DOCTOR_HE = 'אם הכאב חדש, משתנה או מדאיג אתכם, כדאי לבדוק אותו אצל רופא לפני שמתרגלים איתו.';
 
 type Def = [title: string, cards: LessonCard[], practice: string, theme: PracticeTheme, minutes: 3 | 5 | 7 | 10];
 
@@ -372,18 +406,288 @@ const DAYS: Def[] = [
   ],
 ];
 
+/**
+ * The Hebrew program (27 Oct 2026): the same 28 days, rewritten rather than translated
+ * (docs/HEBREW.md). Same cards in the same order, same restraint: plural or neutral
+ * address, never a guessed gender. "בהלה" is the feeling of alarm; "אזעקה" is the alarm
+ * the lessons explain. "דריכות" is bracing: the body tensing in expectation of pain.
+ */
+type DefHe = [title: string, cards: LessonCard[]];
+
+const DAYS_HE: DefHe[] = [
+  // ——— שבוע 1 · להבין ———
+  [
+    'הכאב אמיתי',
+    [
+      { text: ['כל כאב שאתם מרגישים הוא אמיתי. מערכת העצבים היא שמייצרת כל כאב – ככה כאב עובד אצל כולם.'] },
+      { text: ['כאב הוא מנגנון הגנה. הוא אזעקה שאומרת: אולי משהו לא בסדר, כדאי להיזהר.'] },
+      {
+        text: ['אצל הרבה אנשים שהכאב שלהם נמשך, האזעקה נעשית רגישה יותר עם הזמן. היא נדלקת מהר יותר, וחזק יותר.', DOCTOR_HE],
+        notice: 'בימים הקרובים, שימו לב מתי האזעקה חזקה יותר, ומתי היא שקטה יותר.',
+      },
+    ],
+  ],
+  [
+    'אזעקה שלמדה',
+    [
+      { text: ['מערכת העצבים לומדת. מה שחוזר הרבה, קל לה יותר לעשות שוב – מיומנות, הרגל, וגם כאב.'] },
+      { text: ['אחרי חודשים או שנים, הדרכים שבהן נוצר כאב יכולות להפוך לשביל כבוש, לפעמים הרבה אחרי שהפציעה עצמה החלימה.'] },
+      { text: ['מה שנלמד אפשר ללמוד מחדש. על הרעיון הזה בנויה התוכנית.'] },
+    ],
+  ],
+  [
+    'מעגל הכאב והפחד',
+    [
+      { text: ['כאב מביא דאגה. מה זה? זה יחמיר? ומה אם אני אחמיר את זה?'] },
+      { text: ['הדאגה אומרת לאזעקה שאולי יש סכנה, והאזעקה מגבירה את העוצמה. יותר כאב, יותר דאגה.'] },
+      { text: ['לפגוש תחושה עם קצת פחות בהלה – זו דרך אחת לרופף את המעגל. את זה התרגול מאמן.'] },
+    ],
+  ],
+  [
+    'סימנים מהכאב שלכם',
+    [
+      { text: ['אנשי מקצוע מחפשים סימנים לכך שהכאב מגיע מאזעקה רגישה, ולא מנזק שעדיין נמשך.'] },
+      { text: ['כמה מהסימנים האלה: הכאב התחיל בתקופה לחוצה. הוא זז, או מתפשט. הוא משתנה עם מצב הרוח או הסביבה. הוא נחלש כשאתם שקועים במשהו.'] },
+      {
+        text: ['רק אתם – ועדיף יחד עם הרופא שלכם – יכולים לשקול את הסימנים של הכאב שלכם. האפליקציה לא יכולה.'],
+        notice: 'היום, רק שימו לב אילו מהם מוכרים לכם. לא צריך להגיע למסקנות.',
+      },
+    ],
+  ],
+  [
+    'כשהכאב שוכך',
+    [
+      { text: ['קרה פעם שהכאב נחלש בזמן שצחקתם, כששקעתם במשהו, או כשהייתם רחוק מהשגרה?'] },
+      { text: ['כדאי לשים לב לרגעים כאלה. הם מראים שהעוצמה יכולה להשתנות.'] },
+      { text: ['אם קורה רגע כזה השבוע, אפשר לשמור אותו. הרגעים מצטברים.'], notice: 'חפשו רגע שבו הכאב שקט יותר ממה שציפיתם.' },
+    ],
+  ],
+  [
+    'למה לחץ מגביר את העוצמה',
+    [
+      { text: ['מערכת העצבים קובעת עד כמה חזק מרגישים כל אות שמגיע מהגוף.'] },
+      { text: ['כשהיא מזהה איום – דדליין, דאגה, לילה בלי מספיק שינה – היא עלולה להגביר את העוצמה.'] },
+      { text: ['תשומת לב רגועה היא דרך אחת לעזור לה להנמיך את העוצמה בחזרה. זה התרגול של היום.'] },
+    ],
+  ],
+  [
+    'אחרי שבוע',
+    [
+      { text: ['השבוע עסק באזעקה: בשביל מה היא קיימת, איך היא לומדת, ואיך הפחד מזין אותה.'] },
+      { text: ['בשבוע הבא התרגול נעשה מפורט יותר: הקצוות של תחושה, המרקם שלה, והאם היא זזה.'] },
+      { text: ['להגיע – זו העבודה. לא משנה מה הכאב עשה השבוע, תרגלתם.'] },
+    ],
+  ],
+
+  // ——— שבוע 2 · לשים לב ———
+  [
+    'מה זה מעקב סומטי',
+    [
+      { text: ['מעקב סומטי הוא להתבונן בתחושה כמו שמתבוננים בענן: בסקרנות, בלי צורך שהיא תשתנה.'] },
+      { text: ['זה לא להתעלם מהכאב, וגם לא להילחם בו. זה לפגוש אותו עם קצת פחות בהלה.'] },
+      { text: ['כל תרגול השבוע מתמקד בתכונה אחת של התחושה.'] },
+    ],
+  ],
+  [
+    'הקצוות של התחושה',
+    [
+      { text: ['לתחושה יש צורה. היא מתחילה איפשהו, ומתפוגגת איפשהו.'] },
+      { text: ['כשהאזעקה חזקה, נדמה שהתחושה ממלאת הכול. כשמחפשים את הקצוות שלה, הרבה פעמים מתברר שהיא קטנה יותר ממה שחשבתם.'] },
+      { text: ['היום הקול המנחה יעזור לחפש את הקצוות. לא צריך לענות על כלום. רק להקשיב.'] },
+    ],
+  ],
+  [
+    'כשתחושה זזה',
+    [
+      { text: ['תחושות קבועות הרבה פחות ממה שנדמה. הן פועמות, נודדות, מתפשטות ומצטמצמות.'] },
+      { text: ['לשים לב לתנועה זה לא מבחן. גם תחושה שנשארת במקום שווה התבוננות, באותה מידה.'] },
+    ],
+  ],
+  [
+    'מרקם, לא פסק דין',
+    [
+      { text: ['"רע" זה פסק דין. "תפוס", "חם", "מזמזם", "עמום" – אלה מרקמים.'] },
+      { text: ['כשמתארים מרקם במקום לשפוט אותו, יש לאזעקה קצת פחות חומר לעבוד איתו.'] },
+      { text: ['לא צריך להגיד את המילים בקול. אפשר פשוט לתת למילה לעלות, אם היא עולה.'] },
+    ],
+  ],
+  [
+    'הסקרנות היא החלק הפעיל',
+    [
+      { text: ['האזעקה קשובה לדרך שבה פוגשים תחושה. חרדה אומרת: סכנה. סקרנות אומרת: בואו נראה.'] },
+      { text: ['סקרנות יכולה להיות קטנה. מספיק לתהות איפה משהו נגמר.'] },
+    ],
+  ],
+  [
+    'להתבונן, לא לתקן',
+    [
+      { text: ['טבעי לרצות שהתחושה תיעלם. גם הרצון הזה הוא חלק מהאזעקה.'] },
+      { text: ['היום, נסו לתת לתחושה לעשות מה שהיא עושה, ופשוט להתבונן.'] },
+    ],
+  ],
+  [
+    'אחרי שבועיים',
+    [
+      { text: ['שבועיים של תרגול. המיומנות שאתם בונים היא תשומת לב בלי בהלה.'] },
+      { text: ['השבוע הבא עובר למה שמגביר את האזעקה: פחד, דריכות, והדחף לתקן.'] },
+    ],
+  ],
+
+  // ——— שבוע 3 · לרכך ———
+  [
+    'דריכות',
+    [
+      { text: ['כשמצפים לכאב, השרירים נדרכים סביבו. הכתפיים מתרוממות. הלסת ננעלת. הנשימה נעצרת.'] },
+      { text: ['דריכות היא הגנה, אבל היא גם יכולה להשאיר את האזעקה דולקת.'] },
+      { text: ['התרגול של היום שם לב לדריכות, ומשחרר אותה קצת, איפה שאפשר.'], notice: 'פעם אחת היום, נסו לתפוס רגע של דריכות. רק לשים לב אליו.' },
+    ],
+  ],
+  [
+    'פחד זה לא פגם',
+    [
+      { text: ['אם אתם מפחדים מהכאב, זה הגיוני. הוא הכאיב לכם, אולי כבר הרבה זמן.'] },
+      { text: ['לא צריך להיפטר מהפחד. אפשר לשים לב אליו, ברכות, לצד התחושה.'] },
+    ],
+  ],
+  [
+    'הדחף לתקן',
+    [
+      { text: ['למתוח, לעסות, לבדוק, להחליף תנוחה, לחפש באינטרנט. אצל הרבה אנשים עם כאב, הדחף לתקן לא מרפה.'] },
+      { text: ['כל בדיקה כזאת יכולה לאותת לאזעקה: זה עדיין מצב חירום.'] },
+      { text: ['היום, שימו לב לדחף, ונסו לתת לו לחלוף בלי לפעול לפיו – רק בשביל התרגול.'] },
+    ],
+  ],
+  [
+    'גם רגשות יושבים בגוף',
+    [
+      { text: ['לחץ, צער, כעס ודאגה מורגשים בגוף. הם עוברים דרך אותה מערכת אזעקה כמו הכאב.'] },
+      { text: ['כשהרגשות קשים, העוצמה יכולה לעלות.'] },
+      { text: ['אם רגשות כבדים מלווים אתכם, היום כדאי לנהוג בעצמכם ברכות. תמיכה ממישהו שאתם סומכים עליו, או מאיש מקצוע, יכולה לעזור.'] },
+    ],
+  ],
+  [
+    'הקול שלוחץ',
+    [
+      { text: ['"צריך פשוט להתגבר." "אסור להישבר." "זה כבר היה צריך לעבור."'] },
+      { text: ['קול פנימי קשוח הוא עוד סוג של איום, והאזעקה שומעת אותו.'] },
+      { text: ['התרגול של היום מנסה טון רך יותר, כזה שבו הייתם מדברים עם מישהו קרוב.'] },
+    ],
+  ],
+  [
+    'גם תחושות נעימות נחשבות',
+    [
+      { text: ['תשומת לב שרגילה להתמקד בכאב עלולה לשכוח את כל מה שהגוף מרגיש חוץ ממנו.'] },
+      { text: ['ידיים חמות, המשקל של שמיכה, נשימה קלה: גם אלה תחושות אמיתיות, והן אומרות לאזעקה משהו אחר.'] },
+    ],
+  ],
+  [
+    'אחרי שלושה שבועות',
+    [
+      { text: ['התבוננתם בפחד, בדריכות, בדחף לתקן ובקול שלוחץ.'] },
+      { text: ['השבוע האחרון מוציא את התרגול מהחדר השקט אל תוך היום שלכם.'] },
+    ],
+  ],
+
+  // ——— שבוע 4 · לחיות ———
+  [
+    'לחזור למה שחשוב',
+    [
+      { text: ['בהתחלה ציינתם למה אתם רוצים לחזור.'] },
+      { text: ['השבוע, בחרו צעד קטן אחד בכיוון הזה. קטן זה: קצת יותר ממה שקל, והרבה לפני התלקחות.'] },
+      { text: ['קודם לתרגל, ואז לעשות את הצעד. אחרי הצעד, אפשר לשמור אותו ברגעים שלכם.'] },
+    ],
+  ],
+  [
+    'צעד קטן, הרבה פעמים',
+    [
+      { text: ['פחד מפעילות קטן הכי הרבה כשעושים ממנה קצת, הרבה פעמים, ושמים לב מה באמת קורה.'] },
+      { text: ['אם צעד מעורר תחושה, זו הזמנה לתרגל: לשים לב אליה, בלי בהלה, ולהמשיך בעדינות אם אפשר.'] },
+    ],
+  ],
+  [
+    'כשהאזעקה נדלקת',
+    [
+      { text: ['לפעמים האזעקה נדלקת באמצע פעילות. זה חלק מהדרך.'] },
+      { text: ['תרגול קצר ברגע עצמו יכול לעזור: לעצור, לנשום, למצוא את הקצוות, ואז להמשיך או לנוח.'] },
+      { text: ['תרגול ההתלקחות של 3 דקות נמצא תמיד בלשונית היום.'] },
+    ],
+  ],
+  [
+    'התלקחויות הן חלק מהדרך',
+    [
+      { text: ['התלקחות לא אומרת שחזרתם להתחלה. אצל רוב האנשים הדרך עולה ויורדת.'] },
+      { text: ['בהתלקחות: לתרגל, לנוח, לנהוג בעצמכם ברכות. אם ההתלקחות שונה ממה שאתם מכירים, או מגיעה עם תסמינים חדשים, כדאי לפנות לרופא.'] },
+    ],
+  ],
+  [
+    'הראיות שלכם',
+    [
+      { text: ['הסתכלו אחורה על הרגעים ששמרתם: צעדים שעשיתם, פעמים שבהן הכאב היה שקט ממה שציפיתם.'] },
+      { text: ['אלה הראיות שלכם, שאספתם בעצמכם. אפשר להמשיך להוסיף להן.'] },
+    ],
+  ],
+  [
+    'להמשיך הלאה',
+    [
+      { text: ['מיומנויות נשמרות כשמשתמשים בהן. אחרי התוכנית, כמה תרגולים בשבוע זה די והותר.'] },
+      { text: ['תרגול ההתלקחות, תרגול השינה והתוכנית כולה נשארים כאן, לכל פעם שתרצו.'] },
+    ],
+  ],
+  [
+    'יום 28',
+    [
+      { text: ['ארבעה שבועות של תרגול. זה החלק שהיה בידיים שלכם, ועשיתם אותו.'] },
+      { text: ['כשתרצו, אפשר להסתכל על יומן הכאב ועל הרגעים שלכם יחד. לא משנה מה הם מראים, התרגול כבר שלכם.'] },
+    ],
+  ],
+];
+
+/** Practice titles, keyed by the English title so a practice reused on several days reads the same. */
+const PRACTICE_HE: Record<string, string> = {
+  Arriving: 'להגיע',
+  'Arriving, again': 'להגיע, שוב',
+  'Finding the place': 'למצוא את המקום',
+  'Breath around it': 'נשימה סביב התחושה',
+  'Its texture': 'המרקם של התחושה',
+  'The body as a whole': 'הגוף כולו',
+  'The edges of a sensation': 'הקצוות של התחושה',
+  'When a sensation moves': 'כשתחושה זזה',
+  'With curiosity': 'בסקרנות',
+  'Letting the bracing go': 'לשחרר את הדריכות',
+  'Fear, gently': 'פחד, בעדינות',
+  'The urge, passing': 'לתת לדחף לחלוף',
+  'A kinder tone': 'טון רך יותר',
+  'What feels easy': 'מה שנעים',
+  'Before a step': 'לפני צעד',
+  'In the moment': 'ברגע עצמו',
+};
+
 function sessionTypeFor(theme: PracticeTheme): SessionType {
   if (theme === 'flare') return 'flare';
   if (theme === 'fear') return 'fear';
   return 'notice';
 }
 
-export const PROGRAM: ProgramDay[] = DAYS.map(([title, cards, practice, theme, minutes], i) => ({
-  day: i + 1,
-  week: (Math.floor(i / 7) + 1) as 1 | 2 | 3 | 4,
-  lesson: { title, cards },
-  practice: { title: practice, theme, minutes, sessionType: sessionTypeFor(theme) },
-}));
+export const PROGRAM: ProgramDay[] = DAYS.map(([title, cards, practice, theme, minutes], i) => {
+  const en = { title, cards };
+  const [heTitle, heCards] = DAYS_HE[i];
+  const he = { title: heTitle, cards: heCards };
+  return {
+    day: i + 1,
+    week: (Math.floor(i / 7) + 1) as 1 | 2 | 3 | 4,
+    get lesson() {
+      return tr(en, he);
+    },
+    practice: {
+      get title() {
+        return tr(practice, PRACTICE_HE[practice] ?? practice);
+      },
+      theme,
+      minutes,
+      sessionType: sessionTypeFor(theme),
+    },
+  };
+});
 
 export function programDay(day: number): ProgramDay {
   return PROGRAM[Math.max(1, Math.min(PROGRAM_DAYS, day)) - 1];

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { type ReactNode } from 'react';
 import {
+  I18nManager,
   Platform,
   Pressable,
   ScrollView,
@@ -20,6 +21,7 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, HIT, radius, space, type, type TypeVariant } from './theme';
+import { isHe, tr } from '../i18n';
 
 export function haptic(kind: 'light' | 'select' | 'soft' = 'light') {
   if (Platform.OS === 'web') return;
@@ -43,6 +45,9 @@ const TONES = {
   inverse: color.onAccent,
 };
 
+/** Hebrew is never letter-spaced: tracking is Latin typography, and it pulls Hebrew letters apart. */
+const UNTRACKED = { letterSpacing: 0 } as const;
+
 /** Type scaled with Dynamic Type (large titles capped so layouts hold). */
 export function Txt({ variant = 'body', tone = 'primary', align, style, maxFontSizeMultiplier, ...rest }: TxtProps) {
   const cap = maxFontSizeMultiplier ?? (variant === 'display' || variant === 'title' ? 1.35 : 2);
@@ -50,7 +55,7 @@ export function Txt({ variant = 'body', tone = 'primary', align, style, maxFontS
     <Text
       {...rest}
       maxFontSizeMultiplier={cap}
-      style={[type[variant], { color: TONES[tone], textAlign: align }, style]}
+      style={[type[variant], { color: TONES[tone], textAlign: align }, style, isHe() && UNTRACKED]}
     />
   );
 }
@@ -157,7 +162,11 @@ const GLYPHS: Record<string, string> = {
   wind: '≋',
 };
 
-export function Icon({ name, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: ColorValue; weight?: SymbolViewProps['weight'] }) {
+/** Right to left, "forward" points left: directional symbols swap so a chevron still means next. */
+const MIRRORED: Record<string, string> = { 'chevron.right': 'chevron.left', 'chevron.left': 'chevron.right', 'arrow.right': 'arrow.left', 'arrow.left': 'arrow.right' };
+
+export function Icon({ name: given, size = 20, tint = color.text, weight = 'regular' }: { name: string; size?: number; tint?: ColorValue; weight?: SymbolViewProps['weight'] }) {
+  const name = I18nManager.isRTL ? (MIRRORED[given] ?? given) : given;
   if (Platform.OS === 'ios') {
     return (
       <SymbolView
@@ -225,7 +234,7 @@ export function IconButton({
 
 /** Settings sit behind a gear at the top right of every tab, not in a tab of their own (22 Oct 2026). */
 export function SettingsButton() {
-  return <IconButton icon="gearshape" label="Settings" onPress={() => router.push('/settings')} tint={color.textSecondary} iconSize={20} style={{ marginRight: -space.s }} />;
+  return <IconButton icon="gearshape" label={tr('Settings', 'הגדרות')} onPress={() => router.push('/settings')} tint={color.textSecondary} iconSize={20} style={{ marginRight: -space.s }} />;
 }
 
 /** A screen with a large title that scrolls with its content, iOS-style. */
@@ -245,7 +254,7 @@ export function TitledScroll({
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={[{ paddingTop: insets.top + space.l, paddingBottom: insets.bottom + 120, paddingHorizontal: space.l }, contentStyle]}
     >
-      {onBack ? <IconButton icon="chevron.left" label="Back" onPress={onBack} tint={color.textSecondary} style={{ marginLeft: -space.m }} /> : null}
+      {onBack ? <IconButton icon="chevron.left" label={tr('Back', 'חזרה')} onPress={onBack} tint={color.textSecondary} style={{ marginLeft: -space.m }} /> : null}
       <View style={styles.titleRow}>
         <Txt variant="display" accessibilityRole="header" style={{ flex: 1 }}>
           {title}
@@ -367,9 +376,9 @@ export function Card({ children, onPress, label, style }: { children: ReactNode;
 
 export function SampleBadge() {
   return (
-    <View style={styles.badge} accessibilityLabel="Sample session">
+    <View style={styles.badge} accessibilityLabel={tr('Sample session', 'תרגול לדוגמה')}>
       <Txt variant="caption" tone="tertiary" style={{ fontSize: 10, letterSpacing: 0.6 }}>
-        SAMPLE
+        {tr('SAMPLE', 'דוגמה')}
       </Txt>
     </View>
   );

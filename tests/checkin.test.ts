@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dayKey, latestPlace, painDays, painLabel, type CheckIn } from '../src/domain/checkin';
-import { buildProgress, PROGRESS_MEANING } from '../src/domain/progress';
+import { dayKey, formatPain, latestPlace, painDays, painLabel, type CheckIn } from '../src/domain/checkin';
+import { buildProgress, progressMeaning, PROGRESS_MEANING } from '../src/domain/progress';
+import { setLang } from '../src/i18n';
 import type { Session } from '../src/domain/types';
 
 const DAY = 86_400_000;
@@ -71,4 +72,34 @@ test('samples never enter progress', () => {
   assert.equal(p.checkInDays, 0);
   assert.equal(p.practiceDays, 0);
   assert.equal(p.summary, 'Nothing recorded yet.');
+});
+
+test('in Hebrew the five words describe the pain, at every score, and the number travels with its word', () => {
+  setLang('he');
+  try {
+    assert.deepEqual(
+      Array.from({ length: 11 }, (_, i) => painLabel(i)),
+      ['אין כאב', 'קל', 'קל', 'קל', 'בינוני', 'בינוני', 'בינוני', 'חזק', 'חזק', 'חזק', 'הכי חזק'],
+    );
+    assert.equal(formatPain(5), '5 · בינוני');
+  } finally {
+    setLang('en');
+  }
+  assert.equal(painLabel(10), 'Most intense');
+});
+
+test('in Hebrew progress counts plainly and keeps its sentence about what it does not mean', () => {
+  setLang('he');
+  try {
+    const p = buildProgress([0, 1, 2, 4, 6, 9].map((d) => ci(d, 5)), [{ startedAt: NOW - DAY, outcome: 'completed' } as Session], { now: NOW, tz: 180 });
+    assert.equal(p.summary, 'ב־8 השבועות האחרונים: צ׳ק־אין ב־6 ימים, תרגול ביום אחד.');
+    const none = buildProgress([ci(0, 5)], [], { now: NOW, tz: 180 });
+    assert.equal(none.summary, 'ב־8 השבועות האחרונים: צ׳ק־אין ביום אחד, בלי תרגול.');
+    assert.equal(buildProgress([], [], { now: NOW, tz: 180 }).summary, 'עוד לא נרשם כלום.');
+    assert.match(progressMeaning(), /לא יום בלי כאב/);
+    for (const text of [p.summary, progressMeaning()]) assert.doesNotMatch(text, /השתפר|החמיר|יותר טוב|%|רצף/);
+  } finally {
+    setLang('en');
+  }
+  assert.equal(progressMeaning(), PROGRESS_MEANING);
 });
