@@ -373,11 +373,13 @@ export function guidedTurn(ctx: GuideContext): GuideTurn {
 
   // The day's theme leads: its lines come on alternate steps until each has been spoken,
   // with the general guidance between them, so a theme shapes the session without
-  // repeating itself.
+  // repeating itself. In the order written: a theme's lines build on each other ("Offer
+  // yourself the same tone" needs the tone first), and a random first pick played them
+  // out of order.
   const themed = (general: L.Line[][]): L.Line[] => {
     const bank = ctx.theme ? L.GUIDED_THEMES[ctx.theme] : [];
     const fresh = bank.filter((v) => !ctx.usedLines.has(v[0][0]));
-    if (fresh.length && ctx.phaseStep % 2 === 1) return pickLines(fresh, ctx);
+    if (fresh.length && ctx.phaseStep % 2 === 1) return fresh[0];
     return pickLines([...general, ...bank], ctx);
   };
 
@@ -392,10 +394,16 @@ export function guidedTurn(ctx: GuideContext): GuideTurn {
 
     case 'OPEN_AWARENESS':
       if (ctx.phaseStep === 0) return guide(L.OPEN_AWARENESS);
-      return guide(themed(L.GUIDED_OPEN));
+      // Only the whole-body theme here. With no place to rest on, the other themes' lines
+      // ("Find the edges", "Look at it as if for the first time") point at a sensation
+      // nobody named.
+      return guide(ctx.theme === 'open' ? themed(L.GUIDED_OPEN) : pickLines(L.GUIDED_OPEN, ctx));
 
     case 'CLOSE': {
-      const prepare = lines(pickLines(L.CLOSE_PREPARE[ctx.sessionType], ctx), ctx);
+      // A three-minute session keeps only the announcement: the full preparation and close
+      // took over a minute, longer than the practice itself.
+      const prep = pickLines(L.CLOSE_PREPARE[ctx.sessionType], ctx);
+      const prepare = lines(ctx.plan.targetMs <= 3 * 60_000 ? prep.slice(0, 1) : prep, ctx);
       return turn({ lines: [...prepare, ...lines(L.CLOSE[ctx.sessionType], ctx)], expectsResponse: false, end: true });
     }
 

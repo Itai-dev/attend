@@ -73,8 +73,13 @@ Spoken by ElevenLabs, eyes closed. Everything above applies, plus:
   made the first version sound translated — and not "שימו לב" at the start of every line.
 - **"הקשב", not "תשומת הלב",** in the spoken script: it is what Israeli mindfulness teachers
   say, it is shorter, and the voice says it more clearly. Written screens may use either.
-- **Questions without a question to answer** are natural in Hebrew guidance ("ומה המרקם
-  שלה?") and read as wondering, not asking: the session still never waits for an answer.
+- **Statements, never questions (5 Nov 2026).** A guided session never asks, not even a
+  "wondering" question it doesn't wait for (AGENTS.md wins over the old allowance here): write
+  "הרגישו אם…", "אולי היא…", "שימו לב מה…", with "שימו לב" not opening every line.
+  `tests/hebrew.test.ts` fails any guided line ending in "?".
+- **"היא" needs a feminine noun first.** English "it" hides this: say "התחושה" before the
+  lines that call it "היא", "שלה", "בה". Sessions with no place never speak of a sensation.
+- **Not "בדקו".** The program teaches not to check the body; the guide says "הרגישו".
 - **Short lines, commas for breath.** The number after each line is the silence that follows;
   keep the English silences.
 - **Say it the way it will be heard.** No abbreviations, no gershayim, no digits: write
