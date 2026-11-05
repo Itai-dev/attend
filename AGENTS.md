@@ -96,9 +96,13 @@ One leading colour, moss, for the one next step and practice done, chosen for ca
 never red; see `design/theme.ts`). The mark (5 Nov 2026) is a thick ring of grain, eclipsed on
 the right so it dissolves along a curve: the cycle, softening (`tools/make-mark.py` draws the
 icon, splash and PDFs; `viz/EclipseField.tsx` draws it live). It marks the app's other screens
-(`viz/Enso.tsx`). The session shows the ring whole, a perfect circle at rest, and only the
-guide's voice changes it: a spoken line breaks it down into smaller dots, unevenly round the
-circle, and the silence rebuilds it (`eclipse={false}`). Sumi on washi by day, rice paper on charcoal at night;
+(`viz/Enso.tsx`). The session's ring is a particle system (`viz/particles.ts`,
+`viz/ParticleRing.tsx`): about 2,400 round particles, each sprung to a home on the ring, never
+quite still. The guide's voice drives it closely: each syllable's attack kicks particles off
+their homes and loudness slackens their springs, unevenly round the circle, so the ring
+breaks into smaller dots, and in the gap after, the springs rebuild it. Its one exception to
+"one colour": the particles the voice has moved take on soft afterimage colours, like rubbed
+eyes (violet, teal, gold, green; never red). Sumi on washi by day, rice paper on charcoal at night;
 still under Reduce Motion. A gong
 opens and closes every session (`tools/make-gong.py`); under it, real nature recordings kept
 quiet, well under the voice (`tools/make-ambience.py`, `voice/ambience.ts`). After the

@@ -272,10 +272,21 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       const sub = player.addListener('audioSampleUpdate', (s: AudioSample) => {
         const frames = s.channels[0]?.frames;
         if (!frames?.length) return;
+        // The last part of the buffer, not all of it: an average over the whole buffer lags the
+        // voice by its length, and the ring felt behind the words. Loudness is mostly the RMS
+        // with a little of the peak, so a consonant's attack shows.
+        const from = Math.max(0, frames.length - 512);
         let sum = 0;
-        for (let i = 0; i < frames.length; i++) sum += frames[i] * frames[i];
+        let peak = 0;
+        for (let i = from; i < frames.length; i++) {
+          const v = frames[i];
+          sum += v * v;
+          if (v > peak) peak = v;
+          else if (-v > peak) peak = -v;
+        }
+        const rms = Math.sqrt(sum / (frames.length - from));
         // Speech sits around 0.05-0.2 RMS; the gain brings a normal line to about two thirds.
-        const level = Math.min(1, Math.sqrt(sum / frames.length) * gain);
+        const level = Math.min(1, (rms * 0.8 + peak * 0.2) * gain);
         for (const cb of this.levels) cb(level);
       });
       return () => {
