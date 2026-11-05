@@ -62,6 +62,12 @@ export interface SpeechOutput {
    * or once it has rung out, and immediately when aborted. Never rejects.
    */
   gong?(signal: AbortSignal, ringMs?: number): Promise<void>;
+  /**
+   * How loud the guide (and the gong) is right now, 0..1, while it plays: the session's ring
+   * breaks into grain with the voice and gathers again in the silence. Optional: an output
+   * that can't measure itself leaves the ring breathing on its own.
+   */
+  onLevel?(cb: (level: number) => void): () => void;
   stop(): void;
   begin?(): Promise<void>;
   end?(): Promise<void>;

@@ -1,4 +1,5 @@
-import { createAudioPlayer, type AudioPlayer, type AudioSource, type AudioStatus } from 'expo-audio';
+import { createAudioPlayer, type AudioPlayer, type AudioSample, type AudioSource, type AudioStatus } from 'expo-audio';
+import { Platform } from 'react-native';
 import { Directory, File, Paths } from 'expo-file-system';
 import { beginSessionAudio } from '../audioSession';
 import type { SpeechOutput, VoiceError } from '../types';
@@ -67,6 +68,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
   private current?: AudioPlayer;
   /** Gongs still ringing: they outlive the call that struck them, so the guide can begin over the tail. */
   private ringing = new Set<AudioPlayer>();
+  private levels = new Set<(level: number) => void>();
   failures = 0;
 
   constructor(private readonly cfg: ElevenLabsConfig) {}
@@ -208,6 +210,8 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       return Promise.resolve();
     }
     this.ringing.add(player);
+    // The gong moves the ring too, more gently than the voice.
+    const unmeter = this.meter(player, 3);
     return new Promise<void>((resolve) => {
       let resolved = false;
       const done = () => {
@@ -220,6 +224,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       const release = () => {
         clearTimeout(watchdog);
         sub.remove();
+        unmeter();
         if (!this.ringing.delete(player)) return;
         try {
           player.remove();
@@ -249,6 +254,39 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
     });
   }
 
+  onLevel(cb: (level: number) => void): () => void {
+    this.levels.add(cb);
+    return () => this.levels.delete(cb);
+  }
+
+  /**
+   * The player's loudness, sent to the session visual while it plays. iOS only: Android's
+   * sampling needs the microphone permission, and a guided session never asks for it. Builds
+   * without sampling simply send nothing, and the ring keeps breathing on its own.
+   */
+  private meter(player: AudioPlayer, gain: number): () => void {
+    if (!this.levels.size || Platform.OS !== 'ios') return () => {};
+    try {
+      if (!player.isAudioSamplingSupported) return () => {};
+      player.setAudioSamplingEnabled(true);
+      const sub = player.addListener('audioSampleUpdate', (s: AudioSample) => {
+        const frames = s.channels[0]?.frames;
+        if (!frames?.length) return;
+        let sum = 0;
+        for (let i = 0; i < frames.length; i++) sum += frames[i] * frames[i];
+        // Speech sits around 0.05-0.2 RMS; the gain brings a normal line to about two thirds.
+        const level = Math.min(1, Math.sqrt(sum / frames.length) * gain);
+        for (const cb of this.levels) cb(level);
+      });
+      return () => {
+        sub.remove();
+        for (const cb of this.levels) cb(0);
+      };
+    } catch {
+      return () => {};
+    }
+  }
+
   private play(source: AudioSource, signal: AbortSignal, volume?: number): Promise<void> {
     let player: AudioPlayer;
     try {
@@ -261,6 +299,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
       return Promise.reject(unavailable('The guide voice could not be played.'));
     }
     this.current = player;
+    const unmeter = this.meter(player, 5);
     return new Promise<void>((resolve, reject) => {
       let settled = false;
       const startedAt = Date.now();
@@ -284,6 +323,7 @@ export class ElevenLabsSpeechOutput implements SpeechOutput {
         settled = true;
         clearInterval(watchdog);
         sub.remove();
+        unmeter();
         signal.removeEventListener('abort', onAbort);
         try {
           player.remove();

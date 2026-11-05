@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useData } from '@/data/store';
-import { CATEGORY_ART, SOUND_ART, type ArtKey } from '@/design/art';
+import { CATEGORY_ART, CATEGORY_MOTIF, SOUND_ART, SOUND_MOTIF, type ArtKey, type Motif } from '@/design/art';
 import { haptic, SettingsButton, TitledScroll, Txt } from '@/design/components';
 import { CoverArt, Pill } from '@/design/media';
 import { space, radius } from '@/design/theme';
@@ -21,7 +21,7 @@ import { startPreset } from '../shared/startPreset';
 const ON_ART = '#FFFFFF';
 const ON_ART_SOFT = 'rgba(255,255,255,0.82)';
 
-function Tile({ art, seed, width, height, title, detail, label, onPress }: { art: ArtKey; seed: number; width: number; height: number; title: string; detail: string; label: string; onPress: () => void }) {
+function Tile({ art, motif, seed, width, height, title, detail, label, onPress }: { art: ArtKey; motif: Motif; seed: number; width: number; height: number; title: string; detail: string; label: string; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -32,7 +32,7 @@ function Tile({ art, seed, width, height, title, detail, label, onPress }: { art
       }}
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}
     >
-      <CoverArt art={art} seed={seed} size={width} height={height} rounded={radius.l}>
+      <CoverArt art={art} motif={motif} seed={seed} size={width} height={height} rounded={radius.l}>
         <View style={styles.tileText}>
           <Txt variant="headline" style={{ color: ON_ART }} numberOfLines={2}>
             {title}
@@ -74,6 +74,7 @@ export function ExploreScreen() {
         <Animated.View key="sessions" entering={FadeIn.duration(400)}>
           <Tile
             art={CATEGORY_ART[featured.category]}
+            motif={CATEGORY_MOTIF[featured.category]}
             seed={3}
             width={full}
             height={200}
@@ -99,6 +100,7 @@ export function ExploreScreen() {
                     <Tile
                       key={p.id}
                       art={CATEGORY_ART[p.category]}
+                      motif={CATEGORY_MOTIF[p.category]}
                       seed={i + 5}
                       width={shelfTile}
                       height={shelfTile * 1.15}
@@ -123,6 +125,7 @@ export function ExploreScreen() {
               <Tile
                 key={s.id}
                 art={SOUND_ART[s.id]}
+                motif={SOUND_MOTIF[s.id]}
                 seed={i + 11}
                 width={half}
                 height={half * 1.25}

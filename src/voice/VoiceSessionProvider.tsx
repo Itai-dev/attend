@@ -58,6 +58,8 @@ type VoiceSessionValue = {
   /** Session time excluding pauses, read on demand by the timer. */
   activeMs(): number;
   level: SharedValue<number>;
+  /** The guide's loudness, 0..1, smoothed: the session ring dissolves with it. 0 between lines. */
+  voiceLevel: SharedValue<number>;
   labels: { input: string; output: string; brain: string };
   debug: DebugEntry[];
   devInput?: DevTextInput;
@@ -218,6 +220,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
   const [debug, setDebug] = useState<DebugEntry[]>([]);
   const [devInput, setDevInput] = useState<DevTextInput | undefined>();
   const level = useSharedValue(0);
+  const voiceLevel = useSharedValue(0);
   // A session or the spoken welcome: both pause, resume and end the same way.
   const runner = useRef<SessionRunner | WelcomeRunner | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -301,6 +304,11 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
           // Smoothed on the UI thread so the visual follows the voice without flicker.
           level.value = withTiming(l, { duration: 160 });
         },
+        onVoiceLevel: (l) => {
+          // Quick to rise with a syllable, slow to settle, so the ring breathes with the voice
+          // instead of flickering on every sample.
+          voiceLevel.value = withTiming(l, { duration: l > voiceLevel.value ? 90 : 420 });
+        },
         onDraft: (d) => {
           if (draftTimer.current) clearTimeout(draftTimer.current);
           draftTimer.current = setTimeout(() => {
@@ -346,9 +354,10 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
           if (!runner.current) endSessionAudio().catch(() => {});
         }, ambience ? 1400 : 0);
         level.value = 0;
+        voiceLevel.value = withTiming(0, { duration: 1200 });
       }
     },
-    [level],
+    [level, voiceLevel],
   );
 
   const startWelcome = useCallback(async (): Promise<WelcomeResult> => {
@@ -423,6 +432,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
       completedSessionId,
       activeMs: () => runner.current?.activeMs ?? 0,
       level,
+      voiceLevel,
       labels,
       debug,
       devInput,
@@ -442,7 +452,7 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
         setSessionType(undefined);
       },
     }),
-    [status, error, pausedBy, sessionType, completedSessionId, level, labels, debug, devInput, start, warm, startWelcome],
+    [status, error, pausedBy, sessionType, completedSessionId, level, voiceLevel, labels, debug, devInput, start, warm, startWelcome],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -93,9 +93,13 @@ and Sumi at night (warm charcoal, rice-paper text), following the phone's appear
 session opened at night never starts bright. Ma — room around everything, soft corners,
 soft shadows, few boxes. San Francisco only (22 Oct 2026): SF Pro Rounded for titles, regular SF for the rest; no serif.
 One leading colour, moss, for the one next step and practice done, chosen for calm (green,
-never red; see `design/theme.ts`). The ensō (`viz/Enso.tsx`) marks the app's other screens;
-the session itself shows the moving orb (`viz/BreathingField.tsx`, 22 Oct 2026: the still ensō
-read as static mid-practice), light on charcoal at night and an ink wash on paper by day. A gong
+never red; see `design/theme.ts`). The mark (5 Nov 2026) is a thick ring of grain, eclipsed on
+the right so it dissolves along a curve: the cycle, softening (`tools/make-mark.py` draws the
+icon, splash and PDFs; `viz/EclipseField.tsx` draws it live). It marks the app's other screens
+(`viz/Enso.tsx`). The session shows the ring whole, a perfect circle at rest, and only the
+guide's voice changes it: a spoken line breaks it down into smaller dots, unevenly round the
+circle, and the silence rebuilds it (`eclipse={false}`). Sumi on washi by day, rice paper on charcoal at night;
+still under Reduce Motion. A gong
 opens and closes every session (`tools/make-gong.py`); under it, real nature recordings kept
 quiet, well under the voice (`tools/make-ambience.py`, `voice/ambience.ts`). After the
 completion moment, a closing screen with one quote (`domain/quotes.ts`): about practice and
