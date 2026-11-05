@@ -119,7 +119,7 @@ export function SessionScreen() {
       <StatusBar hidden />
       {/* No indication of the person's own voice for now: no VoiceGlow, no mic level on the field. VoiceGlow stays in viz/ to bring back. */}
       {/* A whole ring at rest (5 Nov 2026): the guide's voice loosens it into grain, the silence gathers it back. */}
-      <EclipseField width={width} height={height} mode={breathMode(vs.status)} level={vs.voiceLevel} opaque eclipse={false} size={0.27} style={StyleSheet.absoluteFill} />
+      <EclipseField width={width} height={height} mode={breathMode(vs.status)} level={vs.voiceLevel} opaque eclipse={false} alive size={0.27} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.top, { paddingTop: insets.top + space.l }]} pointerEvents="none">
         <Txt variant="caption" tone="tertiary" style={[styles.status, isHe() && styles.statusHe]} accessibilityLiveRegion="none">

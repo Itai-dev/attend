@@ -102,18 +102,20 @@ half4 main(float2 fragCoord) {
 `;
 
 /**
- * ECLIPSE: the ring of grain (5 Nov 2026), two ways.
+ * ECLIPSE: the ring of particles (5 Nov 2026), two ways.
  *
  * The mark (`uEclipse` 1, tools/make-mark.py): eclipsed on the right by an unseen disc 1.4x
  * its size, so it dissolves along a curve. The other screens show it, breathing slowly.
  *
- * The session (`uEclipse` 0): a whole, perfect ring at rest, and only the guide's voice
- * changes it. As a line is spoken the ring loosens into grain all the way round, more in some
- * places than others, the places drifting slowly round the circle; in the silence after it, it
- * gathers back into the whole ring. Under Reduce Motion it is still.
+ * The session (`uEclipse` 0): a whole ring, never quite still. Particles keep coming apart and
+ * gathering at its edges even in silence (`uIdle`). The guide's voice drives it closely:
+ * each syllable loosens it, more in some arcs than others (the loosest arcs drift slowly
+ * round the circle), and the gap after it lets it gather again. With `uColor`, soft colours
+ * shimmer in the loose particles, like the shapes seen after rubbing the eyes: violet, teal,
+ * gold, a little green. Never red. Under Reduce Motion it is still.
  *
- * `uOpaque` 1 draws the background (the session, full screen); 0 draws the mark alone with
- * alpha (the small mark on other screens).
+ * Particles are round dots on two jittered grids of different sizes, antialiased, so the ring
+ * reads as grain, not as pixels.
  */
 export const ECLIPSE_SKSL = `
 uniform float2 uRes;
@@ -128,9 +130,10 @@ uniform float uOpaque;
 uniform float uSize;
 uniform float uGrain;
 uniform float uEclipse;
+uniform float uColor;
+uniform float uIdle;
 
-// No sin(): on GPUs its precision breaks down at large arguments and the grain lines up
-// in diagonal streaks.
+// No sin(): its precision breaks down at large arguments on GPUs and grain lines up in streaks.
 float hash(float2 p) {
   p = fract(p * float2(123.34, 456.21));
   p += dot(p, p + 45.32);
@@ -144,6 +147,71 @@ float noise(float2 p) {
   return mix(mix(hash(i), hash(i + float2(1.0, 0.0)), u.x), mix(hash(i + float2(0.0, 1.0)), hash(i + float2(1.0, 1.0)), u.x), u.y);
 }
 
+// How much ring there is at a point: 0..1. "local" is how loose the ring is there.
+float ringDensity(float2 p, float s, float2 fragCoord, float t, float local, float ro) {
+  float ri = ro * 0.52;
+  float rho = length(p);
+  float drift = noise(fragCoord / (s * 0.018) + float2(t * 0.35, -t * 0.25)) - 0.35;
+  rho -= local * 0.1 * drift * ro / 0.31;
+  float outSoft = (0.07 + 0.28 * local) * ro;
+  float inSoft = (0.045 + 0.16 * local) * ro;
+  float band = smoothstep(ri - inSoft, ri + inSoft, rho) * (1.0 - smoothstep(ro - outSoft, ro + outSoft, rho));
+  band = pow(band, 0.8);
+  float moonDx = 1.95 * ro;
+  float moonR = 1.4 * ro;
+  float moonSoft = 0.45 * ro;
+  float moon = mix(1.0, smoothstep(moonR - moonSoft, moonR + moonSoft, length(p - float2(moonDx, 0.0))), uEclipse);
+  // Loose, the ring thins: patches open and fill again as it comes apart and gathers.
+  float holes = noise(fragCoord / (s * 0.03) + float2(-t * 0.5, t * 0.4));
+  return clamp(band * moon * (1.0 - 0.75 * local * smoothstep(0.25, 0.75, holes)), 0.0, 1.0);
+}
+
+// One layer of round particles: in each cell of a jittered grid, a dot that is there with the
+// density's probability. While loose, cells re-roll at their own moments, so particles wink
+// out and in: the ring destructs and rebuilds a particle at a time. Each pixel looks at the
+// neighbouring cells too, so dots can be large enough to merge where the ring is solid and
+// never get cut flat at a cell edge. The ring's density is the pixel's, computed once: per
+// particle it cost a full-screen frame several times over on a phone.
+float dots(float2 fragCoord, float cs, float density, float t, float local, float seed, out float pick) {
+  float2 g = fragCoord / cs + seed;
+  float2 base = floor(g);
+  float best = 0.0;
+  pick = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      float2 cell = base + float2(float(i), float(j));
+      float r1 = hash(cell);
+      float r2 = hash(cell + 17.3);
+      float r3 = hash(cell + 41.7);
+      float2 centre = cell + 0.5 + (float2(r2, r3) - 0.5) * 0.7;
+      float roll = floor(t * (1.5 + 18.0 * local) + r3 * 9.0);
+      float rp = 0.06 + 0.94 * mix(r1, hash(cell + roll * 0.37 + 3.1), clamp(local * 1.4, 0.0, 1.0));
+      float there = smoothstep(rp - 0.06, rp + 0.06, density);
+      float rad = cs * (0.26 + 0.12 * r2 + 0.3 * density) * sqrt(there);
+      float d = length(g - centre) * cs;
+      float a = 1.0 - smoothstep(rad - 0.5, rad + 0.5, d);
+      if (a > best) {
+        best = a;
+        pick = r2;
+      }
+    }
+  }
+  return best;
+}
+
+float3 phosphene(float k) {
+  // Violet, teal, gold, green: the colours behind closed, rubbed eyes. No red.
+  float3 violet = float3(0.62, 0.50, 0.90);
+  float3 teal = float3(0.40, 0.80, 0.82);
+  float3 gold = float3(0.95, 0.80, 0.45);
+  float3 green = float3(0.60, 0.85, 0.58);
+  k = fract(k) * 4.0;
+  if (k < 1.0) return mix(violet, teal, k);
+  if (k < 2.0) return mix(teal, green, k - 1.0);
+  if (k < 3.0) return mix(green, gold, k - 2.0);
+  return mix(gold, violet, k - 3.0);
+}
+
 half4 main(float2 fragCoord) {
   float s = min(uRes.x, uRes.y);
   float2 p = (fragCoord - uRes * 0.5) / s;
@@ -151,53 +219,55 @@ half4 main(float2 fragCoord) {
 
   // The voice, or, where the voice can't be measured, a slow swell while the guide speaks.
   float swell = uSpeak * (0.22 + 0.12 * sin(t * 1.3));
+  float idle = uIdle * (0.1 + 0.07 * noise(float2(t * 0.35, 1.7)));
   float L = clamp(max(uLevel, swell), 0.0, 1.0) * uMotion;
+  float act = clamp(L + idle * uMotion, 0.0, 1.0);
 
-  // Round the ring, the voice lands unevenly: some arcs loosen more, and the loosest arcs
-  // drift slowly round the circle, like sound moving through it. On the mark this is off.
+  // Round the ring the voice lands unevenly; on the mark this is off.
   float ang = atan(p.y, p.x);
   float arc = noise(float2(cos(ang), sin(ang)) * 1.6 + float2(t * 0.22, -t * 0.17));
-  float local = L * mix(1.0, 0.35 + 1.1 * arc, 1.0 - uEclipse);
+  float local = act * mix(1.0, 0.35 + 1.1 * arc, 1.0 - uEclipse);
 
   float breath = sin(t * 6.2831853 / 10.0) * uMotion;
   float ro = uSize * (1.0 + 0.015 * breath + 0.035 * local * (1.0 - uEclipse));
-  float ri = ro * 0.52;
+  float density = ringDensity(p, s, fragCoord, t, local, ro);
+  float rhoNow = length(p);
+  // Nowhere near the ring: no particles to draw, so none of their cost.
+  float near = step(ro * 0.25, rhoNow) * step(rhoNow, ro * 1.9);
 
-  // Particles drift as it loosens: the sampled radius wanders with a slow noise field.
-  float rho = length(p);
-  float drift = noise(fragCoord / (s * 0.018) + float2(t * 0.35, -t * 0.25)) - 0.35;
-  rho -= local * 0.1 * drift * ro / 0.31;
+  // Two layers of particles, a fine one and a coarser one offset from it, so the solid part
+  // of the ring is dense and the loose part reads as separate dots.
+  float pickA;
+  float pickB;
+  float a1 = 0.0;
+  float a2 = 0.0;
+  pickA = 0.0;
+  pickB = 0.0;
+  if (near > 0.5 && density > 0.002) {
+    a1 = dots(fragCoord, uGrain * 2.6, density, t, local, 0.0, pickA);
+    a2 = dots(fragCoord, uGrain * 4.2, density, t + 3.0, local, 0.5, pickB);
+  }
+  float a = clamp(max(a1, a2 * 0.9), 0.0, 1.0) * uDim;
 
-  float outSoft = (0.07 + 0.28 * local) * ro;
-  float inSoft = (0.045 + 0.16 * local) * ro;
-  float band = smoothstep(ri - inSoft, ri + inSoft, rho) * (1.0 - smoothstep(ro - outSoft, ro + outSoft, rho));
-  band = pow(band, 0.8);
+  // Colour lives in the loose particles more than the solid core, and grows with the voice.
+  float loose = 1.0 - smoothstep(0.55, 1.0, density);
+  float amt = uColor * clamp(0.18 + 0.5 * act, 0.0, 1.0) * (0.35 + 0.65 * loose);
+  float hue = noise(p * 3.2 + float2(t * 0.07, -t * 0.05)) * 1.6 + ang * 0.08 + (a1 > a2 ? pickA : pickB) * 0.35 + t * 0.02;
+  float3 tint = phosphene(hue);
+  float paper = step(0.5, dot(uBg, float3(0.3333)));
+  // On paper the colours are an ink, a little deeper and used more lightly; on charcoal they glow.
+  tint = mix(tint, tint * 0.8, paper);
+  float3 dotCol = mix(uInk, tint, amt * (1.0 - 0.35 * paper));
 
-  // The eclipse: the mark's disc at rest, moving in and softening with the voice.
-  float moonDx = (1.95 - 0.4 * L) * ro;
-  float moonR = 1.4 * ro;
-  float moonSoft = (0.45 + 0.3 * L) * ro;
-  float md = length(p - float2(moonDx, 0.0));
-  float moon = mix(1.0, smoothstep(moonR - moonSoft, moonR + moonSoft, md), uEclipse);
-
-  // Loud, the ring itself thins into grain: patches of it open up and fill again, so it breaks
-  // down into smaller dots and is rebuilt as the voice falls.
-  float holes = noise(fragCoord / (s * 0.03) + float2(-t * 0.5, t * 0.4));
-  float density = clamp(band * moon * (1.0 - 0.75 * local * smoothstep(0.25, 0.75, holes)), 0.0, 1.0);
-
-  // Grain: a fixed screen of thresholds, so the mark is made of particles, not a blur. While
-  // the voice is loud some of them re-roll a few times a second: the grain shimmers.
-  float2 cell = floor(fragCoord / uGrain);
-  float h = hash(cell);
-  float h2 = hash(cell + floor(t * 6.0) * 17.0);
-  // Kept above zero, so where there is no mark there is no grain at all.
-  float thr = 0.03 + 0.97 * mix(h, h2, 0.55 * local);
-  float a = smoothstep(thr - 0.02, thr + 0.02, density) * uDim;
+  // A faint afterglow inside the ring, as rubbed eyes see: soft colour, never a bright disc.
+  float glow = uColor * exp(-abs(length(p) - ro * 0.76) / (0.16 * ro)) * (0.035 + 0.06 * act) * uDim;
+  float3 glowCol = phosphene(t * 0.03 + ang * 0.16 + 0.3);
 
   if (uOpaque > 0.5) {
-    return half4(mix(uBg, uInk, a), 1.0);
+    float3 base = uBg + (glowCol - uBg) * glow * (1.0 - paper * 0.5);
+    return half4(mix(base, dotCol, a), 1.0);
   }
-  return half4(uInk * a, a);
+  return half4(dotCol * a, a);
 }
 `;
 

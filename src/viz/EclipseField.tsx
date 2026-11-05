@@ -33,10 +33,12 @@ type Props = {
   size?: number;
   /** The mark's eclipse on the right. Off in the session, where the ring is whole until the voice moves it. */
   eclipse?: boolean;
+  /** The session's living ring: always slightly coming apart and gathering, with soft afterimage colours. */
+  alive?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-export function EclipseField({ width, height, mode, level, dim = 1, opaque = false, size = 0.31, eclipse = true, style }: Props) {
+export function EclipseField({ width, height, mode, level, dim = 1, opaque = false, size = 0.31, eclipse = true, alive = false, style }: Props) {
   const fx = effect('eclipse');
   const c = useColors();
   const bg = useMemo(() => rgb(c.bg), [c.bg]);
@@ -71,8 +73,10 @@ export function EclipseField({ width, height, mode, level, dim = 1, opaque = fal
       uSize: size,
       uGrain: grain,
       uEclipse: eclipse ? 1 : 0,
+      uColor: alive ? 1 : 0,
+      uIdle: alive ? 1 : 0,
     }),
-    [width, height, reduceMotion, level, bg, ink, opaque, size, grain, eclipse],
+    [width, height, reduceMotion, level, bg, ink, opaque, size, grain, eclipse, alive],
   );
 
   if (!fx) return <View style={[{ width, height, backgroundColor: opaque ? c.bg : undefined }, style]} />;

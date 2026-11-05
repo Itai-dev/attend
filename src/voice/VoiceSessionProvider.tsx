@@ -305,9 +305,9 @@ export function VoiceSessionProvider({ children }: { children: ReactNode }) {
           level.value = withTiming(l, { duration: 160 });
         },
         onVoiceLevel: (l) => {
-          // Quick to rise with a syllable, slow to settle, so the ring breathes with the voice
-          // instead of flickering on every sample.
-          voiceLevel.value = withTiming(l, { duration: l > voiceLevel.value ? 90 : 420 });
+          // Close behind the voice: rises within a frame or two of a syllable and falls in the
+          // gap after it (420 ms felt like lag), still smoothed enough not to flicker.
+          voiceLevel.value = withTiming(l, { duration: l > voiceLevel.value ? 35 : 150 });
         },
         onDraft: (d) => {
           if (draftTimer.current) clearTimeout(draftTimer.current);
