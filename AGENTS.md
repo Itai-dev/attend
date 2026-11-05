@@ -80,7 +80,10 @@ the app is used, then left. Do not add anything that encourages checking the bod
 question, and when to end are decided in `SessionEngine`. A `GuideBrain` only phrases the
 turn. Arrival, closing and all safety lines are fixed text and never sent to a model.
 
-**Local-first.** Sessions and check-ins live in SQLite on the device; no account. Guided
+**Local-first.** Sessions and check-ins live in SQLite on the device; no account. No
+therapist dashboard (5 Nov 2026): the person's tab makes a one-sheet PDF (`domain/share.ts`)
+that leaves the phone only through the share sheet, when they send it, to whom they choose;
+it follows the tab's rules (counts, no verdicts, `tests/share.test.ts`). Guided
 sessions use no microphone. Speech, where it is used (the welcome), is recognised on the
 device and audio is never stored. No analytics. Changing what leaves the phone means
 updating the privacy copy in Settings and the README first.

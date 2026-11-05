@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useData } from '@/data/store';
 import { currentTz, MIN_DAYS_FOR_PICTURE } from '@/domain/checkin';
+import { localGoal } from '@/domain/goals';
 import { milestones, practiceStats } from '@/domain/engagement';
 import { EMPTY_PROGRAM, PROGRAM_DAYS } from '@/domain/program';
 import { buildProgress, progressMeaning } from '@/domain/progress';
@@ -11,6 +12,7 @@ import { color, HIT, radius, space } from '@/design/theme';
 import { isHe, tr } from '@/i18n';
 import { longDate } from '../shared/format';
 import { PainChart } from './PainChart';
+import { sharePage } from './sharePage';
 
 /**
  * The person's own tab, named for them (22 Oct 2026, after Headspace's profile): who they are,
@@ -68,6 +70,8 @@ export function YouScreen() {
   }, [sessions]);
   const lastMoment = prefs.moments?.[0];
   const name = prefs.name?.trim();
+  const goal = localGoal(prefs.goal);
+  const [sharing, setSharing] = useState(false);
 
   return (
     <TitledScroll title={name || tr('You', 'אני')} right={<SettingsButton />}>
@@ -83,9 +87,9 @@ export function YouScreen() {
               ? tr(`Practising since ${longDate(first)}`, `מתרגלים מאז ${longDate(first)}`)
               : tr('Your first practice is waiting on Today', 'התרגול הראשון מחכה בלשונית היום')}
           </Txt>
-          {prefs.goal ? (
+          {goal ? (
             <Txt variant="callout" style={{ color: color.milestone }}>
-              {tr(`Toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}`, `המטרה: ${prefs.goal}`)}
+              {tr(`Toward ${goal.charAt(0).toLowerCase() + goal.slice(1)}`, `המטרה: ${goal}`)}
             </Txt>
           ) : null}
         </View>
@@ -159,6 +163,31 @@ export function YouScreen() {
         <Pressable accessibilityRole="button" onPress={() => router.push('/checkin')} style={styles.link} hitSlop={8}>
           <Txt variant="callout" style={{ color: color.practice, fontWeight: '600' }}>
             {tr('Check in', 'לעשות צ׳ק־אין')}
+          </Txt>
+        </Pressable>
+      </Card>
+
+      {/* Instead of a therapist dashboard: this tab on one sheet, sent by the person, when they choose (domain/share.ts). */}
+      <Card style={{ padding: space.l, marginTop: space.m }}>
+        <Txt variant="headline">{tr('Share a page with your therapist', 'לשתף דף עם המטפלים שלכם')}</Txt>
+        <Txt variant="callout" tone="secondary" style={{ marginTop: space.xs }}>
+          {tr(
+            'One sheet: your practice days, minutes, the program and the pain record of the last eight weeks. Made here, sent only when you send it.',
+            'עמוד אחד: ימי התרגול, הדקות, התוכנית ויומן הכאב של שמונת השבועות האחרונים. נעשה כאן, ונשלח רק כשאתם שולחים אותו.',
+          )}
+        </Txt>
+        <Pressable
+          accessibilityRole="button"
+          disabled={sharing}
+          onPress={() => {
+            setSharing(true);
+            void sharePage({ name, goal, sessions, checkIns, program, now: Date.now(), tz }).finally(() => setSharing(false));
+          }}
+          style={styles.link}
+          hitSlop={8}
+        >
+          <Txt variant="callout" style={{ color: color.practice, fontWeight: '600' }}>
+            {sharing ? tr('Preparing…', 'רגע…') : tr('Make the page', 'להכין את הדף')}
           </Txt>
         </Pressable>
       </Card>

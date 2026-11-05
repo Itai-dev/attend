@@ -67,7 +67,8 @@ test('in Hebrew every session and shelf has Hebrew words, under the same rules',
   setLang('he');
   try {
     const he = presets();
-    assert.deepEqual(he.map((p) => [p.id, p.type, p.minutes, p.voiceId]), PRESETS.map((p) => [p.id, p.type, p.minutes, p.voiceId]));
+    // Same sessions, same lengths; the voice is the type's Hebrew one (the tile names who speaks).
+    assert.deepEqual(he.map((p) => [p.id, p.type, p.minutes]), PRESETS.map((p) => [p.id, p.type, p.minutes]));
     const lines = [...he.flatMap((p) => [p.title, p.blurb]), ...presetCategories().flatMap((c) => [c.title, c.detail])];
     for (const l of lines) {
       assert.match(l, /[א-ת]/, l);
@@ -101,4 +102,20 @@ test('Hebrew sessions speak with native Hebrew voices, and a pick stays in its o
     setLang('en');
   }
   assert.equal(voiceFor('flare', { flare: danit }), SESSION_VOICES.flare.voiceId, 'a Hebrew pick is not used in English');
+});
+
+test('in Hebrew, every tile names the Hebrew voice that will speak it', async () => {
+  const { setLang } = await import('../src/i18n');
+  const { SESSION_VOICES_HE } = await import('../src/domain/presets');
+  setLang('he');
+  try {
+    for (const p of presets()) {
+      assert.equal(p.voiceId, SESSION_VOICES_HE[p.type].voiceId, p.id);
+      assert.equal(p.voiceName, SESSION_VOICES_HE[p.type].voiceName, p.id);
+      assert.equal(voiceFor(p.type), p.voiceId, `${p.id}: the tile and the session agree`);
+      assert.doesNotMatch(p.voiceName, /[A-Za-z]/, `${p.id}: no Latin name on a Hebrew tile`);
+    }
+  } finally {
+    setLang('en');
+  }
 });

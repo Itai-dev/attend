@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useData } from '@/data/store';
+import { localGoal } from '@/domain/goals';
 import { newId } from '@/domain/ids';
 import { haptic, IconButton, PrimaryButton, Txt } from '@/design/components';
 import { color, radius, space } from '@/design/theme';
@@ -16,6 +17,7 @@ import { tr } from '@/i18n';
 export function MomentScreen() {
   const insets = useSafeAreaInsets();
   const { prefs, setPrefs } = useData();
+  const goal = localGoal(prefs.goal);
   const [text, setText] = useState('');
   const ready = text.trim().length > 0;
 
@@ -38,11 +40,11 @@ export function MomentScreen() {
           {tr('Save a moment', 'לשמור רגע')}
         </Txt>
         <Txt variant="callout" tone="secondary" style={{ marginTop: space.s }}>
-          {prefs.goal
+          {goal
             ? tr(
-                `A step toward ${prefs.goal.charAt(0).toLowerCase() + prefs.goal.slice(1)}, or a time the pain was quieter than you expected.`,
+                `A step toward ${goal.charAt(0).toLowerCase() + goal.slice(1)}, or a time the pain was quieter than you expected.`,
                 // The goal is shown as typed, between dashes: Hebrew can't fold any phrase into "toward".
-                `צעד בדרך למטרה – ${prefs.goal} – או רגע שבו הכאב היה שקט יותר ממה שציפיתם.`,
+                `צעד בדרך למטרה – ${goal} – או רגע שבו הכאב היה שקט יותר ממה שציפיתם.`,
               )
             : tr('A step you took, or a time the pain was quieter than you expected.', 'צעד שעשיתם, או רגע שבו הכאב היה שקט יותר ממה שציפיתם.')}
         </Txt>
